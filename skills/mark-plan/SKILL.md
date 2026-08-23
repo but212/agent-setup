@@ -9,13 +9,17 @@ description: >
 
 Use a Markdown plan file instead of a UI plan state machine. Create or update
 `.plans/<task-name>.md`, then execute its checklist while keeping the file
-accurate.
+accurate. The plan is local execution state; synchronize durable domain or
+architectural requirements into the repository's appropriate documentation when
+the task changes them.
 
 ## Operating contract
 
 1. **Create the SSOT:** Before non-trivial implementation, search `.plans/` for
-   a matching task. Reuse the existing plan; if several plans match, ask which
-   one to use. Otherwise create `.plans/<task-name>.md` with lowercase kebab-case.
+   a matching task. Reuse one matching `planned`, `in-progress`, or `blocked`
+   plan. Do not silently reuse a `complete` or `cancelled` plan; ask whether to
+   reopen it or create a new plan. If several active plans match, ask which one
+   to use. Otherwise create `.plans/<task-name>.md` with lowercase kebab-case.
 2. **Define authority:** The plan is authoritative for this task's scope,
    decisions, progress, blockers, and verification results. It does not override
    user requirements or repository guidance.
@@ -30,11 +34,16 @@ accurate.
 6. **Update as truth changes:** Mark items only after completion and verification.
    Record decisions, deviations, blockers, and verification results in the plan;
    do not hide them only in chat.
-7. **Protect user control:** Pause and ask before proceeding when requirements
-   are materially ambiguous, scope expands, a breaking change is needed, or a
+7. **Protect user control:** Planning ends in review. Do not execute checklist
+   items until the user explicitly approves execution (for example, “execute the
+   plan”, “start implementation”, or equivalent); merely creating or reviewing a
+   plan is not approval. Pause and ask when requirements are materially
+   ambiguous, scope expands, a breaking change is needed, or a
    destructive/unrecoverable action is proposed.
 8. **Finish honestly:** Do not mark the plan complete while required criteria,
    checklist items, failed checks, blockers, or open decisions remain unresolved.
+   A checked item requires its verification result to be recorded; a complete
+   plan requires every required item and criterion to be checked.
 
 ## Plan file format
 
@@ -76,12 +85,21 @@ Create the smallest useful file with this structure:
 Allowed plan statuses: `planned`, `in-progress`, `blocked`, `complete`, and
 `cancelled`.
 
-- `planned`: plan exists; execution has not started.
-- `in-progress`: approved execution is underway.
+- `planned`: plan exists and is awaiting review or execution approval; no
+  checklist item is being executed.
+- `in-progress`: the user approved execution and work is underway.
 - `blocked`: execution cannot continue without an external answer, approval, or
-  fix; record the exact blocker and resume point.
-- `complete`: every required criterion and checklist item is verified.
-- `cancelled`: the user stopped the task or replaced it with another plan.
+  fix; record the exact blocker and resume as `in-progress` only after it is
+  resolved.
+- `complete`: every required criterion and checklist item is verified; this is a
+  terminal state and must not be reused silently for new work.
+- `cancelled`: the user stopped the task or replaced it with another plan; this
+  is terminal unless the user explicitly reopens it.
+
+Valid transitions are `planned -> in-progress`, `in-progress -> blocked`,
+`blocked -> in-progress`, and `in-progress -> complete` or `cancelled`.
+Reopening a terminal plan requires explicit user direction and a recorded
+Decision; otherwise create a new plan.
 
 Keep scope and acceptance criteria stable. If a discovered change is required,
 ask before expanding scope and record the decision under **Decisions and
@@ -97,7 +115,8 @@ deviations**. Put optional work in **Out** or create a separate plan.
   and dependency-ordered checklist items.
 - Set status to `planned` and report the plan for review.
 - Do not execute checklist items until the user requests execution or gives
-  explicit approval; then set status to `in-progress`.
+  explicit approval using a clear action signal; then record that decision and
+  set status to `in-progress` before the first checklist item.
 
 ### Execute
 
@@ -122,7 +141,10 @@ independent task belongs in a separate plan.
 - Run the relevant repository-native checks and record exact commands/results.
 - Confirm every acceptance criterion and required checklist item is checked.
 - Resolve or explicitly record all blockers and open questions.
-- Set status to `complete` only then; use `blocked` or `cancelled` otherwise.
+- Set status to `complete` only then; use `blocked` when an unresolved external
+  dependency prevents progress, or `cancelled` when the user stops or replaces
+  the task. If the task changes scope, stop and record the decision before
+  continuing.
 
 ## Output
 

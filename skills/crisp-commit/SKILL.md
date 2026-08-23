@@ -12,7 +12,7 @@ Inspect Git diffs and generate factual, high-density Conventional Commit message
 
 1. Lead directly with the formatted commit message block followed by a copyable `git commit` shell snippet.
 2. Ground claims strictly in `git diff` evidence; eliminate speculative or unverified commentary.
-3. Detect commit language via `git log -n 5`; default to Korean (한국어) if `git log` is unavailable or inconclusive.
+3. Detect commit language via `git log -n 5`; default to English if `git log` is unavailable or inconclusive.
 
 ## Workflow
 

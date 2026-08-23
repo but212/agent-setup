@@ -2,7 +2,7 @@
 name: spec-drive
 description: >
   Spec-Driven Development (SDD) orchestrator bridging crisp specification density
-  with lean structural design, surgical TDD vertical slices, and automated spec synchronization.
+  with lean structural design, surgical TDD vertical slices, and living spec synchronization.
   Activate with /spec-drive.
 ---
 
@@ -17,8 +17,10 @@ Drive complex or contract-sensitive changes through high-density specifications,
 1. **Crisp over Bloat:** Specifications must express concrete observable behaviors, invariants, and input/output contracts. No speculative requirements or decorative text.
 2. **Lean over Patchwork:** Eliminate impossible states structurally before implementing logic. Implement the minimum code needed to satisfy the contracts.
 3. **Bounded Generalization:** Extract laws as `condition -> guarantee` from multiple cases or explicit domain evidence. State scope, preconditions, exceptions, and counterexamples; reject one-case restatements and unsupported universal abstractions. Promote a law to a shared domain rule only when it recurs across boundaries or has clear reuse evidence.
-4. **Evidence-Gated Pipeline:** Progress through the 4-phase SDD pipeline. Stop for user review only on breaking changes, major architectural trade-offs, or genuine ambiguity.
+4. **Evidence-Gated Pipeline:** Progress through the 4-phase SDD pipeline. Stop for user review on breaking changes, major architectural trade-offs, genuine ambiguity, or before any implementation when explicit execution approval is absent.
 5. **Living Spec Sync:** Keep execution contracts in the active `.plans/<task-name>.md` when `mark-plan` is active; synchronize permanent domain and architectural documentation in the repository in the same change.
+6. **Authority Separation:** Permanent specifications are authoritative for domain rules, public contracts, and architecture. Plans track execution scope and verification state only.
+7. **Composed Activation:** When `/crisp` is active with `/spec-drive`, `spec-drive` coordinates the task and `crisp` controls response prose only; it does not grant edit permission.
 
 ## The 4-Phase SDD Pipeline
 
@@ -37,7 +39,11 @@ Establish clear boundaries and observable contracts before modifying code:
   | --- | --- | --- | --- |
   | `C-01` | ... | ... | ... |
 
-*Rule:* If requirements contain ambiguity, stop and resolve with the user before writing implementation.
+For each contract, record linked invariants, test path and name, implementation boundary, and permanent specification path when applicable. For non-executable contracts, record the verification method.
+
+*Rules:* If requirements contain ambiguity, stop and resolve with the user before writing implementation. Classify material claims as `Confirmed`, `Assumption`, or `Open decision`.
+
+Treat changes to public inputs/outputs, error meaning, state transitions, persistence schemas, authentication, or authorization as breaking changes. Require explicit approval and compatibility, migration, and rollback decisions before implementation.
 
 ### Phase 2: Lean Structural Design (lean-design)
 
@@ -69,7 +75,9 @@ Before declaring done, enforce repository quality boundaries:
 3. **Code Quality:** Pass all repository-native formatting, linting, and static analysis checks.
 4. **Spec Synchronization:**
    - Check if changes alter domain models, API contracts, business rules, or platform invariants.
+   - Classify material claims as `Confirmed`, `Assumption`, or `Open decision`.
    - Update repository specification documents (e.g., `docs/spec/`, architecture decision records, or contract references) in the same change.
+   - Compare the skills catalog with actual `skills/*/SKILL.md` names, activation rules, and modification boundaries.
 
 ## Output Format
 
@@ -93,9 +101,9 @@ When invoking `spec-drive`, present the task progress systematically:
 - Forbidden States: ...
 
 ## 4. Contracts Table
-| ID | Behavior | Condition / Input | Expected Output / Error |
-|---|---|---|---|
-| C-01 | ... | ... | ... |
+| ID | Behavior | Condition / Input | Expected Output / Error | Invariant | Test path/name | Implementation boundary | Permanent spec |
+|---|---|---|---|---|---|---|---|
+| C-01 | ... | ... | ... | ... | ... | ... | ... |
 
 ## 5. TDD Slices
 - Slice 1 (C-01): Red (`[test path]`) -> Green (`[src path]`) -> Verify (`[cmd]`)
@@ -114,5 +122,7 @@ When `mark-plan` is active, use its `.plans/<task-name>.md` as the execution SSO
 
 ## Controls & Revert
 
+- **Scope:** Contract orchestration and synchronization decisions; do not directly edit production code or tests.
+- **Approval:** Analysis and planning are read-only until explicit execution approval. Breaking changes also require compatibility, migration, and rollback decisions.
 - **Activate:** `/spec-drive`, `/sdd`, or when asked for spec-driven development.
 - **Deactivate:** `stop spec-drive` or return to normal mode.
