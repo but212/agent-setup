@@ -18,7 +18,7 @@ Drive complex or contract-sensitive changes through high-density specifications,
 2. **Lean over Patchwork:** Eliminate impossible states before implementing logic; write only the code needed to satisfy contracts.
 3. **Bounded Generalization:** Extract `condition -> guarantee` laws only from multiple cases or explicit domain evidence. State scope, preconditions, exceptions, and counterexamples; reject one-case restatements and unsupported abstractions. Promote laws to shared rules only with cross-boundary recurrence or clear reuse evidence.
 4. **Evidence-Gated Pipeline:** Follow the 4 phases. Stop for review on breaking changes, major architectural trade-offs, genuine ambiguity, or before implementation without explicit approval.
-5. **Living Spec Sync:** Keep execution contracts in `.plans/<task-name>.md` when `mark-plan` is active; synchronize permanent domain and architecture docs in the same change.
+5. **Living Spec Sync:** Keep execution contracts in `.plans/YYYY-MM-DD/<task-name>.md` when `mark-plan` is active; synchronize permanent domain and architecture docs in the same change.
 6. **Authority Separation:** Permanent specifications govern domain rules, public contracts, and architecture; plans track execution scope and verification only.
 7. **Composed Activation:** When `/crisp` is active with `/spec-drive`, `spec-drive` coordinates the task and `crisp` controls response prose only; it does not grant edit permission.
 
@@ -78,6 +78,7 @@ Before declaring done, enforce repository quality boundaries:
    - Classify material claims as `Confirmed`, `Assumption`, or `Open decision`.
    - Update repository specification documents (e.g., `docs/spec/`, architecture decision records, or contract references) in the same change.
    - Compare the skills catalog with actual `skills/*/SKILL.md` names, activation rules, and modification boundaries.
+   - Run any repository-native catalog or policy validator and record its exact result.
 
 ## Output Format
 
@@ -116,9 +117,13 @@ When invoking `spec-drive`, present the task progress systematically:
 - [ ] Repository specs synchronized (or confirmed unchanged)
 ```
 
+## Stabilization handoff
+
+When the repository defines a candidate/stable policy, remain `candidate` until catalog parity, routing coverage, safety review, documentation consistency, and repository-native validation all pass. Record unresolved breaking-change decisions, blockers, and open questions instead of promoting the status optimistically.
+
 ## Plan handoff
 
-When `mark-plan` is active, use its `.plans/<task-name>.md` as the execution SSOT. Put the SDD contracts, laws, invariants, and TDD slices in the plan or link them from the plan; do not create a competing plan artifact.
+When `mark-plan` is active, use its `.plans/YYYY-MM-DD/<task-name>.md` as the execution SSOT. Put the SDD contracts, laws, invariants, and TDD slices in the plan or link them from the plan; do not create a competing plan artifact.
 
 ## Controls & Revert
 

@@ -3,7 +3,7 @@
 - Status: `candidate`
 - Basis: 16 current `skills/*/SKILL.md` files
 - Last verified: 2026-08-23
-- Purpose: Define when repository agent skills activate, what scope they cover, and what they produce.
+- Purpose: Define when repository agent skills activate, what scope they cover, what they produce, and how the setup reaches stable status.
 
 ## 1. Scope and Shared Rules
 
@@ -13,6 +13,7 @@
 - Repository-grounded planning, design, implementation, testing, and review
 - Documentation, UI, and commit-message generation and quality verification
 - Synchronization between plan files and permanent specifications
+- Dependency-free validation of skill metadata, catalog parity, routing markers, and safety guards
 
 ### Excluded
 
@@ -29,7 +30,7 @@
 5. **Separate permissions:** Read-only diagnostic skills do not modify files; implementation skills modify only approved scope.
 6. **Explicit handoffs:** Hand design to implementation, test plans to implementation, and UI diagnosis to UI implementation explicitly.
 7. **Approval boundary:** Analysis and planning are read-only by default. Do not modify code, tests, or permanent documentation without user approval.
-8. **Separate authority:** Permanent specifications govern domain rules, public contracts, and architecture; `.plans/` tracks execution state only.
+8. **Separate authority:** Permanent specifications govern domain rules, public contracts, and architecture; `.plans/YYYY-MM-DD/` tracks execution state by plan creation date only.
 
 ## 2. Skill Catalog
 
@@ -84,7 +85,7 @@
 
 ### 3.4 Plan File Rules
 
-When `mark-plan` is active, `.plans/<task-name>.md` is the execution SSOT.
+When `mark-plan` is active, `.plans/YYYY-MM-DD/<task-name>.md` is the execution SSOT; create the ISO-date folder when creating a plan and search all date folders when reusing one.
 
 - State: `planned → in-progress → complete|cancelled`, or `in-progress ↔ blocked`.
 - Do not execute checklist items while the plan is `planned` and awaiting approval.
@@ -167,7 +168,7 @@ Use Lean path for established UI and Full path for new visual directions or majo
 
 #### `mark-plan`
 
-`.plans/<task-name>.md` is the single source of truth for scope, decisions, progress, and verification. Wait for review during planning and switch to `in-progress` only after explicit execution approval. Check items only after verification. Do not complete a plan with unresolved criteria, checks, failures, blockers, or open questions.
+`.plans/YYYY-MM-DD/<task-name>.md` is the single source of truth for scope, decisions, progress, and verification. Wait for review during planning and switch to `in-progress` only after explicit execution approval. Check items only after verification. Do not complete a plan with unresolved criteria, checks, failures, blockers, or open questions.
 
 #### `spec-drive`
 
@@ -198,7 +199,22 @@ Adopt a law only when supported by at least two distinct cases, repeated cross-b
 - [ ] Permanent domain and architecture specifications are synchronized with the change.
 - [ ] No authority conflict exists between the plan and permanent specifications.
 - [ ] The actual `skills/*/SKILL.md` files match the catalog's names, activation rules, and modification authority.
+- [ ] `python3 scripts/validate-skills.py` passes when the validation script exists.
 
-## 6. Current Repository Documentation State
+## 6. Stabilization Policy
+
+The specification remains `candidate` while any required contract, catalog, safety, documentation, or validation gate is incomplete. Promote it to `stable` only when all of the following are true:
+
+1. Every `skills/*/SKILL.md` has valid metadata and exactly one catalog entry.
+2. Catalog entries match actual names, activation rules, roles, handoffs, and modification authority.
+3. Approval boundaries, plan lifecycle, authority separation, and destructive-command restrictions are explicit and reviewed.
+4. Routing and handoff rules have representative, ecosystem-neutral verification cases.
+5. `AGENTS.md` and `README.md` describe the same safety and discovery model without contradictory instructions.
+6. The repository-native validation command passes, and the final diff has been reviewed.
+7. No unresolved breaking-change decision, blocker, unsupported requirement, or open stabilization question remains.
+
+A change that invalidates any gate returns the status to `candidate` until the gate is restored and recorded.
+
+## 7. Current Repository Documentation State
 
 The repository currently contains the 16 skill documents under `skills/`; no product code, tests, APIs, or domain models were found. This document therefore defines skill operations and does not invent product contracts or executable tests. When product functionality is added, document its specification separately and update this document only for skill-operation changes.

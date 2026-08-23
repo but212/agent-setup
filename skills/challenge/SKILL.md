@@ -10,7 +10,7 @@ disable-model-invocation: true
 
 Inspect context and invoke exactly one sub-skill with evidence. Never ask the user to select a mode when repository or documentation evidence exists. The selected sub-skill owns questioning, challenge, and approval handoff.
 
-When `mark-plan` is active, keep planning artifacts in `.plans/<task-name>.md`; otherwise keep them in the response and do not create ad hoc plan files.
+When `mark-plan` is active, keep planning artifacts in `.plans/YYYY-MM-DD/<task-name>.md`; otherwise keep them in the response and do not create ad hoc plan files.
 
 ## Scope and controls
 

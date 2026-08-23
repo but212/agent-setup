@@ -20,7 +20,7 @@ Consume an approved requirement or contract and produce only deterministic test 
    - **Verify:** Command proving slice and related behavior pass.
    - **Refactor:** Concrete duplication/design issue exposed after Green, or `None`.
 
-When `mark-plan` is active, this output defines the TDD section of `.plans/<task-name>.md`; do not create a competing plan artifact.
+When `mark-plan` is active, this output defines the TDD section of `.plans/YYYY-MM-DD/<task-name>.md`; do not create a competing plan artifact.
 
 Use this authoritative output format:
 

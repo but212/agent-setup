@@ -2,16 +2,16 @@
 name: mark-plan
 description: >
   File-backed planning and execution tracking for coding agents without a native
-  plan mode. Use `.plans/<task-name>.md` as the single source of truth.
+  plan mode. Use `.plans/YYYY-MM-DD/<task-name>.md` as the single source of truth.
 ---
 
 # Mark Plan
 
-Use `.plans/<task-name>.md` as the execution SSOT instead of a UI plan state. Keep it accurate while executing its checklist. Synchronize durable domain or architectural requirements into the appropriate repository documentation.
+Use `.plans/YYYY-MM-DD/<task-name>.md` as the execution SSOT instead of a UI plan state. Create the ISO-date folder for the plan's creation date, then keep the file accurate while executing its checklist. Synchronize durable domain or architectural requirements into the appropriate repository documentation.
 
 ## Operating contract
 
-1. **Create the SSOT:** Before non-trivial implementation, search `.plans/` for a matching task. Reuse a matching `planned`, `in-progress`, or `blocked` plan. Never silently reuse `complete` or `cancelled`; ask whether to reopen it or create a new plan. If several active plans match, ask which to use. Otherwise create `.plans/<task-name>.md` in lowercase kebab-case.
+1. **Create the SSOT:** Before non-trivial implementation, search all date folders under `.plans/` for a matching task. Reuse a matching `planned`, `in-progress`, or `blocked` plan. Never silently reuse `complete` or `cancelled`; ask whether to reopen it or create a new plan. If several active plans match, ask which to use. Otherwise create `.plans/YYYY-MM-DD/<task-name>.md`, creating the current ISO-date folder first, with the task name in lowercase kebab-case.
 2. **Define authority:** The plan governs this task's scope, decisions, progress, blockers, and verification results, but not user requirements or repository guidance.
 3. **Ground the plan:** Inspect relevant code, tests, conventions, and commands. Record confirmed paths and commands; label unresolved facts as assumptions or open questions.
 4. **Bound the work:** State goal, in-scope and out-of-scope work, and acceptance criteria. Do not add speculative tasks.
@@ -122,6 +122,7 @@ independent task belongs in a separate plan.
 ### Close
 
 - Run the relevant repository-native checks and record exact commands/results.
+- If the repository provides a catalog or policy validator, run it and record the result.
 - Confirm every acceptance criterion and required checklist item is checked.
 - Resolve or explicitly record all blockers and open questions.
 - Set status to `complete` only then; use `blocked` when an unresolved external
