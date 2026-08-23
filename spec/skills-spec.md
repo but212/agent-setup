@@ -2,7 +2,7 @@
 
 - Status: `candidate`
 - Basis: 16 current `skills/*/SKILL.md` files
-- Last verified: 2026-08-23
+- Last verified: 2026-08-24
 - Purpose: Define when repository agent skills activate, what scope they cover, what they produce, and how the setup reaches stable status.
 
 ## 1. Scope and Shared Rules
@@ -199,7 +199,7 @@ Adopt a law only when supported by at least two distinct cases, repeated cross-b
 - [ ] Permanent domain and architecture specifications are synchronized with the change.
 - [ ] No authority conflict exists between the plan and permanent specifications.
 - [ ] The actual `skills/*/SKILL.md` files match the catalog's names, activation rules, and modification authority.
-- [ ] `python3 scripts/validate-skills.py` passes when the validation script exists.
+- [ ] `python3 scripts/validate-skills.py` passes when the validation script exists, including dated plan-path validation.
 
 ## 6. Stabilization Policy
 

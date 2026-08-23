@@ -14,7 +14,7 @@ A framework- and language-agnostic operating baseline for coding agents.
 - `AGENTS.md` — repository-wide agent rules.
 - `skills/*/SKILL.md` — individual skill contracts.
 - `spec/skills-spec.md` — catalog, routing, shared invariants, and stabilization policy.
-- `.plans/` — optional file-backed execution plans when planning mode is active.
+- `.plans/YYYY-MM-DD/` — tracked file-backed execution plans grouped by creation date.
 - `scripts/validate-skills.py` — dependency-free catalog and safety validation.
 
 ## Use
@@ -31,7 +31,7 @@ Run the repository's validation script from the root:
 python3 scripts/validate-skills.py
 ```
 
-The script checks skill frontmatter, catalog parity, routing/authority markers, and destructive-command guards. It does not validate product behavior or ecosystem-specific workflows.
+The script checks skill frontmatter, catalog rows, routing/authority markers, dated plan paths, and destructive-command guards. It does not validate product behavior or ecosystem-specific workflows.
 
 ## Status
 
