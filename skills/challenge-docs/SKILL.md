@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 ## Operating contract
 
-Consume a repository-grounded request or decision and produce one confirmed decision summary. Select **Fast path** when all 6 gates pass; otherwise use **Standard path**. User owns decisions and trade-offs. No code, config, or doc modifications prior to user confirmation. This skill challenges scope and trade-offs; it does not design tests or implement changes.
+Consume a repository-grounded request or decision and produce one confirmed decision summary. Use **Fast path** only when all 6 gates pass; otherwise use **Standard path**. The user owns decisions and trade-offs. Do not modify code, config, or docs before confirmation; this skill challenges scope and trade-offs, not tests or implementation.
 
 ## Fast path
 
@@ -25,7 +25,7 @@ Provide compact plan for user confirmation: Goal & scope | Target areas | Intend
 
 ## Standard path
 
-Use when any Fast-path gate fails. Inspect repository facts, docs, code, and types first; do not ask for verifiable facts. Challenge assumptions and ask material design choices one at a time in dependency order.
+Use when any Fast-path gate fails. Inspect repository facts, docs, code, and types first; do not ask for verifiable facts. Challenge assumptions and ask material choices one at a time in dependency order.
 
 - **Questioning:** Ask the user one material decision at a time. Present 2–4 options with `(Recommended)` first.
 - **Format:** Recommendation | Why | Trade-off / Counter-argument | Decision requested.
@@ -39,8 +39,8 @@ Use when any Fast-path gate fails. Inspect repository facts, docs, code, and typ
 
 ## Controls
 
-- **Scope:** Read-only challenge; do not edit code, config, or docs before confirmation.
-- **Activate:** Explicit `/challenge` routing or a request to challenge a repository-grounded decision.
+- **Scope:** Read-only challenge; no edits before confirmation.
+- **Activate:** Explicit `/challenge` routing or a repository-grounded challenge request.
 - **Deactivate:** After the decision summary and handoff.
 
 ## Output & handoff

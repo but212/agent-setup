@@ -6,7 +6,7 @@ description: >
 
 # Crisp Commit
 
-Inspect Git diffs and generate factual, high-density Conventional Commit messages.
+Generate factual, high-density Conventional Commit messages from Git diffs.
 
 ## Operating Contract
 
@@ -16,9 +16,9 @@ Inspect Git diffs and generate factual, high-density Conventional Commit message
 
 ## Workflow
 
-1. **Target Identification**: Inspect `git status --short`, explicit target/range, `git diff --staged`, `git diff`, and targeted untracked files without staging or modifying files. Report if no grounded diff exists.
-2. **Context & Language**: Check `git log -n 5` for commit language. Filter out non-diff remarks.
-3. **Analysis**: Inventory material structural changes vs. superficial formatting/imports.
+1. **Target:** Inspect `git status --short`, explicit target/range, `git diff --staged`, `git diff`, and targeted untracked files without staging or modifying files. Report if no grounded diff exists.
+2. **Context:** Check `git log -n 5` for commit language; default to English when unavailable or inconclusive, and filter non-diff remarks.
+3. **Analysis:** Separate material structural changes from superficial formatting/imports.
 4. **Format Selection**:
    - **Simple diff**: Single-line subject (`<type>(<scope>): <summary>`).
    - **Complex diff**: Subject line + bulleted body with exact symbol/file anchors.
@@ -36,8 +36,8 @@ Inspect Git diffs and generate factual, high-density Conventional Commit message
 
 ## Controls
 
-- **Scope:** Read-only commit-message generation; never stage, commit, or modify files.
-- **Activate:** `/crisp-commit` or an explicit request for a commit message.
+- **Scope:** Read-only; never stage, commit, or modify files.
+- **Activate:** `/crisp-commit` or an explicit commit-message request.
 
 ## Output Format
 

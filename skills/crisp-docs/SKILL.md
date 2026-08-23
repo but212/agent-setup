@@ -13,16 +13,12 @@ disable-model-invocation: true
 
 Compress explicitly named documents without weakening their meaning, usability, or factual precision. `crisp` handles response prose and output style; `crisp-agent-docs` handles agent instruction contracts; this skill handles general documentation.
 
-## Operating contract
-
-Produce the smallest clear document that preserves every fact, constraint, qualification, example, and action needed by its audience.
-
 ## Scope and defaults
 
-- **Named targets only:** Process only documents explicitly named by the user or unambiguously selected by the request. Do not rewrite an entire documentation tree by default.
+- **Named targets only:** Process only documents explicitly named or unambiguously selected; do not rewrite a documentation tree by default.
 - **Supported prose:** Markdown, plain text, and other human-readable documentation. Do not modify source code, configuration, generated files, lockfiles, or machine-readable data as prose.
-- **In-place editing:** Edit explicitly targeted files in place by default. For review, analysis, or no-edit requests, return findings or a proposed rewrite without editing.
-- **Audience first:** Preserve the document's audience, purpose, language, voice, and required level of formality unless the user requests a change.
+- **In-place editing:** Edit targeted files in place unless the request is review, analysis, or no-edit.
+- **Audience first:** Preserve audience, purpose, language, voice, and formality unless asked otherwise.
 - **Structure preservation:** Keep headings, links, anchors, lists, tables, code blocks, frontmatter, identifiers, commands, paths, numbers, and machine-readable text intact. Change surrounding explanation only when safe.
 
 ## Compression rules

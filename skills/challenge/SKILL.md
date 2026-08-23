@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 ## Operating contract
 
-Inspect environment context and invoke exactly one sub-skill with evidence. Never prompt for mode selection when codebase/doc evidence exists. Selected sub-skill owns questioning, challenge pass, and approval handoff.
+Inspect context and invoke exactly one sub-skill with evidence. Never ask the user to select a mode when repository or documentation evidence exists. The selected sub-skill owns questioning, challenge, and approval handoff.
 
 When `mark-plan` is active, keep planning artifacts in `.plans/<task-name>.md`; otherwise keep them in the response and do not create ad hoc plan files.
 

@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 ## Operating contract
 
-Consume an early-stage request or decision without repository evidence and produce one confirmed decision summary. Automatically select **Fast path** when all 4 gates pass; otherwise use **Standard path**. User owns all decisions and trade-offs. This skill challenges assumptions; it does not produce implementation or test plans.
+Consume an early-stage request or decision without repository evidence and produce one confirmed decision summary. Use **Fast path** only when all 4 gates pass; otherwise use **Standard path**. The user owns decisions and trade-offs; this skill challenges assumptions, not implementation or test plans.
 
 ## Fast path
 
@@ -32,7 +32,7 @@ Use when any Fast-path gate fails. Challenge core assumptions and ask material d
 ## Controls
 
 - **Scope:** Read-only challenge without repository artifacts.
-- **Activate:** Explicit `/challenge` routing or a request to stress-test an idea without a codebase.
+- **Activate:** Explicit `/challenge` routing or a codebase-free idea challenge.
 - **Deactivate:** After the decision summary and handoff.
 
 ## Output & handoff

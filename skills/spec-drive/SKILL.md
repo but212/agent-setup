@@ -12,14 +12,14 @@ Drive complex or contract-sensitive changes through high-density specifications,
 
 ## Operating Contract
 
-`spec-drive` owns contract orchestration only: it defines the requirement boundary and coordinates delegated design, test planning, implementation, and synchronization. `lean-design` owns structural design, `tdd-plan` owns test slices, and `lean-mode` owns production edits.
+`spec-drive` defines the requirement boundary and coordinates delegation: `lean-design` owns structure, `tdd-plan` owns test slices, and `lean-mode` owns production edits.
 
-1. **Crisp over Bloat:** Specifications must express concrete observable behaviors, invariants, and input/output contracts. No speculative requirements or decorative text.
-2. **Lean over Patchwork:** Eliminate impossible states structurally before implementing logic. Implement the minimum code needed to satisfy the contracts.
-3. **Bounded Generalization:** Extract laws as `condition -> guarantee` from multiple cases or explicit domain evidence. State scope, preconditions, exceptions, and counterexamples; reject one-case restatements and unsupported universal abstractions. Promote a law to a shared domain rule only when it recurs across boundaries or has clear reuse evidence.
-4. **Evidence-Gated Pipeline:** Progress through the 4-phase SDD pipeline. Stop for user review on breaking changes, major architectural trade-offs, genuine ambiguity, or before any implementation when explicit execution approval is absent.
-5. **Living Spec Sync:** Keep execution contracts in the active `.plans/<task-name>.md` when `mark-plan` is active; synchronize permanent domain and architectural documentation in the repository in the same change.
-6. **Authority Separation:** Permanent specifications are authoritative for domain rules, public contracts, and architecture. Plans track execution scope and verification state only.
+1. **Crisp over Bloat:** Express concrete observable behavior, invariants, and input/output contracts; omit speculative requirements and decoration.
+2. **Lean over Patchwork:** Eliminate impossible states before implementing logic; write only the code needed to satisfy contracts.
+3. **Bounded Generalization:** Extract `condition -> guarantee` laws only from multiple cases or explicit domain evidence. State scope, preconditions, exceptions, and counterexamples; reject one-case restatements and unsupported abstractions. Promote laws to shared rules only with cross-boundary recurrence or clear reuse evidence.
+4. **Evidence-Gated Pipeline:** Follow the 4 phases. Stop for review on breaking changes, major architectural trade-offs, genuine ambiguity, or before implementation without explicit approval.
+5. **Living Spec Sync:** Keep execution contracts in `.plans/<task-name>.md` when `mark-plan` is active; synchronize permanent domain and architecture docs in the same change.
+6. **Authority Separation:** Permanent specifications govern domain rules, public contracts, and architecture; plans track execution scope and verification only.
 7. **Composed Activation:** When `/crisp` is active with `/spec-drive`, `spec-drive` coordinates the task and `crisp` controls response prose only; it does not grant edit permission.
 
 ## The 4-Phase SDD Pipeline

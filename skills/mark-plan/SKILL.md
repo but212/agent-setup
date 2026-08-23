@@ -7,33 +7,16 @@ description: >
 
 # Mark Plan
 
-Use a Markdown plan file instead of a UI plan state machine. Create or update
-`.plans/<task-name>.md`, then execute its checklist while keeping the file
-accurate. The plan is local execution state; synchronize durable domain or
-architectural requirements into the repository's appropriate documentation when
-the task changes them.
+Use `.plans/<task-name>.md` as the execution SSOT instead of a UI plan state. Keep it accurate while executing its checklist. Synchronize durable domain or architectural requirements into the appropriate repository documentation.
 
 ## Operating contract
 
-1. **Create the SSOT:** Before non-trivial implementation, search `.plans/` for
-   a matching task. Reuse one matching `planned`, `in-progress`, or `blocked`
-   plan. Do not silently reuse a `complete` or `cancelled` plan; ask whether to
-   reopen it or create a new plan. If several active plans match, ask which one
-   to use. Otherwise create `.plans/<task-name>.md` with lowercase kebab-case.
-2. **Define authority:** The plan is authoritative for this task's scope,
-   decisions, progress, blockers, and verification results. It does not override
-   user requirements or repository guidance.
-3. **Ground the plan:** Inspect the relevant code, tests, conventions, and
-   repository commands. Record confirmed paths and commands; label unresolved
-   facts as assumptions or open questions.
-4. **Bound the work:** State the goal, in-scope work, out-of-scope work, and
-   acceptance criteria. Do not add speculative tasks.
-5. **Make it executable:** Give acceptance criteria stable IDs and map each
-   checklist item to one or more IDs. Order items by dependency; name target
-   paths and a concrete verification command or observable result.
-6. **Update as truth changes:** Mark items only after completion and verification.
-   Record decisions, deviations, blockers, and verification results in the plan;
-   do not hide them only in chat.
+1. **Create the SSOT:** Before non-trivial implementation, search `.plans/` for a matching task. Reuse a matching `planned`, `in-progress`, or `blocked` plan. Never silently reuse `complete` or `cancelled`; ask whether to reopen it or create a new plan. If several active plans match, ask which to use. Otherwise create `.plans/<task-name>.md` in lowercase kebab-case.
+2. **Define authority:** The plan governs this task's scope, decisions, progress, blockers, and verification results, but not user requirements or repository guidance.
+3. **Ground the plan:** Inspect relevant code, tests, conventions, and commands. Record confirmed paths and commands; label unresolved facts as assumptions or open questions.
+4. **Bound the work:** State goal, in-scope and out-of-scope work, and acceptance criteria. Do not add speculative tasks.
+5. **Make it executable:** Give criteria stable IDs and map each checklist item to them. Order items by dependency; name target paths and a concrete verification command or observable result.
+6. **Update as truth changes:** Mark items only after completion and verification. Record decisions, deviations, blockers, and results in the plan, not only in chat.
 7. **Protect user control:** Planning ends in review. Do not execute checklist
    items until the user explicitly approves execution (for example, “execute the
    plan”, “start implementation”, or equivalent); merely creating or reviewing a
