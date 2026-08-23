@@ -22,6 +22,15 @@
 - Unsupported requirements, abstractions, tests, or performance optimization
 - Implementation or scope expansion without user approval
 
+### Prompt Design Principles
+
+The skill contracts implement prompt engineering as input/output interface design and a communication protocol between the model and the task, not as prose writing:
+
+1. **Interfaces, not spells:** Every skill defines explicit inputs (operating contracts) and expected outputs (authoritative output formats); persona role-play and magic keywords are not used.
+2. **Decomposition over one-shot prompts:** Complex workflows are split into routed skills with explicit handoffs and separated modification authority (see Section 3).
+3. **Evaluation criteria over format:** Skills state the logical criteria good output must satisfy and how edge cases are handled; verification is repository-native and deterministic.
+4. **Iterative refinement over static templates:** Work starts from the simplest contract and gains constraints only where verification fails (TDD slices, plan state transitions, stabilization policy).
+
 ### Shared Invariants
 
 1. **Evidence first:** Infer intent in this order: runtime behavior, tests, types, schemas, and documentation. Mark unverifiable facts as assumptions.

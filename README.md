@@ -9,6 +9,15 @@ A framework- and language-agnostic operating baseline for coding agents.
 - Evidence-first, minimal-change, deterministic-verification guidance.
 - Safety rules for preserving user work and refusing destructive commands unless explicitly requested.
 
+## Design principles
+
+The skill contracts treat prompt engineering as input/output interface design and a communication protocol between the model and the task, not as writing polished sentences:
+
+- **Interfaces, not spells:** Each skill defines explicit inputs (operating contracts) and expected outputs (authoritative formats), not magic keywords or persona role-play.
+- **Decomposition:** Complex workflows are split into routed skills (`challenge`, `lean-*`, `tdd-plan`, `spec-drive`) with explicit handoffs and separated modification authority, instead of one monolithic prompt.
+- **Evaluation criteria:** Skills state the logical criteria good output must satisfy and how edge cases are handled, verified through repository-native checks.
+- **Iterative refinement:** Work starts from the simplest contract (TDD slices, `planned` plan states) and gains constraints only where verification fails.
+
 ## Inspirations
 
 - `lean-*` — inspired by [ponytail](https://github.com/DietrichGebert/ponytail).
