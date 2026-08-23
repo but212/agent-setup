@@ -11,6 +11,13 @@ set -eu
 REPO_ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 TARGET=${AGENT_HOME:-"$HOME/.agents"}
 
+case "$TARGET" in
+"/" | "$HOME")
+  echo "refusing unsafe AGENT_HOME: $TARGET" >&2
+  exit 1
+  ;;
+esac
+
 LINK_PI=0
 for arg in "$@"; do
   case $arg in
@@ -36,13 +43,9 @@ mkdir -p "$TARGET"
 cp "$REPO_ROOT/AGENTS.md" "$TARGET/AGENTS.md"
 echo "copied: AGENTS.md -> $TARGET/AGENTS.md"
 
-# Mirror skills/: remove stale skill dirs/files, then copy current content.
+# Mirror skills/: rsync --delete removes stale copies inside <target>/skills only.
 mkdir -p "$TARGET/skills"
-for existing in "$TARGET/skills"/*; do
-  [ -e "$existing" ] || continue
-  rm -rf "$existing"
-done
-cp -R "$REPO_ROOT/skills/." "$TARGET/skills/"
+rsync -a --delete "$REPO_ROOT/skills/" "$TARGET/skills/"
 echo "mirrored: skills/ -> $TARGET/skills ($(find "$TARGET/skills" -name SKILL.md | wc -l) skills)"
 
 if [ "$LINK_PI" -eq 1 ]; then

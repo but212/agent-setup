@@ -14,6 +14,7 @@
 - Documentation and commit-message generation and quality verification
 - Synchronization between plan files and permanent specifications
 - Dependency-free validation of skill metadata, catalog parity, routing markers, and safety guards
+- Deployment mirroring of `AGENTS.md` and `skills/` into the shared agent folder
 
 ### Excluded
 
@@ -91,6 +92,15 @@ When `mark-plan` is active, `.plans/YYYY-MM-DD/<task-name>.md` is the execution 
 - Keep execution contracts in the plan and synchronize domain and architecture requirements with permanent repository documentation.
 - Permanent specifications govern domain rules, public contracts, and architecture decisions.
 - When copying contracts into a plan, link to their permanent specification source; the plan tracks scope, checklist, and verification state only.
+
+### 3.5 Deployment Mirror Rules
+
+`scripts/deploy-agents.sh` mirrors repository content into the shared agent folder (`~/.agents`, overridable via `AGENT_HOME`).
+
+- The deployment target is a copy destination only; the repository remains the source of truth.
+- Skills mirroring uses `rsync --delete`, never a manual `rm -rf` loop; deletions are limited to stale copies inside `<target>/skills/`.
+- `AGENT_HOME` resolving to `/` or `$HOME` is refused before any write.
+- A real (non-symlink) file at pi's global instructions path is never overwritten; `--link` refuses instead.
 
 ## 4. Skill Contracts
 
