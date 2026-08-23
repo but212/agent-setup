@@ -1,7 +1,7 @@
 # Agent Skills Integration Specification
 
 - Status: `candidate`
-- Basis: 16 current `skills/*/SKILL.md` files
+- Basis: 14 current `skills/*/SKILL.md` files
 - Last verified: 2026-08-24
 - Purpose: Define when repository agent skills activate, what scope they cover, what they produce, and how the setup reaches stable status.
 
@@ -11,7 +11,7 @@
 
 - Skill selection and handoffs based on request intent
 - Repository-grounded planning, design, implementation, testing, and review
-- Documentation, UI, and commit-message generation and quality verification
+- Documentation and commit-message generation and quality verification
 - Synchronization between plan files and permanent specifications
 - Dependency-free validation of skill metadata, catalog parity, routing markers, and safety guards
 
@@ -28,7 +28,7 @@
 3. **Preserve boundaries:** Do not remove or weaken input validation, error handling, security, authorization, accessibility, or domain invariants.
 4. **Verifiability:** Verify changed behavior with repository-native tools. Claim success only when the actual command succeeds.
 5. **Separate permissions:** Read-only diagnostic skills do not modify files; implementation skills modify only approved scope.
-6. **Explicit handoffs:** Hand design to implementation, test plans to implementation, and UI diagnosis to UI implementation explicitly.
+6. **Explicit handoffs:** Hand design to implementation and test plans to implementation explicitly.
 7. **Approval boundary:** Analysis and planning are read-only by default. Do not modify code, tests, or permanent documentation without user approval.
 8. **Separate authority:** Permanent specifications govern domain rules, public contracts, and architecture; `.plans/YYYY-MM-DD/` tracks execution state by plan creation date only.
 
@@ -43,8 +43,6 @@
 | `crisp-docs` | Compresses general documentation | Named documentation compression request | Named files only |
 | `crisp-agent-docs` | Compresses agent rule documents | Named `SKILL.md` or similar request | Named files only |
 | `crisp-commit` | Generates evidence-based Conventional Commits | Commit-message request | None |
-| `interface-audit` | Read-only evidence-based UI audit | UI audit or review request | None |
-| `interface-craft` | Implements approved UI visual changes | Approved UI visual change | Approved UI paths only |
 | `lean-design` | Designs around states, types, and boundaries | Structural, invariant, or API design request | None |
 | `lean-mode` | Makes the smallest correct code change | Implementation, fix, or refactor request | Approved code scope |
 | `lean-review` | Adversarial diff or repository review | Code review or full audit request | None |
@@ -69,11 +67,9 @@
 1. Run `lean-design` first when states, types, data, or API boundaries are central.
 2. Use `tdd-plan` when a test-first plan is needed, then hand implementation to `lean-mode`.
 3. Use `lean-test` for test-only work.
-4. Use `interface-craft` for visual, layout, typography, color, motion, or copy changes.
-5. Use `interface-audit` first to diagnose existing UI problems, then hand findings to `interface-craft` after approval.
-6. Use `spec-drive` to coordinate contract-sensitive work involving state transitions, persistence, security, public contracts, or major architecture decisions.
-7. Use `lean-review` for read-only diff or repository audits; it does not modify files.
-8. `lean-mode` does not replace `lean-review`, `tdd-plan`, or `lean-test`.
+4. Use `spec-drive` to coordinate contract-sensitive work involving state transitions, persistence, security, public contracts, or major architecture decisions.
+5. Use `lean-review` for read-only diff or repository audits; it does not modify files.
+6. `lean-mode` does not replace `lean-review`, `tdd-plan`, or `lean-test`.
 
 ### 3.3 Execution Modes and Composed Activation
 
@@ -154,17 +150,7 @@ Test observable public boundaries with the smallest set covering representative 
 
 Assume the change is wrong and falsify semantic preservation, scope, structure, YAGNI, boundary integrity, duplication, and dead surfaces. Every finding includes location, reproduction condition, failure mechanism, evidence, and the smallest alternative. Use P1/P2/P3 and the defined tags. Review only; do not modify files.
 
-### 4.5 UI Skills
-
-#### `interface-audit`
-
-Define the target surface and single user purpose, then inspect local components, tokens, styles, tests, and render states. Always assess hierarchy and layout; assess typography, color, semantics, interaction, motion, resilience, copy, and states when applicable. Findings include ID, severity, location, evidence type, evidence, user impact, principle, minimum direction, and confidence.
-
-#### `interface-craft`
-
-Use Lean path for established UI and Full path for new visual directions or major redesigns. Preserve existing tokens, boundaries, semantics, and vocabulary. Before implementation define the target, patterns/tokens, constraints, intended visual outcome, and responsive, focus, motion, contrast, and render checks. Do not claim render verification when it was unavailable.
-
-### 4.6 Coordination and Synchronization Skills
+### 4.5 Coordination and Synchronization Skills
 
 #### `mark-plan`
 
@@ -194,7 +180,6 @@ Adopt a law only when supported by at least two distinct cases, repeated cross-b
 - [ ] Validation, error handling, security, and accessibility at public boundaries are preserved.
 - [ ] Every executable contract has deterministic verification; non-executable contracts record a verification method.
 - [ ] When a plan is used, every checklist item and acceptance criterion has a recorded verification result.
-- [ ] UI changes verify responsive behavior, keyboard access, reduced motion, contrast, and rendering when applicable.
 - [ ] Read-only skills did not modify files.
 - [ ] Permanent domain and architecture specifications are synchronized with the change.
 - [ ] No authority conflict exists between the plan and permanent specifications.
@@ -217,4 +202,4 @@ A change that invalidates any gate returns the status to `candidate` until the g
 
 ## 7. Current Repository Documentation State
 
-The repository currently contains the 16 skill documents under `skills/`; no product code, tests, APIs, or domain models were found. This document therefore defines skill operations and does not invent product contracts or executable tests. When product functionality is added, document its specification separately and update this document only for skill-operation changes.
+The repository currently contains the 14 skill documents under `skills/`; no product code, tests, APIs, or domain models were found. This document therefore defines skill operations and does not invent product contracts or executable tests. When product functionality is added, document its specification separately and update this document only for skill-operation changes.

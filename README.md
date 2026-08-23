@@ -9,6 +9,12 @@ A framework- and language-agnostic operating baseline for coding agents.
 - Evidence-first, minimal-change, deterministic-verification guidance.
 - Safety rules for preserving user work and refusing destructive commands unless explicitly requested.
 
+## Inspirations
+
+- `lean-*` — inspired by [ponytail](https://github.com/DietrichGebert/ponytail).
+- `crisp*` — inspired by [caveman](https://github.com/JuliusBrussee/caveman).
+- `challenge*` — inspired by [grill-me](https://github.com/mattpocock/skills/tree/main/skills/productivity/grill-me).
+
 ## Layout
 
 - `AGENTS.md` — repository-wide agent rules.
