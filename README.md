@@ -16,6 +16,7 @@ A framework- and language-agnostic operating baseline for coding agents.
 - `spec/skills-spec.md` — catalog, routing, shared invariants, and stabilization policy.
 - `.plans/YYYY-MM-DD/` — tracked file-backed execution plans grouped by creation date.
 - `scripts/validate-skills.py` — dependency-free catalog and safety validation.
+- `scripts/deploy-agents.sh` — mirrors `AGENTS.md` and `skills/` into `~/.agents` (the shared agent folder); `--link` also symlinks pi's global instructions to it.
 
 ## Use
 
