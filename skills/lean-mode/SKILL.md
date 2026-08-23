@@ -1,79 +1,62 @@
 ---
 name: lean-mode
 description: >
-  Produces the smallest correct coding change. Use for writing, adding,
-  refactoring, fixing code, choosing dependencies, or implementing requested
-  changes. Do not use for read-only code or diff review; use `lean-review`.
-  Also use when
-  the user requests a minimal, simple, lazy, YAGNI, short-path, or non-bloated
-  solution. Use after `lean-design` when structural design is also required.
-  Do not use for prose compression, document style, or non-coding requests.
+  Produces the smallest correct coding change adhering to lean-design models.
+  Use for writing, refactoring, fixing code, and managing dependencies.
+  Do not use for prose compression or read-only review; use `lean-review`.
 ---
 
 # Lean Mode
 
-Choose the smallest correct change for coding tasks. `crisp-*` handles prose; this skill handles executable code and repository changes. `lean-review` owns read-only diff and repository reviews.
-
-Invoke `lean-design` first when state, type, data, or API design is the main problem. If `lean-design` is inactive, perform a brief structural pass over states, invariants, and boundaries before editing.
+Choose the smallest correct change for coding tasks based on approved structural models.
 
 ## Operating contract
 
-Consume an approved requirement, structural design, or TDD slice and produce the smallest correct code change. `lean-mode` owns production edits; it does not replace `tdd-plan` for test planning or `lean-review` for read-only review.
+Consume an approved requirement, structural design (`lean-design`), or failing test (`lean-test`) and produce the minimal correct code change.
 
-Make the smallest correct change after grounding in runtime behavior, tests, types, and call boundaries. Trace real flow end-to-end before choosing implementation.
+Make changes only after tracing execution flow end-to-end through runtime behavior, tests, types, and call boundaries. Fix root causes at shared boundaries, not symptoms at caller sites. Preserve explicit domain contracts established by `lean-design`.
 
-## Routing precedence
+## Universal decision ladder
 
-- Use `lean-review` for read-only diff or repository audits.
-- Use `lean-design` before implementation when states, invariants, types, data, or API boundaries are the main problem.
-- Use `tdd-plan` for a test-first implementation plan; use `lean-test` for test-only implementation or test diagnosis.
-- Use `spec-drive` instead of assembling these steps manually when the change is contract-sensitive or architecturally material.
+Stop at the first applicable rung:
 
-## Performance and complexity gate
+1. **Need to exist?** (YAGNI) Skip speculative branches, extension points, and unused config knobs.
+2. **Already in the codebase?** Reuse existing helpers, types, patterns, or installed dependencies.
+3. **Native language / stdlib primitive?** Use standard collection pipelines, built-in pattern matching, or standard error types.
+4. **Installed dependency solves it?** Reuse installed tools; reject new packages for small utilities.
+5. **Parse, Don't Validate**: Parse untrusted input into strict domain types at the boundary once; never repeatedly validate raw primitives inside inner functions.
+6. **One Clear Expression**: Prefer a single deterministic expression over intermediate mutable state. Avoid cryptic syntax-golfing.
+7. **Smallest Local Implementation**: Write the minimal cohesive logic that satisfies the contract.
 
-- **Performance gate**: Measure before optimizing. Change performance only when a representative baseline identifies a dominant path.
-- **Required complexity**: Do not simplify away necessary complexity demanded by input, business, or environmental constraints.
+## Invariant boundaries (never minimize)
 
-## Decision ladder
+- Input sanitization and authorization gates at trust boundaries
+- Explicit error handling that prevents data corruption, silent failure, or lost context
+- Atomic state transitions (DB transactions, concurrency guards, compare-and-swap, or equivalent)
+- Resource ownership, cleanup, and cancellation at I/O boundaries
+- Explicit domain contracts established by `lean-design`
 
-Stop at first applicable rung:
+Errors must follow the repository's established propagation model consistently: return typed errors where the language uses them, or preserve meaningful exceptions where that is the contract. Do not swallow, reclassify, or duplicate handling without evidence.
 
-1. **Need to exist?** Skip speculative work; state assumptions (YAGNI).
-2. **Already in codebase?** Reuse existing helper, util, type, pattern, or installed dependency.
-3. **Stdlib does it?** Use standard library.
-4. **Native platform feature covers it?** Use declarative UI/CSS, DB constraints, or native primitives.
-5. **Installed dependency solves it?** Use existing dependencies; do not add new packages for trivial lines.
-6. **One clear line?** Prefer a single readable expression over multi-line code. Avoid unreadable ternaries or golfed hacks.
-7. **Local implementation**: Write the smallest local implementation that works.
+## Scope rules
 
-## Bug fix rule
-
-Fix bugs at shared root cause, not symptoms in individual callers. Trace callers before editing.
-
-## Boundaries (When NOT to minimize)
-
-Never simplify away:
-
-- Input validation at trust boundaries
-- Error handling preventing data loss
-- Security controls
-- Accessibility basics
-- Explicitly requested features/requirements
-
-Avoid unrequested abstractions: single-implementation interfaces, single-product factories, or static configs for fixed values.
-
-## Output format
-
-For implementation requests, output the smallest code change first. For dependency selection or no-edit requests, lead with recommendation and evidence. Add at most two short lines when mechanisms are skipped:
-
-```text
-Skipped: <unnecessary mechanism>.
-Add <mechanism> when <observable trigger>.
-```
+- Use `lean-design` first when states, types, data, or API boundaries are the main problem.
+- Use `lean-test` for test-only changes and `lean-review` for read-only audits.
+- Use `spec-drive` for contract-sensitive or materially architectural changes.
+- Do not add abstractions, factories, interfaces, or dependencies without demonstrated need.
 
 ## Verification
 
-Choose the narrowest repository-native check that covers the changed behavior. Non-trivial logic (branch, loop, parser, security/money path) requires a runnable check. A one-line change still requires validation when it affects a public boundary, configuration, schema, security control, or user-visible behavior; otherwise no test is required.
+Run the narrowest repository-native check covering changed behavior. Non-trivial logic (branches, loops, parsers, security, money, concurrency, or public boundaries) requires a runnable check. Never claim success unless the command exits cleanly.
+
+## Output format
+
+Lead immediately with the code change. When mechanisms are intentionally omitted:
+
+```text
+Skipped: <unnecessary abstraction/guard>.
+Add <mechanism> when <observable trigger>.
+```
 
 ## Controls
 
