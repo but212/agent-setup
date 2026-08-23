@@ -15,6 +15,8 @@ A framework- and language-agnostic operating baseline for coding agents.
 - `crisp*` — inspired by [caveman](https://github.com/JuliusBrussee/caveman).
 - `challenge*` — inspired by [grill-me](https://github.com/mattpocock/skills/tree/main/skills/productivity/grill-me).
 
+See NOTICE for third-party license notices.
+
 ## Layout
 
 - `AGENTS.md` — repository-wide agent rules.
