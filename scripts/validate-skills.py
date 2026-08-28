@@ -28,14 +28,14 @@ def frontmatter(path: Path) -> dict[str, str]:
     return values
 
 
-def catalog_names(text: str) -> set[str]:
+def catalog_names(text: str) -> list[str]:
     section = text.split("## 3. Routing and Handoffs", 1)[0]
     table = section.split("## 2. Skill Catalog", 1)[-1]
-    return {
+    return [
         match.group(1)
         for line in table.splitlines()
         if (match := re.match(r"\|\s*`([^`]+)`\s*\|", line))
-    }
+    ]
 
 
 def main() -> int:
@@ -62,6 +62,13 @@ def main() -> int:
 
     catalog_text = CATALOG.read_text(encoding="utf-8")
     listed_names = catalog_names(catalog_text)
+    listed_counts: dict[str, int] = {}
+    for name in listed_names:
+        listed_counts[name] = listed_counts.get(name, 0) + 1
+    for name, count in sorted(listed_counts.items()):
+        if count != 1:
+            errors.append(f"catalog skill must appear exactly once: {name} ({count} rows)")
+
     catalog_section = catalog_text.split("## 3. Routing and Handoffs", 1)[0]
     catalog_table = catalog_section.split("## 2. Skill Catalog", 1)[-1]
     for line in catalog_table.splitlines():
@@ -71,9 +78,10 @@ def main() -> int:
         if len(fields) != 4 or any(not field for field in fields):
             errors.append(f"malformed catalog row: {line}")
 
-    for name in sorted(actual_names - listed_names):
+    listed_name_set = set(listed_names)
+    for name in sorted(actual_names - listed_name_set):
         errors.append(f"catalog missing skill: {name}")
-    for name in sorted(listed_names - actual_names):
+    for name in sorted(listed_name_set - actual_names):
         errors.append(f"catalog lists absent skill: {name}")
 
     required_catalog_terms = (

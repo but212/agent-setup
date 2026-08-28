@@ -1,7 +1,7 @@
 # Agent Skills Integration Specification
 
 - Status: `candidate`
-- Basis: 14 current `skills/*/SKILL.md` files
+- Basis: 15 current `skills/*/SKILL.md` files
 - Last verified: 2026-08-24
 - Purpose: Define when repository agent skills activate, what scope they cover, what they produce, and how the setup reaches stable status.
 
@@ -59,6 +59,7 @@ The skill contracts implement prompt engineering as input/output interface desig
 | `lean-test` | Designs, writes, or diagnoses minimal deterministic tests | Test request | Test scope only |
 | `mark-plan` | Tracks execution through `.plans/` files | Planning mode or checklist request | Plan file |
 | `tdd-plan` | Creates an implementation-ready TDD plan | TDD plan request | None |
+| `sql-orm-indicator-audit` | Audits SQL and ORM query risks | Explicit audit request | None (read-only) |
 | `spec-drive` | Coordinates contract-centered SDD | `/spec-drive`, `/sdd`, contract-sensitive change | Contract coordination only |
 
 ## 3. Routing and Handoffs
@@ -108,8 +109,10 @@ When `mark-plan` is active, `.plans/YYYY-MM-DD/<task-name>.md` is the execution 
 
 - The deployment target is a copy destination only; the repository remains the source of truth.
 - Skills mirroring uses `rsync --delete`, never a manual `rm -rf` loop; deletions are limited to stale copies inside `<target>/skills/`.
-- `AGENT_HOME` resolving to `/` or `$HOME` is refused before any write.
+- `AGENT_HOME` is canonicalized before writes; resolving to `/` or `$HOME` is refused.
+- Existing symlinked targets or destination entries (`AGENT_HOME`, `AGENTS.md`, `skills/`, or pi's agent directory) are refused before writes.
 - A real (non-symlink) file at pi's global instructions path is never overwritten; `--link` refuses instead.
+- Relative `AGENT_HOME` values are supported and produce an absolute pi global-instructions link.
 
 ## 4. Skill Contracts
 
@@ -169,6 +172,10 @@ Test observable public boundaries with the smallest set covering representative 
 
 Assume the change is wrong and falsify semantic preservation, scope, structure, YAGNI, boundary integrity, duplication, and dead surfaces. Every finding includes location, reproduction condition, failure mechanism, evidence, and the smallest alternative. Use P1/P2/P3 and the defined tags. Review only; do not modify files.
 
+#### `sql-orm-indicator-audit`
+
+Audit raw SQL and ORM query risks using static analysis by default. Regex and language-agnostic AST specifications produce candidates, not security proofs. Dynamic plan analysis requires explicit approval, a disposable non-production environment, a read-only transaction, and a statement timeout; never execute DDL or DML as part of the audit. Report unsupported constructs and unmeasured impact honestly. Read-only audit; do not modify files.
+
 ### 4.5 Coordination and Synchronization Skills
 
 #### `mark-plan`
@@ -221,4 +228,4 @@ A change that invalidates any gate returns the status to `candidate` until the g
 
 ## 7. Current Repository Documentation State
 
-The repository currently contains the 14 skill documents under `skills/`; no product code, tests, APIs, or domain models were found. This document therefore defines skill operations and does not invent product contracts or executable tests. When product functionality is added, document its specification separately and update this document only for skill-operation changes.
+The repository currently contains the 15 skill documents under `skills/`; no product code, APIs, or domain models were found. The repository now has dependency-free regression tests for deployment and catalog contracts. This document therefore defines skill operations and does not invent product contracts. When product functionality is added, document its specification separately and update this document only for skill-operation changes.
