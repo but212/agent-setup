@@ -8,13 +8,13 @@ disable-model-invocation: true
 
 ## Operating contract
 
-Inspect context and invoke exactly one sub-skill with evidence. Never ask the user to select a mode when repository or documentation evidence exists. The selected sub-skill owns questioning, challenge, and approval handoff.
+Inspect context and invoke exactly one sub-skill with evidence. If repository or documentation evidence exists, choose the mode instead of asking the user to choose it. The selected child owns questioning, artifacts, and the approval handoff.
 
-When `mark-plan` is active, keep planning artifacts in `.plans/YYYY-MM-DD/<task-name>.md`; otherwise keep them in the response and do not create ad hoc plan files.
+When `mark-plan` is active, keep planning artifacts in `.plans/YYYY-MM-DD/<task-name>.md`; otherwise report in chat and create no ad hoc plan files.
 
-## Scope and controls
+## Controls
 
-- **Scope:** Route only; the selected sub-skill owns questioning, artifacts, and handoff.
+- **Scope:** Route only; the selected child owns the remainder.
 - **Activate:** `/challenge` or an explicit request to stress-test assumptions.
 - **Deactivate:** After routing to exactly one sub-skill.
 

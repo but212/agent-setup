@@ -24,12 +24,12 @@
 
 ### Prompt Design Principles
 
-The skill contracts implement prompt engineering as input/output interface design and a communication protocol between the model and the task, not as prose writing:
+The skill contracts define prompt engineering as input/output interfaces and a communication protocol, not persona or prose decoration:
 
-1. **Interfaces, not spells:** Every skill defines explicit inputs (operating contracts) and expected outputs (authoritative output formats); persona role-play and magic keywords are not used.
-2. **Decomposition over one-shot prompts:** Complex workflows are split into routed skills with explicit handoffs and separated modification authority (see Section 3).
-3. **Evaluation criteria over format:** Skills state the logical criteria good output must satisfy and how edge cases are handled; verification is repository-native and deterministic.
-4. **Iterative refinement over static templates:** Work starts from the simplest contract and gains constraints only where verification fails (TDD slices, plan state transitions, stabilization policy).
+1. **Interfaces, not spells:** Define explicit inputs and authoritative outputs; do not rely on magic keywords or role-play.
+2. **Decomposition:** Split complex workflows into routed skills with explicit handoffs and separate modification authority (see Section 3).
+3. **Evaluation over format:** State success criteria and edge-case handling; verify with deterministic, repository-native checks.
+4. **Iterative refinement:** Start with the simplest contract and add constraints only when verification exposes a need.
 
 ### Shared Invariants
 
@@ -41,6 +41,7 @@ The skill contracts implement prompt engineering as input/output interface desig
 6. **Explicit handoffs:** Hand design to implementation and test plans to implementation explicitly.
 7. **Approval boundary:** Analysis and planning are read-only by default. Do not modify code, tests, or permanent documentation without user approval.
 8. **Separate authority:** Permanent specifications govern domain rules, public contracts, and architecture; `.plans/YYYY-MM-DD/` tracks execution state by plan creation date only.
+9. **Keyboard portability:** All Markdown content is ASCII-only so it can be entered on a standard US QWERTY keyboard; use ASCII equivalents for arrows, dashes, quotes, and other Unicode punctuation.
 
 ## 2. Skill Catalog
 
@@ -84,24 +85,21 @@ The skill contracts implement prompt engineering as input/output interface desig
 
 ### 3.3 Execution Modes and Composed Activation
 
-- `spec-drive` owns contract coordination. Its default output is a read-only specification, risk assessment, and plan.
-- When `/crisp` is active with `/spec-drive`, `spec-drive` coordinates the task and `crisp` controls response prose only.
-- Production code, tests, and permanent documentation may be modified only after explicit execution approval.
-- Before approval, produce only a `planned` state or analysis; do not extend delegated skills' modification authority.
+- `spec-drive` owns contract coordination and defaults to a read-only specification, risk assessment, and plan.
+- With `/crisp` and `/spec-drive`, `spec-drive` coordinates the task while `crisp` controls response prose only.
+- Before explicit execution approval, produce only a `planned` state or analysis; afterward, modify production code, tests, or permanent documentation only within the approved authority.
 - If a permanent specification conflicts with an execution plan, stop and present the conflict and its location.
 
 ### 3.4 Plan File Rules
 
-When `mark-plan` is active, `.plans/YYYY-MM-DD/<task-name>.md` is the execution SSOT; create the ISO-date folder when creating a plan and search all date folders when reusing one.
+When `mark-plan` is active, `.plans/YYYY-MM-DD/<task-name>.md` is the execution SSOT. Create the ISO-date folder for new plans and search all date folders when reusing one.
 
-- State: `planned → in-progress → complete|cancelled`, or `in-progress ↔ blocked`.
+- State: `planned -> in-progress -> complete|cancelled`, or `in-progress <-> blocked`.
 - Do not execute checklist items while the plan is `planned` and awaiting approval.
 - Each checklist item has acceptance criterion IDs, target paths, and a verification command.
-- Do not check an item before verification; record failures, decisions, and deviations in the plan immediately.
+- Check items only after verification; record failures, decisions, and deviations immediately.
 - Do not silently reuse or resume a `complete` plan.
-- Keep execution contracts in the plan and synchronize domain and architecture requirements with permanent repository documentation.
-- Permanent specifications govern domain rules, public contracts, and architecture decisions.
-- When copying contracts into a plan, link to their permanent specification source; the plan tracks scope, checklist, and verification state only.
+- Keep execution contracts, scope, and progress in the plan; synchronize domain and architecture requirements with permanent specifications. Link copied contracts to their permanent source.
 
 ### 3.5 Deployment Mirror Rules
 
@@ -134,25 +132,25 @@ When `mark-plan` is active, `.plans/YYYY-MM-DD/<task-name>.md` is the execution 
 
 #### `crisp`
 
-Lead with the answer. Prioritize correctness, safety, explicit requirements, grounding, clarity, force, and minimalism. Do not omit identifiers, commands, errors, order, constraints, or next actions. Do not alter code blocks or machine-readable text unless asked.
+Lead with the answer and optimize for the reader's task. Use prose for one connected idea, reasoning, qualifications, and transitions; use bullets for parallel items, actions, evidence, or caveats, and numbered lists only for sequence. Match structure to the task: answer and explanation, recommendation and trade-offs, prerequisites and steps, or outcome and evidence. Mix forms when each serves a different purpose; do not force structure for appearance. Honor the requested language, audience, format, and detail. Do not omit identifiers, commands, errors, order, constraints, or next actions. Do not alter code blocks or machine-readable text unless asked.
 
 #### `crisp-docs`
 
-Compress only explicitly named general documentation in place. Preserve facts, conditions, exceptions, links, commands, and structure. Do not modify generated content, code, configuration, or machine-readable data. Stop when the target, audience, or references are ambiguous.
+Compress only explicitly named general documentation in place. Put the reader's purpose, answer, decision, or required action near the beginning. Match form to document type: prose for concepts, numbered lists for procedures, and bullets or tables for reference material. Keep prerequisites before actions and expected results or failure paths near procedures. Preserve meaningful existing structure and do not fragment reasoning. Preserve facts, conditions, exceptions, links, commands, and structure. Do not modify generated content, code, configuration, or machine-readable data. Stop when the target, audience, or references are ambiguous.
 
 #### `crisp-agent-docs`
 
-Compress only explicitly named agent rule documents such as `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, and `SKILL.md`. Preserve mandatory terms, exceptions, safety, verification, paths, and identifiers. Do not modify when rules conflict or references are missing.
+Compress only explicitly named agent rule documents such as `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, and `SKILL.md`. Put scope, authority, safety boundaries, and high-impact triggers first. Model actionable rules as `trigger -> action -> exception -> consequence` when those parts exist. Use prose when conditions or exceptions must stay connected; use bullets for independent rules and numbered lists for workflows. Preserve mandatory terms, exceptions, safety, verification, paths, and identifiers. Do not modify when rules conflict or references are missing.
 
 #### `crisp-commit`
 
-Read `git status`, staged and unstaged diffs, targeted untracked files, and the five latest log entries to produce an evidence-based message. Follow recent commit language; use English when the repository language is unclear. Select an appropriate `feat|fix|refactor|style|docs|test|chore` type and never stage or commit.
+Read `git status`, staged and unstaged diffs, targeted untracked files, and the five latest log entries to produce an evidence-based message. Make the subject self-contained; use it alone for a simple diff and add an optional shared-context paragraph plus parallel bullets only for a complex diff. Use numbered lists only for ordered changes, omit cosmetic details and speculation, describe unrelated changes separately, and keep the command consistent with the displayed message. Follow recent commit language; use English when the repository language is unclear. Select an appropriate `feat|fix|refactor|style|docs|test|chore` type and never stage or commit.
 
 ### 4.3 Design, Implementation, and Test Skills
 
 #### `lean-design`
 
-Define data models and state transitions first, then make invalid states unrepresentable with types, enums, and constraints. Address nulls, partial failure, concurrency, and schema mismatches before happy paths. Remove unsupported abstractions, unused parameters, and speculative extension points. Output: `Problem → Structure → Remove → Implementation → Verify`; design only.
+Define data models and state transitions first, then make invalid states unrepresentable with types, enums, and constraints. Address nulls, partial failure, concurrency, and schema mismatches before happy paths. Remove unsupported abstractions, unused parameters, and speculative extension points. Output: `Problem -> Structure -> Remove -> Implementation -> Verify`; design only.
 
 #### `lean-mode`
 
@@ -160,7 +158,7 @@ Make the smallest code change that satisfies an approved requirement, design, or
 
 #### `tdd-plan`
 
-Inspect code, tests, runners, and fixtures, then express contracts as conditions and expected results. Write vertical slices in dependency order as `Red → Green → Verify → Refactor`. Plan only; do not write code. Record exact paths and commands and mark unknowns as assumptions.
+Inspect code, tests, runners, and fixtures, then express contracts as conditions and expected results. Write vertical slices in dependency order as `Red -> Green -> Verify -> Refactor`. Plan only; do not write code. Record exact paths and commands and mark unknowns as assumptions.
 
 #### `lean-test`
 
@@ -210,7 +208,8 @@ Adopt a law only when supported by at least two distinct cases, repeated cross-b
 - [ ] Permanent domain and architecture specifications are synchronized with the change.
 - [ ] No authority conflict exists between the plan and permanent specifications.
 - [ ] The actual `skills/*/SKILL.md` files match the catalog's names, activation rules, and modification authority.
-- [ ] `python3 scripts/validate-skills.py` passes when the validation script exists, including dated plan-path validation.
+- [ ] Markdown content is ASCII-only.
+- [ ] `python3 scripts/validate-skills.py` passes when the validation script exists, including dated plan-path and Markdown ASCII validation.
 
 ## 6. Stabilization Policy
 

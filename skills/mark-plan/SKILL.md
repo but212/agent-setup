@@ -18,8 +18,8 @@ Use `.plans/YYYY-MM-DD/<task-name>.md` as the execution SSOT instead of a UI pla
 5. **Make it executable:** Give criteria stable IDs and map each checklist item to them. Order items by dependency; name target paths and a concrete verification command or observable result.
 6. **Update as truth changes:** Mark items only after completion and verification. Record decisions, deviations, blockers, and results in the plan, not only in chat.
 7. **Protect user control:** Planning ends in review. Do not execute checklist
-   items until the user explicitly approves execution (for example, “execute the
-   plan”, “start implementation”, or equivalent); merely creating or reviewing a
+   items until the user explicitly approves execution (for example, "execute the
+   plan", "start implementation", or equivalent); merely creating or reviewing a
    plan is not approval. Pause and ask when requirements are materially
    ambiguous, scope expands, a breaking change is needed, or a
    destructive/unrecoverable action is proposed.
@@ -51,16 +51,16 @@ Create the smallest useful file with this structure:
 - Assumption: [unverified fact], or `None`
 
 ## Acceptance criteria
-- [ ] `C-01` — [Observable requirement]
+- [ ] `C-01` - [Observable requirement]
 
 ## Checklist
-- [ ] `C-01` **[Step name]** — `[target paths]`; verify: `[command or result]`
+- [ ] `C-01` **[Step name]** - `[target paths]`; verify: `[command or result]`
 
 ## Decisions and deviations
 - [Decision, reason, and date], or `None`
 
 ## Verification
-- [ ] [Command] — [result]
+- [ ] [Command] - [result]
 
 ## Blockers and open questions
 - [Question or blocker], or `None`

@@ -41,8 +41,8 @@ Use this authoritative output format:
 
 ### 1. [Contract or slice name]
 
-- Red: `[test path]` — `[test name and expected failure]`
-- Green: `[source path]` — `[smallest required change]`
+- Red: `[test path]` - `[test name and expected failure]`
+- Green: `[source path]` - `[smallest required change]`
 - Verify: `[command]`
 - Refactor: `[concrete change]` or `None`
 

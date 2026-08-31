@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 ## Operating contract
 
-Consume a repository-grounded request or decision and produce one confirmed decision summary. Use **Fast path** only when all 6 gates pass; otherwise use **Standard path**. The user owns decisions and trade-offs. Do not modify code, config, or docs before confirmation; this skill challenges scope and trade-offs, not tests or implementation.
+Consume a repository-grounded request or decision and produce one confirmed decision summary. Use **Fast path** only when all 6 gates pass; otherwise use **Standard path**. The user owns decisions and trade-offs. Challenge scope and trade-offs only; do not modify code, config, docs, tests, or implementation before confirmation.
 
 ## Fast path
 
@@ -27,13 +27,13 @@ Provide compact plan for user confirmation: Goal & scope | Target areas | Intend
 
 Use when any Fast-path gate fails. Inspect repository facts, docs, code, and types first; do not ask for verifiable facts. Challenge assumptions and ask material choices one at a time in dependency order.
 
-- **Questioning:** Ask the user one material decision at a time. Present 2–4 options with `(Recommended)` first.
+- **Questioning:** Ask the user one material decision at a time. Present 2-4 options with `(Recommended)` first.
 - **Format:** Recommendation | Why | Trade-off / Counter-argument | Decision requested.
 - **Post-answer summary:** Decision | Recommendation | Why | Risk mitigated.
 
 ## Context & Documentation
 
-- **Discovery order:** 1. Repo guidance → 2. Local docs (`context.md`, ADRs) → 3. Target code & tests. Propose minimal `context.md` for new domain terms.
+- **Discovery order:** 1. Repo guidance -> 2. Local docs (`context.md`, ADRs) -> 3. Target code & tests. Propose minimal `context.md` for new domain terms.
 - **Maintain `context.md`:** Propose updates for entities, value objects, invariants, boundaries, or lifecycle rules.
 - **Maintain ADRs:** Propose ADRs for hard-to-reverse or high-trade-off architectural choices.
 
@@ -45,10 +45,10 @@ Use when any Fast-path gate fails. Inspect repository facts, docs, code, and typ
 
 ## Output & handoff
 
-After confirmation, update the active `mark-plan` plan when present. Otherwise report only in chat. Hand off the confirmed decision to `tdd-plan`, `lean-design`, or `lean-mode`; do not create a second planning artifact.
+After confirmation, update the active `mark-plan` plan when present; otherwise report only in chat. Hand off to `tdd-plan`, `lean-design`, or `lean-mode`; do not create a second planning artifact.
 
 When resolved, output:
 
 - **Summary:** Mode (`Challenge Docs`) | Plan | Next step | Decisions | Domain term changes | ADRs affected | Challenged assumptions | Risks | Revisit triggers.
-- **Artifacts:** When `mark-plan` is active, record the resolved decision and plan changes in `.plans/YYYY-MM-DD/<task-name>.md`. Otherwise report the result in chat; do not create ad hoc plan files.
-- **Handoff:** Propose next skill (`tdd-plan`, `lean-design`, or `lean-mode`).
+- **Artifacts:** Record the decision and plan changes in `.plans/YYYY-MM-DD/<task-name>.md` when `mark-plan` is active; otherwise report in chat without creating ad hoc plan files.
+- **Handoff:** Propose the next skill (`tdd-plan`, `lean-design`, or `lean-mode`).

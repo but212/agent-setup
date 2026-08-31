@@ -12,9 +12,7 @@ Choose the smallest correct change for coding tasks based on approved structural
 
 ## Operating contract
 
-Consume an approved requirement, structural design (`lean-design`), or failing test (`lean-test`) and produce the minimal correct code change.
-
-Make changes only after tracing execution flow end-to-end through runtime behavior, tests, types, and call boundaries. Fix root causes at shared boundaries, not symptoms at caller sites. Preserve explicit domain contracts established by `lean-design`.
+Consume an approved requirement, structural design (`lean-design`), or failing test (`lean-test`) and produce the minimal correct code change. Before editing, trace execution end-to-end through runtime behavior, tests, types, and call boundaries. Fix root causes at shared boundaries, not caller symptoms, and preserve `lean-design` contracts.
 
 ## Universal decision ladder
 
@@ -36,7 +34,7 @@ Stop at the first applicable rung:
 - Resource ownership, cleanup, and cancellation at I/O boundaries
 - Explicit domain contracts established by `lean-design`
 
-Errors must follow the repository's established propagation model consistently: return typed errors where the language uses them, or preserve meaningful exceptions where that is the contract. Do not swallow, reclassify, or duplicate handling without evidence.
+Follow the repository's established error propagation model: return typed errors where expected or preserve meaningful exceptions. Do not swallow, reclassify, or duplicate handling without evidence.
 
 ## Scope rules
 

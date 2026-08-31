@@ -39,21 +39,43 @@ Generate factual, high-density Conventional Commit messages from Git diffs.
 - **Scope:** Read-only; never stage, commit, or modify files.
 - **Activate:** `/crisp-commit` or an explicit commit-message request.
 
+## Reader-first form
+
+Optimize for someone scanning history later:
+
+- Make the subject a self-contained summary of the observable change; do not make the reader infer it from the body.
+- For a simple diff, use the subject alone. For a complex diff, add a body paragraph only for shared context or qualification, then use parallel bullets for independent material changes.
+- Keep bullets concrete, limited to material changes, and anchored to files or symbols when useful for verification. Number only ordered changes.
+- Describe unrelated changes separately instead of inventing a unifying rationale; omit cosmetic details and speculation.
+- Do not add a preamble outside the commit message and command. Omit empty body sections and keep the command consistent with the displayed message.
+
 ## Output Format
+
+For a simple diff, output only the subject:
 
 ```text
 <type>(<scope>): <short summary in detected language>
+```
+
+For a complex diff, use the subject, an optional shared-context paragraph, and material-change bullets:
+
+```text
+<type>(<scope>): <short summary in detected language>
+
+<optional shared context or qualification>
 
 - <material change 1 with exact symbol/file anchor>
 - <material change 2 with key rationale or impact>
 ```
 
+Follow the displayed message with a copyable command. For a simple diff:
+
 ```bash
 git commit -m "<type>(<scope>): <short summary>"
 ```
 
-For a complex diff, include body bullets as separate `-m` flags:
+For a complex diff, pass the paragraph and each bullet as separate `-m` arguments, omitting the paragraph argument when it is absent:
 
 ```bash
-git commit -m "<type>(<scope>): <short summary>" -m "<material change 1>" -m "<material change 2>"
+git commit -m "<type>(<scope>): <short summary>" -m "<optional shared context>" -m "<material change 1>" -m "<material change 2>"
 ```

@@ -1,10 +1,10 @@
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
-
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -16,9 +16,14 @@ class DeployAgentsTests(unittest.TestCase):
         self.repo = self.root / "repo"
         (self.repo / "scripts").mkdir(parents=True)
         (self.repo / "skills" / "example").mkdir(parents=True)
-        shutil.copy2(ROOT / "scripts" / "deploy-agents.sh", self.repo / "scripts" / "deploy-agents.sh")
+        shutil.copy2(
+            ROOT / "scripts" / "deploy-agents.sh",
+            self.repo / "scripts" / "deploy-agents.sh",
+        )
         shutil.copy2(ROOT / "AGENTS.md", self.repo / "AGENTS.md")
-        (self.repo / "skills" / "example" / "SKILL.md").write_text("example\n", encoding="utf-8")
+        (self.repo / "skills" / "example" / "SKILL.md").write_text(
+            "example\n", encoding="utf-8"
+        )
         self.home = self.root / "home"
         self.home.mkdir()
 
@@ -101,7 +106,9 @@ class DeployAgentsTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("refusing to overwrite real file", result.stderr)
         self.assertFalse((target / "AGENTS.md").exists())
-        self.assertEqual((pi_dir / "AGENTS.md").read_text(encoding="utf-8"), "user-owned")
+        self.assertEqual(
+            (pi_dir / "AGENTS.md").read_text(encoding="utf-8"), "user-owned"
+        )
 
     def test_rejects_symlinked_pi_directory_before_deployment_write(self):
         target = self.root / "target"
@@ -149,7 +156,7 @@ class DeployAgentsTests(unittest.TestCase):
 class RepositoryContractTests(unittest.TestCase):
     def test_catalog_validates(self):
         result = subprocess.run(
-            ["python3", "scripts/validate-skills.py"],
+            [sys.executable, "scripts/validate-skills.py"],
             cwd=ROOT,
             capture_output=True,
             text=True,
@@ -161,15 +168,21 @@ class RepositoryContractTests(unittest.TestCase):
     def test_duplicate_catalog_row_fails(self):
         with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
             repository = Path(directory) / "repo"
-            shutil.copytree(ROOT, repository, ignore=shutil.ignore_patterns(".git", "__pycache__"))
+            shutil.copytree(
+                ROOT, repository, ignore=shutil.ignore_patterns(".git", "__pycache__")
+            )
             specification = repository / "spec" / "skills-spec.md"
             text = specification.read_text(encoding="utf-8")
-            row = "| `crisp` | Compresses response prose | `/crisp`, `/crisp on` | None |"
+            row = (
+                "| `crisp` | Compresses response prose | `/crisp`, `/crisp on` | None |"
+            )
             self.assertIn(row, text)
-            specification.write_text(text.replace(row, row + "\n" + row, 1), encoding="utf-8")
+            specification.write_text(
+                text.replace(row, row + "\n" + row, 1), encoding="utf-8"
+            )
 
             result = subprocess.run(
-                ["python3", "scripts/validate-skills.py"],
+                [sys.executable, "scripts/validate-skills.py"],
                 cwd=repository,
                 capture_output=True,
                 text=True,
@@ -179,8 +192,32 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("catalog skill must appear exactly once: crisp", result.stdout)
 
+    def test_non_ascii_markdown_fails(self):
+        with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
+            repository = Path(directory) / "repo"
+            shutil.copytree(
+                ROOT, repository, ignore=shutil.ignore_patterns(".git", "__pycache__")
+            )
+            readme = repository / "README.md"
+            readme.write_text(
+                readme.read_text(encoding="utf-8") + "\n\u2028\n", encoding="utf-8"
+            )
+
+            result = subprocess.run(
+                [sys.executable, "scripts/validate-skills.py"],
+                cwd=repository,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("non-ASCII Markdown content", result.stdout)
+
     def test_sql_audit_declares_safe_dynamic_analysis(self):
-        text = (ROOT / "skills" / "sql-orm-indicator-audit" / "SKILL.md").read_text(encoding="utf-8")
+        text = (ROOT / "skills" / "sql-orm-indicator-audit" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
 
         self.assertIn("Regexes are triage heuristics, not security proofs", text)
         self.assertIn("Never run `EXPLAIN ANALYZE` by default", text)

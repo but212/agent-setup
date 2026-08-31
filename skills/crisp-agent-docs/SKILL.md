@@ -16,7 +16,18 @@ Compress explicitly named agent instruction documents without weakening operatio
 
 ## Operating contract
 
-Report using this skill's own format: `Outcome → Scope → Analysis → Verification → Next`. Report-only requests use the same structure without editing files.
+Report using this skill's own format: `Outcome -> Scope -> Analysis -> Verification -> Next`. Report-only requests use the same structure without editing files.
+
+## Reader-first form
+
+Make rules directly applicable to an agent or maintainer:
+
+- Put scope, authority, safety boundaries, and the highest-impact trigger before routine guidance.
+- Use imperative prose when a rule's conditions, exceptions, or rationale must stay connected; use bullets for independent rules and numbered lists for workflows.
+- Keep each rule's `trigger -> action -> exception -> consequence` together when those parts exist. Keep qualifiers adjacent; do not bury mandatory terms or split one contract across unrelated bullets.
+- Use headings for distinct responsibilities or phases. Mix paragraphs and lists to reflect the logic, not the visual layout.
+
+For reports, preserve the target audience and operational meaning before optimizing scanability.
 
 ## Scope and defaults
 
@@ -28,7 +39,7 @@ Report using this skill's own format: `Outcome → Scope → Analysis → Verifi
 ## Workflow
 
 1. **Ground the source:** Read full file and referenced rules. Inventory operational anchors (mandatory words, conditions, exceptions, safety rules, validation commands, paths, identifiers, precedence). Separate binding rules from rationale and repetition. Stop and report if rules conflict or referenced rules are missing.
-2. **Reduce variance:** Order: preserve anchors → merge duplicates → remove dead context → move high-priority rules earlier. Maintain one authoritative statement per rule using direct imperative phrasing.
+2. **Reduce variance:** Order: preserve anchors -> merge duplicates -> remove dead context -> move high-priority rules earlier. Maintain one authoritative statement per rule using direct imperative phrasing.
 3. **Preserve correctness:** Never remove or weaken security, data-loss prevention, validation, error handling, accessibility, package-manager, migration, or explicit user rules. Preserve exceptions, conditions, precedence, and unique clarifying examples. Do not alter code blocks or machine-readable content.
 4. **Improve context efficiency:** Remove dead context for inactive branches, eliminate duplicate concepts, and place high-impact constraints first. Never hide required detail in vague summaries.
 5. **Verify before reporting:** Compare edited files using `git diff` (or local tools). Recheck all inventory items. If no safe reduction exists, leave the file unchanged and report result.
@@ -41,4 +52,4 @@ Report using this skill's own format: `Outcome → Scope → Analysis → Verifi
 
 ## Output
 
-Lead with the result (`Outcome → Scope → Analysis → Verification → Next`). For edits, report changed files (or no change), reductions, preserved constraints, validation, and uncertainties. For report-only mode, list prioritized candidates with proposed reductions and risks.
+Use these headings in order: `Outcome`, `Scope`, `Analysis`, `Verification`, `Next`. Write the outcome and scope as concise prose; use bullets for changed files, reductions, preserved constraints, validation results, and uncertainties. Use prose in Analysis when rules are connected, and bullets when candidates or risks are independent. Omit empty sections without changing the required order. For edits, report changed files (or no change), reductions, preserved constraints, validation, and uncertainties. For report-only mode, list prioritized candidates with proposed reductions and risks.

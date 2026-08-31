@@ -12,16 +12,15 @@ Design and write the fewest deterministic tests proving observable behavior and 
 
 ## Operating contract
 
-- Ground tests strictly on public boundaries, input/output contracts, types/schemas, existing harness, and nearby tests; never test private methods or implementation details.
+- Ground tests on public boundaries, input/output contracts, types/schemas, the existing harness, and nearby tests; never test private methods or implementation details.
 - Use `lean-design` first for states, invariants, transitions, or API boundaries. Hand production changes to `lean-mode` only when explicitly requested.
-- Eliminate non-determinism: control time, clocks, IDs, random seeds, and concurrency without arbitrary sleeps (`sleep`, `setTimeout`).
-- Mock strictly at external I/O boundaries (HTTP, DB, hardware, filesystem, or nondeterministic services); never mock domain entities or the system under test (SUT).
+- Control time, IDs, randomness, and concurrency without arbitrary sleeps (`sleep`, `setTimeout`). Mock only external I/O boundaries (HTTP, DB, hardware, filesystem, or nondeterministic services); never mock domain entities or the system under test (SUT).
 
 ## Testing matrix
 
 | Layer | Target contract | Assertion focus |
 | :--- | :--- | :--- |
-| **Domain logic** | Pure calculations and transitions | Explicit inputs → outputs; state table |
+| **Domain logic** | Pure calculations and transitions | Explicit inputs -> outputs; state table |
 | **State machine** | Invariants and valid/invalid transitions | Allowed transitions pass; invalid transitions reject |
 | **Boundary / API** | Serialization, validation, status codes | Status, error payload, and boundary gates |
 | **Integration** | Persistence and transactions | Durable effects, rollback, ordering, conflict behavior |
@@ -37,11 +36,11 @@ Choose only applicable distinguishing cases:
 4. Exposed invalid-input or failure path.
 5. Confirmed regression case.
 
-For stateful behavior, express cases as a transition table (`state × event → next state or error`) and assert invariants after each transition. Do not manufacture cases solely to improve coverage percentages.
+For stateful behavior, express cases as a transition table (`state x event -> next state or error`) and assert invariants after each transition. Do not manufacture cases solely to improve coverage percentages.
 
 ## Constraints
 
-- Assert contract values, statuses, errors, and durable effects—not incidental call order, internal shape, or call counts. Assert call counts only when the explicit contract is the side effect (for example, sending exactly one notification).
+- Assert contract values, statuses, errors, and durable effects - not incidental call order, internal shape, or call counts. Assert call counts only when the explicit contract is the side effect (for example, sending exactly one notification).
 - Use snapshots only for intentional, stable rendering contracts; not mutable business logic.
 - Avoid real network calls, shared mutable state, broad fixture builders, and duplicated setup.
 - If no repository-native harness exists, report that before changing tooling; do not add dependencies without explicit request.
@@ -49,7 +48,7 @@ For stateful behavior, express cases as a transition table (`state × event → 
 
 ## Execution and verification
 
-Reuse the repository's declared runner, fixtures, and package manager. Run the narrowest exact test command first, then required broader checks. Report the command and result; never claim success for an unrun or failing command.
+Reuse the repository's declared runner, fixtures, and package manager. Run the narrowest exact command first, then required broader checks. Report each command and result; never claim success for an unrun or failing command.
 
 ## Output format
 

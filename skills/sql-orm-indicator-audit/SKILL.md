@@ -37,7 +37,7 @@ Regexes are triage heuristics, not security proofs. Report a **candidate** first
 
 ### Regex Detection Patterns
 
-#### `SQL-REG-01` — Dynamic SQL assembly candidate
+#### `SQL-REG-01` - Dynamic SQL assembly candidate
 
 ```regex
 (?i)(\bquery\b|\bexecute\b|\bnativeQuery\b)\s*\([^)]*(?:\+|%|\.format\s*\(|f["']|`[^`]*\$\{)
@@ -45,25 +45,25 @@ Regexes are triage heuristics, not security proofs. Report a **candidate** first
 
 This covers common concatenation, `%` formatting, `.format(...)`, f-string, and template-literal forms. Language parsers or taint analysis are required for authoritative injection findings.
 
-#### `SQL-REG-02` — Leading wildcard
+#### `SQL-REG-02` - Leading wildcard
 
 ```regex
 (?i)LIKE\s+['"]%[^'"]+['"]
 ```
 
-#### `SQL-REG-03` — Non-SARGable expression in predicate
+#### `SQL-REG-03` - Non-SARGable expression in predicate
 
 ```regex
 (?i)WHERE\s+[a-zA-Z0-9_]+\s*\([^)]*\)\s*(=|<|>|<=|>=|LIKE)
 ```
 
-#### `SQL-REG-04` — Unconstrained query projection
+#### `SQL-REG-04` - Unconstrained query projection
 
 ```regex
 (?i)\bSELECT\s+\*\s+FROM\b
 ```
 
-#### `SQL-REG-05` — In-loop repository/ORM fetch
+#### `SQL-REG-05` - In-loop repository/ORM fetch
 
 ```regex
 (?s)(for\s*\([^)]+\)|for\s+[a-zA-Z0-9_]+\s+in\s+[^:]+:|\.forEach\s*\([^)]*\))\s*\{[^}]*\b(repository|em|db|session)\.[a-zA-Z0-9_]+\s*\(

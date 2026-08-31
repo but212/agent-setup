@@ -21,6 +21,17 @@ Compress explicitly named documents without weakening their meaning, usability, 
 - **Audience first:** Preserve audience, purpose, language, voice, and formality unless asked otherwise.
 - **Structure preservation:** Keep headings, links, anchors, lists, tables, code blocks, frontmatter, identifiers, commands, paths, numbers, and machine-readable text intact. Change surrounding explanation only when safe.
 
+## Reader-first form
+
+Shape the document around the reader's task and reading path:
+
+- Put the purpose, answer, decision, or required action near the beginning.
+- Use focused prose for concepts, relationships, and qualifications; bullets for parallel reference content; numbered lists for procedures.
+- Use headings for distinct questions or stages and tables only for comparable fields. Keep list items parallel and self-contained; do not fragment connected reasoning.
+- Preserve a meaningful existing structure. Keep prerequisites before actions and expected results or failure paths near the relevant procedure.
+
+Do not add structure merely for appearance. Match form to document type: explanatory prose for concepts, numbered steps for procedures, bullets or tables for reference material, and explicit prose or structured lists for policies and conditions.
+
 ## Compression rules
 
 - Preserve facts, scope, dates, names, definitions, conditions, exceptions, warnings, examples, references, and next actions.
@@ -59,6 +70,4 @@ Stop and ask or report instead of rewriting when:
 
 ## Output
 
-Lead with `Outcome → Scope → Changes → Verification → Next`.
-
-For edits, report changed files and concise evidence of preserved meaning. For review-only requests, list prioritized reductions and risks without modifying files. If no safe reduction exists, leave the document unchanged and say why.
+Use these headings in order: `Outcome`, `Scope`, `Changes`, `Verification`, `Next`. Keep the outcome and scope in short prose; use bullets for changed files, preserved anchors, verification results, and risks. Use a paragraph when several details form one explanation, and omit empty sections. For edits, report changed files and concise evidence of preserved meaning. For review-only requests, list prioritized reductions and risks without modifying files. If no safe reduction exists, leave the document unchanged and say why.

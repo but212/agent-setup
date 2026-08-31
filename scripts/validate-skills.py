@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Validate the skill catalog, skill metadata, and core safety contracts."""
+"""Validate skill metadata, repository contracts, and ASCII-only Markdown."""
 
-from pathlib import Path
 import re
 import sys
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SKILLS = ROOT / "skills"
@@ -38,8 +38,29 @@ def catalog_names(text: str) -> list[str]:
     ]
 
 
-def main() -> int:
+def markdown_ascii_errors() -> list[str]:
     errors: list[str] = []
+    markdown_files = sorted(
+        path for path in ROOT.rglob("*.md") if ".git" not in path.parts
+    )
+    for path in markdown_files:
+        text = path.read_text(encoding="utf-8")
+        if text.isascii():
+            continue
+        for line_number, line in enumerate(text.splitlines(keepends=True), 1):
+            non_ascii = sorted({char for char in line if not char.isascii()})
+            if non_ascii:
+                codepoints = ", ".join(f"U+{ord(char):04X}" for char in non_ascii)
+                errors.append(
+                    f"{path.relative_to(ROOT)}: non-ASCII Markdown content "
+                    f"at line {line_number} ({codepoints})"
+                )
+                break
+    return errors
+
+
+def main() -> int:
+    errors = markdown_ascii_errors()
     skill_files = sorted(SKILLS.glob("*/SKILL.md"))
     actual_names: set[str] = set()
 
@@ -52,7 +73,9 @@ def main() -> int:
         expected = path.parent.name
         name = metadata.get("name")
         if name != expected:
-            errors.append(f"{path.relative_to(ROOT)}: name={name!r}, expected {expected!r}")
+            errors.append(
+                f"{path.relative_to(ROOT)}: name={name!r}, expected {expected!r}"
+            )
         if not metadata.get("description"):
             errors.append(f"{path.relative_to(ROOT)}: missing description")
         if name:
@@ -67,12 +90,14 @@ def main() -> int:
         listed_counts[name] = listed_counts.get(name, 0) + 1
     for name, count in sorted(listed_counts.items()):
         if count != 1:
-            errors.append(f"catalog skill must appear exactly once: {name} ({count} rows)")
+            errors.append(
+                f"catalog skill must appear exactly once: {name} ({count} rows)"
+            )
 
     catalog_section = catalog_text.split("## 3. Routing and Handoffs", 1)[0]
     catalog_table = catalog_section.split("## 2. Skill Catalog", 1)[-1]
     for line in catalog_table.splitlines():
-        if not line.startswith("|") or line.startswith("| ---") or line.startswith("| Skill"):
+        if not line.startswith("|") or line.startswith(("| ---", "| Skill")):
             continue
         fields = [field.strip() for field in line.strip("|").split("|")]
         if len(fields) != 4 or any(not field for field in fields):
@@ -102,8 +127,14 @@ def main() -> int:
             if not path.is_file() or path.name.startswith("."):
                 continue
             relative = path.relative_to(PLANS)
-            if len(relative.parts) != 2 or not date_pattern.fullmatch(relative.parts[0]) or path.suffix != ".md":
-                errors.append(f"plan must be .plans/YYYY-MM-DD/<task-name>.md: {path.relative_to(ROOT)}")
+            if (
+                len(relative.parts) != 2
+                or not date_pattern.fullmatch(relative.parts[0])
+                or path.suffix != ".md"
+            ):
+                errors.append(
+                    f"plan must be .plans/YYYY-MM-DD/<task-name>.md: {path.relative_to(ROOT)}"
+                )
 
     agents_text = AGENTS.read_text(encoding="utf-8")
     for term in ("git push", "git reset --hard", "git clean -f", "rm -rf"):
@@ -116,7 +147,9 @@ def main() -> int:
         return 1
 
     print(f"Validated {len(skill_files)} skills and catalog parity.")
-    print("Validated routing/authority markers, approval, dated plan paths, and destructive-command guards.")
+    print(
+        "Validated ASCII-only Markdown, routing/authority markers, approval, dated plan paths, and destructive-command guards."
+    )
     return 0
 
 

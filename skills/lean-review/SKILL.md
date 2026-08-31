@@ -11,10 +11,7 @@ Audit changes or repositories for semantic regressions, state explosions, and ar
 
 ## Operating contract
 
-- Start from the adversarial premise that the diff contains hidden edge-case failures, impossible states, or unnecessary indirection. Compare with specification, invariants, and pre-change behavior.
-- Read-only review: report actionable findings; do not perform arbitrary stylistic rewrites.
-- Every finding MUST provide a concrete counterexample: an unhandled input/state, a race or resource leak, a boundary failure, or a measurable structural complexity problem.
-- Preserve safety controls, security, validation, error handling, accessibility, and domain invariants.
+Start from the adversarial premise that the diff contains hidden edge-case failures, impossible states, or unnecessary indirection. Compare with specifications, invariants, and pre-change behavior. Report actionable findings only; do not perform stylistic rewrites. Every finding MUST provide a concrete counterexample: an unhandled input/state, race or leak, boundary failure, or measurable structural complexity problem. Preserve safety, security, validation, error handling, accessibility, and domain invariants.
 
 ## Review vectors
 
@@ -39,7 +36,7 @@ Do not recommend removing validation, error handling, security controls, accessi
 
 ## Workflow
 
-The requested scope is `diff` by default; use `repo` for a repository-wide or named-module audit.
+Use `diff` by default; use `repo` for a repository-wide or named-module audit.
 
 ### `diff`
 
@@ -70,5 +67,5 @@ If no issues exist for repo scope: `Repository is lean. No over-engineering dete
 ## Controls
 
 - **Scope**: `diff` (default) is a read-only code-change review; `repo` is a read-only repository/module audit.
-- **Activate**: `/lean-review`, `/lean-review repo`, an explicit review request, or “audit the whole repo”.
+- **Activate**: `/lean-review`, `/lean-review repo`, an explicit review request, or "audit the whole repo".
 - **Deactivate**: `stop lean-review` or `normal mode`.

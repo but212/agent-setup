@@ -12,9 +12,7 @@ Eliminate impossible states and dissolve architectural complexity through struct
 
 ## Operating contract
 
-Consume a requirement, contract, or proposal and produce structural decisions only. `lean-design` owns state spaces, invariants, types, and boundaries; `lean-mode` owns code changes after approval.
-
-Preserve correctness, security, validation, and domain invariants. Evaluate runtime performance only when empirical profiling or hot-path evidence requires it. Infer intent from runtime behavior and tests first, then types/schemas, then comments/docs; state assumptions when evidence is absent.
+Consume a requirement, contract, or proposal and produce structural decisions only. `lean-design` owns state spaces, invariants, types, and boundaries; `lean-mode` owns code changes after approval. Preserve correctness, security, validation, and domain invariants. Infer intent from runtime behavior and tests, then types/schemas, then comments/docs; state assumptions when evidence is absent. Evaluate performance only with profiling or hot-path evidence.
 
 ## Core principles
 
@@ -33,10 +31,10 @@ Infer the target code or path from attached files, referenced paths, and discuss
 
 Use canonical sections in order (omit empty sections for simple tasks):
 
-1. **Problem** — Real problem, constraints, assumptions, and edge boundaries.
-2. **Structure** — Core sum types, state transitions, domain invariants, and I/O boundaries.
-3. **Remove** — Impossible states, hollow interfaces, pass-through layers, and speculative parameters.
-4. **Handoff Contract** — Exact type signatures, transition rules, failure behavior, and invariants for `lean-mode` / `lean-test`.
+1. **Problem** - Real problem, constraints, assumptions, and edge boundaries.
+2. **Structure** - Core sum types, state transitions, domain invariants, and I/O boundaries.
+3. **Remove** - Impossible states, hollow interfaces, pass-through layers, and speculative parameters.
+4. **Handoff Contract** - Exact type signatures, transition rules, failure behavior, and invariants for `lean-mode` / `lean-test`.
 
 Do not implement routine code. If implementation is requested, provide the grounded design and hand off to `lean-mode`.
 
