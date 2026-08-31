@@ -104,10 +104,10 @@ When `mark-plan` is active, `.plans/YYYY-MM-DD/<task-name>.md` is the execution 
 
 ### 3.5 Deployment Mirror Rules
 
-`scripts/deploy-agents.sh` mirrors repository content into the shared agent folder (`~/.agents`, overridable via `AGENT_HOME`).
+`scripts/deploy-agents.sh` and `scripts/deploy-agents.ps1` mirror repository content into the shared agent folder (`~/.agents`, overridable via `AGENT_HOME`). The PowerShell entry point uses `-Link`; the POSIX entry point uses `--link`.
 
 - The deployment target is a copy destination only; the repository remains the source of truth.
-- Skills mirroring uses `rsync --delete`, never a manual `rm -rf` loop; deletions are limited to stale copies inside `<target>/skills/`.
+- Skills mirroring uses `rsync --delete` on POSIX and an equivalent scoped mirror on PowerShell; deletions are limited to stale copies inside `<target>/skills/`.
 - `AGENT_HOME` resolving to `/` or `$HOME` is refused before any write.
 - A real (non-symlink) file at pi's global instructions path is never overwritten; `--link` refuses instead.
 
