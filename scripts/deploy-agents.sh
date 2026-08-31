@@ -8,12 +8,35 @@
 # Source of truth is this repository. ~/.agents is a deployment target.
 set -eu
 
-REPO_ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-TARGET=${AGENT_HOME:-"$HOME/.agents"}
+REPO_ROOT=$(CDPATH= cd -P -- "$(dirname -- "$0")/.." && pwd)
+TARGET_INPUT=${AGENT_HOME:-"$HOME/.agents"}
 
+# Resolve the target before writing. This catches aliases such as $HOME/. and
+# keeps --link targets absolute even when AGENT_HOME is relative.
+case "$TARGET_INPUT" in
+/*) TARGET_PATH=$TARGET_INPUT ;;
+*) TARGET_PATH=$PWD/$TARGET_INPUT ;;
+esac
+if [ -L "$TARGET_PATH" ]; then
+  echo "refusing symlinked AGENT_HOME: $TARGET_INPUT" >&2
+  exit 1
+fi
+if [ -e "$TARGET_PATH" ]; then
+  TARGET=$(CDPATH= cd -P -- "$TARGET_PATH" && pwd) || {
+    echo "cannot resolve AGENT_HOME: $TARGET_INPUT" >&2
+    exit 1
+  }
+else
+  TARGET_PARENT=$(CDPATH= cd -P -- "$(dirname -- "$TARGET_PATH")" && pwd) || {
+    echo "cannot resolve AGENT_HOME parent: $TARGET_INPUT" >&2
+    exit 1
+  }
+  TARGET=$TARGET_PARENT/$(basename -- "$TARGET_PATH")
+fi
+HOME_REAL=$(CDPATH= cd -P -- "$HOME" && pwd)
 case "$TARGET" in
-"/" | "$HOME")
-  echo "refusing unsafe AGENT_HOME: $TARGET" >&2
+"/" | "$HOME_REAL")
+  echo "refusing unsafe AGENT_HOME: $TARGET_INPUT" >&2
   exit 1
   ;;
 esac
@@ -38,8 +61,31 @@ done
   exit 1
 }
 
-mkdir -p "$TARGET"
+if [ -L "$TARGET/AGENTS.md" ]; then
+  echo "refusing symlinked destination: $TARGET/AGENTS.md" >&2
+  exit 1
+fi
+if [ -L "$TARGET/skills" ]; then
+  echo "refusing symlinked destination: $TARGET/skills" >&2
+  exit 1
+fi
+if [ -e "$TARGET/skills" ] && [ ! -d "$TARGET/skills" ]; then
+  echo "destination is not a directory: $TARGET/skills" >&2
+  exit 1
+fi
+if [ "$LINK_PI" -eq 1 ]; then
+  PI_DIR="$HOME/.pi/agent"
+  if [ -L "$PI_DIR" ]; then
+    echo "refusing symlinked pi agent directory: $PI_DIR" >&2
+    exit 1
+  fi
+  if [ -e "$PI_DIR/AGENTS.md" ] && [ ! -L "$PI_DIR/AGENTS.md" ]; then
+    echo "refusing to overwrite real file $PI_DIR/AGENTS.md (not a symlink)" >&2
+    exit 1
+  fi
+fi
 
+mkdir -p "$TARGET"
 cp "$REPO_ROOT/AGENTS.md" "$TARGET/AGENTS.md"
 echo "copied: AGENTS.md -> $TARGET/AGENTS.md"
 
@@ -49,12 +95,7 @@ rsync -a --delete "$REPO_ROOT/skills/" "$TARGET/skills/"
 echo "mirrored: skills/ -> $TARGET/skills ($(find "$TARGET/skills" -name SKILL.md | wc -l) skills)"
 
 if [ "$LINK_PI" -eq 1 ]; then
-  PI_DIR="$HOME/.pi/agent"
   mkdir -p "$PI_DIR"
-  if [ -e "$PI_DIR/AGENTS.md" ] && [ ! -L "$PI_DIR/AGENTS.md" ]; then
-    echo "refusing to overwrite real file $PI_DIR/AGENTS.md (not a symlink)" >&2
-    exit 1
-  fi
   ln -sfn "$TARGET/AGENTS.md" "$PI_DIR/AGENTS.md"
   echo "linked: $PI_DIR/AGENTS.md -> $TARGET/AGENTS.md"
 fi

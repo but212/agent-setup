@@ -4,7 +4,7 @@ A framework- and language-agnostic operating baseline for coding agents.
 
 ## What it provides
 
-- Skill contracts for challenge, design, implementation, testing, review, UI work, planning, and specification.
+- Skill contracts for challenge, design, implementation, testing, review, planning, SQL/ORM auditing, and specification.
 - Explicit routing, handoffs, modification authority, and approval boundaries.
 - Evidence-first, minimal-change, deterministic-verification guidance.
 - Safety rules for preserving user work and refusing destructive commands unless explicitly requested.
