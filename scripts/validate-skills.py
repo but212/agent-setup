@@ -3,6 +3,7 @@
 
 import re
 import sys
+from datetime import date
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -28,14 +29,24 @@ def frontmatter(path: Path) -> dict[str, str]:
     return values
 
 
-def catalog_names(text: str) -> list[str]:
+def catalog_rows(text: str) -> list[dict[str, str]]:
     section = text.split("## 3. Routing and Handoffs", 1)[0]
     table = section.split("## 2. Skill Catalog", 1)[-1]
-    return [
-        match.group(1)
-        for line in table.splitlines()
-        if (match := re.match(r"\|\s*`([^`]+)`\s*\|", line))
-    ]
+    rows: list[dict[str, str]] = []
+    for line in table.splitlines():
+        if not line.startswith("|") or line.startswith(("| ---", "| Skill")):
+            continue
+        fields = [field.strip() for field in line.strip("|").split("|")]
+        if len(fields) == 4 and all(fields):
+            rows.append(
+                {
+                    "name": fields[0].strip("`").strip(),
+                    "role": fields[1],
+                    "activation": fields[2],
+                    "modification-authority": fields[3],
+                }
+            )
+    return rows
 
 
 def markdown_ascii_errors() -> list[str]:
@@ -63,6 +74,7 @@ def main() -> int:
     errors = markdown_ascii_errors()
     skill_files = sorted(SKILLS.glob("*/SKILL.md"))
     actual_names: set[str] = set()
+    metadata_by_name: dict[str, dict[str, str]] = {}
 
     for path in skill_files:
         try:
@@ -78,13 +90,18 @@ def main() -> int:
             )
         if not metadata.get("description"):
             errors.append(f"{path.relative_to(ROOT)}: missing description")
+        for field in ("role", "activation", "modification-authority"):
+            if not metadata.get(field):
+                errors.append(f"{path.relative_to(ROOT)}: missing {field}")
         if name:
             if name in actual_names:
                 errors.append(f"duplicate skill name: {name}")
             actual_names.add(name)
+            metadata_by_name[name] = metadata
 
     catalog_text = CATALOG.read_text(encoding="utf-8")
-    listed_names = catalog_names(catalog_text)
+    catalog_entries = catalog_rows(catalog_text)
+    listed_names = [row["name"] for row in catalog_entries]
     listed_counts: dict[str, int] = {}
     for name in listed_names:
         listed_counts[name] = listed_counts.get(name, 0) + 1
@@ -108,6 +125,17 @@ def main() -> int:
         errors.append(f"catalog missing skill: {name}")
     for name in sorted(listed_name_set - actual_names):
         errors.append(f"catalog lists absent skill: {name}")
+
+    for row in catalog_entries:
+        metadata = metadata_by_name.get(row["name"])
+        if metadata is None:
+            continue
+        for field in ("role", "activation", "modification-authority"):
+            if metadata.get(field) != row[field]:
+                errors.append(
+                    f"catalog mismatch for {row['name']}: {field}="
+                    f"{metadata.get(field)!r}, expected {row[field]!r}"
+                )
 
     required_catalog_terms = (
         "Activation",
@@ -135,6 +163,14 @@ def main() -> int:
                 errors.append(
                     f"plan must be .plans/YYYY-MM-DD/<task-name>.md: {path.relative_to(ROOT)}"
                 )
+                continue
+            try:
+                date.fromisoformat(relative.parts[0])
+            except ValueError:
+                errors.append(
+                    f"plan must use a valid ISO calendar date: {path.relative_to(ROOT)}"
+                )
+
 
     agents_text = AGENTS.read_text(encoding="utf-8")
     for term in ("git push", "git reset --hard", "git clean -f", "rm -rf"):

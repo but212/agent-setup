@@ -43,13 +43,14 @@ Deploy from POSIX with `scripts/deploy-agents.sh [--link]`, or from PowerShell w
 
 ## Validate this setup
 
-Run the repository's validation script from the root:
+Run the repository checks from the root:
 
 ```sh
 python3 scripts/validate-skills.py
+python3 -m unittest discover -s tests -v
 ```
 
-The script checks skill frontmatter, catalog rows, routing/authority markers, dated plan paths, destructive-command guards, and ASCII-only Markdown content. It does not validate product behavior or ecosystem-specific workflows.
+The validator checks skill frontmatter, catalog rows, routing/authority markers, dated plan paths, destructive-command guards, and ASCII-only Markdown content. The test suite covers deployment and repository contracts. These checks do not validate product behavior or ecosystem-specific workflows.
 
 ## Status
 

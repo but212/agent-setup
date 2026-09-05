@@ -1,5 +1,8 @@
 ---
 name: crisp-commit
+role: Generates evidence-based Conventional Commits
+activation: Commit-message request
+modification-authority: None
 description: >
   Generates high-density, crisp Conventional Commit messages grounded in git diff evidence and recent git log language.
 ---

@@ -1,5 +1,8 @@
 ---
 name: challenge-light
+role: Early idea challenge without repository evidence
+activation: No supporting evidence exists
+modification-authority: None
 description: Challenge assumptions and stress-test a plan, decision, or idea through an adaptive, focused inquiry path without requiring an existing codebase or durable project artifacts.
 disable-model-invocation: true
 ---
@@ -37,10 +40,10 @@ Use when any Fast-path gate fails. Challenge core assumptions and ask material d
 
 ## Output & handoff
 
-After confirmation, update the active `mark-plan` plan when present; otherwise report only in chat. Hand off to `tdd-plan`, `lean-design`, or `lean-mode`; do not create a second planning artifact.
+After confirmation, hand the decision summary to active `mark-plan` for plan recording when present; otherwise report only in chat. Hand off to `tdd-plan`, `lean-design`, or `lean-mode`; do not create a second planning artifact.
 
 When resolved, output:
 
 - **Summary:** Mode (`Challenge Light`) | Plan | Next step | Decisions | Defaults | Challenged assumptions | Risks & mitigations | Revisit triggers.
-- **Artifacts:** Record the decision and plan changes in `.plans/YYYY-MM-DD/<task-name>.md` when `mark-plan` is active; otherwise report in chat without creating ad hoc plan files.
+- **Artifacts:** `mark-plan` records the decision and plan changes in `.plans/YYYY-MM-DD/<task-name>.md` when active; otherwise report in chat without creating ad hoc plan files.
 - **Handoff:** Propose the next skill (`tdd-plan`, `lean-design`, or `lean-mode`).

@@ -65,6 +65,10 @@ if [ -L "$TARGET/AGENTS.md" ]; then
   echo "refusing symlinked destination: $TARGET/AGENTS.md" >&2
   exit 1
 fi
+if [ -e "$TARGET/AGENTS.md" ] && [ ! -f "$TARGET/AGENTS.md" ]; then
+  echo "destination is not a regular file: $TARGET/AGENTS.md" >&2
+  exit 1
+fi
 if [ -L "$TARGET/skills" ]; then
   echo "refusing symlinked destination: $TARGET/skills" >&2
   exit 1

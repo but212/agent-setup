@@ -1,5 +1,8 @@
 ---
 name: challenge
+role: Selects a challenge path using repository evidence
+activation: `/challenge`, assumption review
+modification-authority: None
 description: Router and entry point to challenge assumptions and stress-test a plan, decision, or idea by routing to challenge-light or challenge-docs based on repository evidence.
 disable-model-invocation: true
 ---

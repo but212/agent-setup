@@ -21,6 +21,25 @@ function Get-RelativePath([string]$Base, [string]$Path) {
     return $Path.Substring($Base.Length).TrimStart([char[]]@([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar))
 }
 
+function Get-CanonicalPath([string]$Path) {
+    $fullPath = Get-FullPath $Path
+    $missing = @()
+    $current = $fullPath
+    while ($null -eq (Get-ExistingItem $current)) {
+        $leaf = Split-Path -Leaf $current
+        if ([string]::IsNullOrEmpty($leaf)) {
+            throw "cannot resolve path: $Path"
+        }
+        $missing = @($leaf) + $missing
+        $current = Split-Path -Parent $current
+    }
+    $canonical = (Resolve-Path -LiteralPath $current).Path
+    foreach ($part in $missing) {
+        $canonical = Join-Path $canonical $part
+    }
+    return $canonical
+}
+
 function Remove-DeploymentPath([string]$Path) {
     $item = Get-Item -LiteralPath $Path -Force
     if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
@@ -30,13 +49,27 @@ function Remove-DeploymentPath([string]$Path) {
     }
 }
 
+function Get-ExistingItem([string]$Path) {
+    return Get-Item -LiteralPath $Path -Force -ErrorAction SilentlyContinue
+}
+
+function Assert-NotReparsePoint([string]$Path) {
+    $item = Get-ExistingItem $Path
+    if ($null -ne $item -and (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)) {
+        throw "refusing symlinked destination: $Path"
+    }
+    return $item
+}
+
 $repoRoot = Get-FullPath (Join-Path $PSScriptRoot '..')
 $agentHome = $env:AGENT_HOME
 if ([string]::IsNullOrWhiteSpace($agentHome)) {
     $agentHome = Join-Path $HOME '.agents'
 }
-$target = Get-FullPath $agentHome
-$homePath = Get-FullPath $HOME
+$targetInput = Get-FullPath $agentHome
+Assert-NotReparsePoint $targetInput | Out-Null
+$target = Get-CanonicalPath $targetInput
+$homePath = Get-CanonicalPath $HOME
 $rootPath = [IO.Path]::GetPathRoot($target)
 
 if ($target -eq $homePath -or $target -eq $rootPath) {
@@ -52,12 +85,38 @@ if (-not (Test-Path -LiteralPath $skillsSource -PathType Container)) {
     throw "skills/ not found in $repoRoot"
 }
 
+$targetItem = Assert-NotReparsePoint $target
+if ($null -ne $targetItem -and -not $targetItem.PSIsContainer) {
+    throw "AGENT_HOME is not a directory: $target"
+}
+$agentsTarget = Join-Path $target 'AGENTS.md'
+$agentsItem = Assert-NotReparsePoint $agentsTarget
+if ($null -ne $agentsItem -and $agentsItem.PSIsContainer) {
+    throw "destination is not a regular file: $agentsTarget"
+}
+$skillsTarget = Join-Path $target 'skills'
+$skillsItem = Assert-NotReparsePoint $skillsTarget
+if ($null -ne $skillsItem -and -not $skillsItem.PSIsContainer) {
+    throw "destination is not a directory: $skillsTarget"
+}
+if ($Link) {
+    $piDir = Join-Path $HOME '.pi\agent'
+    $piDirItem = Assert-NotReparsePoint $piDir
+    if ($null -ne $piDirItem -and -not $piDirItem.PSIsContainer) {
+        throw "pi agent path is not a directory: $piDir"
+    }
+    $piAgents = Join-Path $piDir 'AGENTS.md'
+    $existing = Get-ExistingItem $piAgents
+    if ($null -ne $existing -and (($existing.Attributes -band [IO.FileAttributes]::ReparsePoint) -eq 0)) {
+        throw "refusing to overwrite real file $piAgents (not a symlink)"
+    }
+}
+
 New-Item -ItemType Directory -Path $target -Force | Out-Null
-Copy-Item -LiteralPath $agentsSource -Destination (Join-Path $target 'AGENTS.md') -Force
-Write-Host "copied: AGENTS.md -> $(Join-Path $target 'AGENTS.md')"
+Copy-Item -LiteralPath $agentsSource -Destination $agentsTarget -Force
+Write-Host "copied: AGENTS.md -> $agentsTarget"
 
 # Mirror skills/: remove stale copies only inside <target>/skills.
-$skillsTarget = Join-Path $target 'skills'
 New-Item -ItemType Directory -Path $skillsTarget -Force | Out-Null
 $sourceItems = @(Get-ChildItem -LiteralPath $skillsSource -Recurse -Force)
 $sourceRelativePaths = @{}
@@ -89,14 +148,9 @@ $skillCount = @(Get-ChildItem -LiteralPath $skillsTarget -Recurse -Filter 'SKILL
 Write-Host "mirrored: skills/ -> $skillsTarget ($skillCount skills)"
 
 if ($Link) {
-    $piDir = Join-Path $HOME '.pi\agent'
-    $piAgents = Join-Path $piDir 'AGENTS.md'
     New-Item -ItemType Directory -Path $piDir -Force | Out-Null
 
-    $existing = Get-Item -LiteralPath $piAgents -Force -ErrorAction SilentlyContinue
-    if ($null -ne $existing -and (($existing.Attributes -band [IO.FileAttributes]::ReparsePoint) -eq 0)) {
-        throw "refusing to overwrite real file $piAgents (not a symlink)"
-    }
+    $existing = Get-ExistingItem $piAgents
     if ($null -ne $existing) {
         Remove-DeploymentPath $piAgents
     }

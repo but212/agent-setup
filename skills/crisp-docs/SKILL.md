@@ -1,5 +1,8 @@
 ---
 name: crisp-docs
+role: Compresses general documentation
+activation: Named documentation compression request
+modification-authority: Named files only
 description: >
   Conservatively compress explicitly named general documents such as README.md,
   specifications, guides, release notes, issue text, and Markdown or plain-text

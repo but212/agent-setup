@@ -1,5 +1,8 @@
 ---
 name: git-conflict
+role: Resolves Git integration conflicts while preserving contracts and unrelated work
+activation: Explicit Git conflict or non-fast-forward integration task
+modification-authority: Approved integration scope
 description: Resolve Git pull, merge, rebase, cherry-pick, and push integration conflicts by preserving behavior, schema contracts, tests, and unrelated work.
 ---
 

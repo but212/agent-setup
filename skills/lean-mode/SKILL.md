@@ -1,5 +1,8 @@
 ---
 name: lean-mode
+role: Makes the smallest correct code change
+activation: Implementation, fix, or refactor request
+modification-authority: Approved code scope
 description: >
   Produces the smallest correct coding change adhering to lean-design models.
   Use for writing, refactoring, fixing code, and managing dependencies.

@@ -1,5 +1,8 @@
 ---
 name: sql-orm-indicator-audit
+role: Audits SQL and ORM query risks
+activation: Explicit audit request
+modification-authority: None (read-only)
 description: Static and dynamic audit skill for detecting performance bottlenecks, anti-patterns, security risks, and index degradation indicators across raw SQL and ORM queries (JPA, TypeORM, SQLAlchemy, Prisma).
 version: 1.0.0
 disable-model-invocation: true

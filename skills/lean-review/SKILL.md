@@ -1,5 +1,8 @@
 ---
 name: lean-review
+role: Adversarial diff or repository review
+activation: Code review or full audit request
+modification-authority: None
 description: >
   Adversarial review for semantic regressions, over-engineering, state sprawl,
   and hollow abstractions across any language. Produces prioritized reports.

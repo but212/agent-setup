@@ -1,5 +1,8 @@
 ---
 name: mark-plan
+role: Tracks execution through `.plans/` files
+activation: Planning mode or checklist request
+modification-authority: Plan file
 description: >
   File-backed planning and execution tracking for coding agents without a native
   plan mode. Use `.plans/YYYY-MM-DD/<task-name>.md` as the single source of truth.
@@ -79,7 +82,7 @@ Allowed plan statuses: `planned`, `in-progress`, `blocked`, `complete`, and
 - `cancelled`: the user stopped the task or replaced it with another plan; this
   is terminal unless the user explicitly reopens it.
 
-Valid transitions are `planned -> in-progress`, `in-progress -> blocked`,
+Valid transitions are `planned -> in-progress`, `planned -> cancelled`, `in-progress -> blocked`,
 `blocked -> in-progress`, and `in-progress -> complete` or `cancelled`.
 Reopening a terminal plan requires explicit user direction and a recorded
 Decision; otherwise create a new plan.
