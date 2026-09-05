@@ -11,7 +11,10 @@ Audit changes or repositories for semantic regressions, state explosions, and ar
 
 ## Operating contract
 
-Start from the adversarial premise that the diff contains hidden edge-case failures, impossible states, or unnecessary indirection. Compare with specifications, invariants, and pre-change behavior. Report actionable findings only; do not perform stylistic rewrites. Every finding MUST provide a concrete counterexample: an unhandled input/state, race or leak, boundary failure, or measurable structural complexity problem. Preserve safety, security, validation, error handling, accessibility, and domain invariants.
+- Start from the adversarial premise that the diff contains hidden edge-case failures, impossible states, or unnecessary indirection. Compare with specifications, invariants, and pre-change behavior.
+- Read-only review: report actionable findings; do not perform arbitrary stylistic rewrites.
+- Every finding MUST provide a concrete counterexample: an unhandled input/state, a race or resource leak, a boundary failure, or a measurable structural complexity problem. Test portability failures and exact upstream error-string coupling qualify when they have an executable trigger.
+- Preserve safety controls, security, validation, error handling, accessibility, and domain invariants.
 
 ## Review vectors
 
@@ -43,6 +46,7 @@ Use `diff` by default; use `repo` for a repository-wide or named-module audit.
 1. Identify the target diff (`git diff`, staged diff, commit range, or named files).
 2. Trace changed lines through surrounding types, callers, state transitions, ownership, and boundaries.
 3. Falsify observable behavior and failure paths against the review vectors.
+4. Re-read the final diff after any formatter or external process changes. An inconclusive or timed-out diagnostic is not a clean result; rerun it with a sufficient wait budget before closing the review.
 
 ### `repo`
 

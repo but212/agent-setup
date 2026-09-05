@@ -1,7 +1,7 @@
 # Agent Skills Integration Specification
 
 - Status: `candidate`
-- Basis: 15 current `skills/*/SKILL.md` files
+- Basis: 16 current `skills/*/SKILL.md` files
 - Last verified: 2026-08-24
 - Purpose: Define when repository agent skills activate, what scope they cover, what they produce, and how the setup reaches stable status.
 
@@ -54,6 +54,7 @@ The skill contracts define prompt engineering as input/output interfaces and a c
 | `crisp-docs` | Compresses general documentation | Named documentation compression request | Named files only |
 | `crisp-agent-docs` | Compresses agent rule documents | Named `SKILL.md` or similar request | Named files only |
 | `crisp-commit` | Generates evidence-based Conventional Commits | Commit-message request | None |
+| `git-conflict` | Resolves Git integration conflicts while preserving contracts and unrelated work | Explicit Git conflict or non-fast-forward integration task | Approved integration scope |
 | `lean-design` | Designs around states, types, and boundaries | Structural, invariant, or API design request | None |
 | `lean-mode` | Makes the smallest correct code change | Implementation, fix, or refactor request | Approved code scope |
 | `lean-review` | Adversarial diff or repository review | Code review or full audit request | None |
@@ -227,4 +228,4 @@ A change that invalidates any gate returns the status to `candidate` until the g
 
 ## 7. Current Repository Documentation State
 
-The repository currently contains the 15 skill documents under `skills/`; no product code, APIs, or domain models were found. The repository now has dependency-free regression tests for deployment and catalog contracts. This document therefore defines skill operations and does not invent product contracts. When product functionality is added, document its specification separately and update this document only for skill-operation changes.
+The repository currently contains the 16 skill documents under `skills/`; no product code, APIs, or domain models were found. The repository now has dependency-free regression tests for deployment and catalog contracts. This document therefore defines skill operations and does not invent product contracts. When product functionality is added, document its specification separately and update this document only for skill-operation changes.

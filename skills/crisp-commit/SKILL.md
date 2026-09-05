@@ -37,6 +37,7 @@ Generate factual, high-density Conventional Commit messages from Git diffs.
 ## Controls
 
 - **Scope:** Read-only; never stage, commit, or modify files.
+- **Handoff:** If the user later explicitly requests a commit, leave this read-only skill and rerun the formatter and verification set, inspect the staged diff, and stage only the approved paths in the normal execution flow.
 - **Activate:** `/crisp-commit` or an explicit commit-message request.
 
 ## Reader-first form

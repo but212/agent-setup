@@ -72,7 +72,7 @@ Before declaring done, enforce repository quality boundaries:
 
 1. **Contract Coverage:** Every defined contract that is executable and in scope has a passing automated test; document non-executable contracts and their verification method.
 2. **Law Coverage:** Every accepted law is linked to an invariant or contract and has executable verification where practical. Do not promote a law to `context.md` or a shared rule without repeated cross-boundary evidence or explicit domain justification.
-3. **Code Quality:** Pass all repository-native formatting, linting, and static analysis checks.
+3. **Code Quality:** Run the project formatter immediately before the final quality set, then pass all repository-native formatting, linting, and static analysis checks. Run build-sharing commands sequentially; a runner timeout or inconclusive diagnostic is not a pass and requires a controlled rerun.
 4. **Spec Synchronization:**
    - Check if changes alter domain models, API contracts, business rules, or platform invariants.
    - Classify material claims as `Confirmed`, `Assumption`, or `Open decision`.

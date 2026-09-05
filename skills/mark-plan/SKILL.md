@@ -16,7 +16,7 @@ Use `.plans/YYYY-MM-DD/<task-name>.md` as the execution SSOT instead of a UI pla
 3. **Ground the plan:** Inspect relevant code, tests, conventions, and commands. Record confirmed paths and commands; label unresolved facts as assumptions or open questions.
 4. **Bound the work:** State goal, in-scope and out-of-scope work, and acceptance criteria. Do not add speculative tasks.
 5. **Make it executable:** Give criteria stable IDs and map each checklist item to them. Order items by dependency; name target paths and a concrete verification command or observable result.
-6. **Update as truth changes:** Mark items only after completion and verification. Record decisions, deviations, blockers, and results in the plan, not only in chat.
+6. **Update as truth changes:** Mark items only after completion and verification. Record decisions, deviations, blockers, and results in the plan, not only in chat. Record formatter drift, inconclusive diagnostics, and rerun results when they affect the verification history.
 7. **Protect user control:** Planning ends in review. Do not execute checklist
    items until the user explicitly approves execution (for example, "execute the
    plan", "start implementation", or equivalent); merely creating or reviewing a

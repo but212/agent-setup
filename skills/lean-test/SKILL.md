@@ -41,6 +41,8 @@ For stateful behavior, express cases as a transition table (`state x event -> ne
 ## Constraints
 
 - Assert contract values, statuses, errors, and durable effects - not incidental call order, internal shape, or call counts. Assert call counts only when the explicit contract is the side effect (for example, sending exactly one notification).
+- Assert the system-owned error contract rather than an upstream dependency's exact display string unless that string is itself public behavior.
+- Gate platform-specific fixtures by the platform that guarantees them; `cfg(unix)` is insufficient for a device that exists only on one Unix target.
 - Use snapshots only for intentional, stable rendering contracts; not mutable business logic.
 - Avoid real network calls, shared mutable state, broad fixture builders, and duplicated setup.
 - If no repository-native harness exists, report that before changing tooling; do not add dependencies without explicit request.
@@ -48,7 +50,7 @@ For stateful behavior, express cases as a transition table (`state x event -> ne
 
 ## Execution and verification
 
-Reuse the repository's declared runner, fixtures, and package manager. Run the narrowest exact command first, then required broader checks. Report each command and result; never claim success for an unrun or failing command.
+Reuse the repository's declared runner, fixtures, and package manager. Run the narrowest exact test command first, then required broader checks. When commands share a build directory or package cache, run them sequentially; a timeout caused by build-lock contention is inconclusive and must be rerun. Report the command and result; never claim success for an unrun or failing command.
 
 ## Output format
 

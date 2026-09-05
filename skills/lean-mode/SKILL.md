@@ -47,6 +47,8 @@ Follow the repository's established error propagation model: return typed errors
 
 Run the narrowest repository-native check covering changed behavior. Non-trivial logic (branches, loops, parsers, security, money, concurrency, or public boundaries) requires a runnable check. Never claim success unless the command exits cleanly.
 
+Run the project formatter immediately before the final check set and inspect the diff afterward; an external editor or formatter may reintroduce formatting drift after an earlier clean result. Avoid concurrent commands that share a build directory or package cache. If a runner times out or reports an inconclusive result during build-lock contention, treat it as unverified and rerun the checks sequentially before reporting success.
+
 ## Output format
 
 Lead immediately with the code change. When mechanisms are intentionally omitted:
