@@ -277,6 +277,37 @@ class RepositoryContractTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
+    def test_unquoted_reserved_frontmatter_scalar_fails(self):
+        with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
+            repository = Path(directory) / "repo"
+            shutil.copytree(
+                ROOT, repository, ignore=shutil.ignore_patterns(".git", "__pycache__")
+            )
+            skill = repository / "skills" / "crisp" / "SKILL.md"
+            text = skill.read_text(encoding="utf-8")
+            skill.write_text(
+                text.replace(
+                    'activation: "`/crisp`, `/crisp on`"',
+                    "activation: `/crisp`, `/crisp on`",
+                    1,
+                ),
+                encoding="utf-8",
+            )
+
+            result = subprocess.run(
+                [sys.executable, "scripts/validate-skills.py"],
+                cwd=repository,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(
+            "activation plain value cannot start with reserved character '`'",
+            result.stdout,
+        )
+
     def test_duplicate_catalog_row_fails(self):
         with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
             repository = Path(directory) / "repo"
@@ -402,7 +433,9 @@ class RepositoryContractTests(unittest.TestCase):
         )
         catalog = (ROOT / "spec" / "skills-spec.md").read_text(encoding="utf-8")
 
-        self.assertIn("activation: `/spec-drive`, contract-sensitive change", skill)
+        self.assertIn(
+            'activation: "`/spec-drive`, contract-sensitive change"', skill
+        )
         self.assertNotIn("activation: `/spec-drive`, `/sdd`", skill)
         self.assertIn(
             "| `spec-drive` | Coordinates contract-centered SDD | `/spec-drive`, contract-sensitive change |",

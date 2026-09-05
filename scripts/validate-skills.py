@@ -25,7 +25,16 @@ def frontmatter(path: Path) -> dict[str, str]:
     for line in lines[1:end]:
         match = re.match(r"^([A-Za-z][\w-]*):\s*(.*)$", line)
         if match:
-            values[match.group(1)] = match.group(2).strip().strip('"')
+            field = match.group(1)
+            value = match.group(2).strip()
+            if value.startswith(("`", "@")):
+                raise ValueError(
+                    f"{field} plain value cannot start with reserved character "
+                    f"{value[0]!r}"
+                )
+            if len(value) >= 2 and value[0] == value[-1] and value[0] in "'\"":
+                value = value[1:-1]
+            values[field] = value
     return values
 
 

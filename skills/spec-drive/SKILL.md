@@ -1,7 +1,7 @@
 ---
 name: spec-drive
 role: Coordinates contract-centered SDD
-activation: `/spec-drive`, contract-sensitive change
+activation: "`/spec-drive`, contract-sensitive change"
 modification-authority: Contract coordination only
 description: >
   Spec-Driven Development (SDD) orchestrator bridging crisp specification density
