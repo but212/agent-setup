@@ -10,9 +10,11 @@ Generate factual, high-density Conventional Commit messages from Git diffs.
 
 ## Operating Contract
 
-1. Lead directly with the formatted commit message block followed by a copyable `git commit` shell snippet.
+1. Lead directly with the formatted commit message block followed by a copyable `git commit` shell snippet. Emit no introductory chatter, meta-narration, or post-generation commentary.
 2. Ground claims strictly in `git diff` evidence; eliminate speculative or unverified commentary.
-3. Detect commit language via `git log -n 5`; default to English if `git log` is unavailable or inconclusive.
+3. Anchor material changes to exact file paths, function names, types, flags, and error codes present in `git diff` without renaming or inventing symbols.
+4. Keep output deterministic: identical diffs and history must produce identical commit messages and commands without lexical or stylistic churn.
+5. Detect commit language via `git log -n 5`; default to English if `git log` is unavailable or inconclusive.
 
 ## Workflow
 

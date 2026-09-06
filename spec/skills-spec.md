@@ -131,31 +131,33 @@ When `mark-plan` is active, `.plans/YYYY-MM-DD/<task-name>.md` is the execution 
 
 ### 4.2 Crisp Skills
 
+Crisp skills produce high-density, grounded output without conversational preamble, meta-commentary, or process explanation. Across all crisp skills, exact identifiers, symbols, paths, code spans, commands, and numbers are immutable anchors; when text is already minimal or further reduction risks dropping facts or altering contracts, the skills preserve the input unaltered without synonym or stylistic churn.
+
 #### `crisp`
 
-Lead with the answer and optimize for the reader's task. Use prose for one connected idea, reasoning, qualifications, and transitions; use bullets for parallel items, actions, evidence, or caveats, and numbered lists only for sequence. Match structure to the task: answer and explanation, recommendation and trade-offs, prerequisites and steps, or outcome and evidence. Mix forms when each serves a different purpose; do not force structure for appearance. Honor the requested language, audience, format, and detail. Do not omit identifiers, commands, errors, order, constraints, or next actions. Do not alter code blocks or machine-readable text unless asked.
+Lead with the answer and optimize for the reader's task without conversational preamble or meta-commentary. Exact identifiers, paths, URLs, code spans, environment variables, constants, numbers, and error strings are immutable anchors. When input is already concise or reduction risks dropping facts, return it unaltered without synonym or stylistic churn. Match form to the reader's job: prose for connected reasoning, bullets for parallel items, and numbered lists only for sequence. Honor requested language, audience, format, and detail.
 
 #### `crisp-docs`
 
-Compress only explicitly named general documentation in place. Put the reader's purpose, answer, decision, or required action near the beginning. Match form to document type: prose for concepts, numbered lists for procedures, and bullets or tables for reference material. Keep prerequisites before actions and expected results or failure paths near procedures. Preserve meaningful existing structure and do not fragment reasoning. Preserve facts, conditions, exceptions, links, commands, and structure. Do not modify generated content, code, configuration, or machine-readable data. Stop when the target, audience, or references are ambiguous.
+Compress only explicitly named general documentation in place without conversational preamble or commentary. Keep headings, links, anchors, lists, tables, code blocks, frontmatter, identifiers, commands, paths, numbers, environment variables, and machine-readable text strictly intact. If the document is already concise or further reduction risks dropping anchors or introducing ambiguity, leave the target document completely unchanged without synonym or stylistic churn. Match form to document type: prose for concepts, numbered lists for procedures, and bullets or tables for reference material.
 
 #### `crisp-agent-docs`
 
-Compress only explicitly named agent rule documents such as `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, and `SKILL.md`. Put scope, authority, safety boundaries, and high-impact triggers first. Model actionable rules as `trigger -> action -> exception -> consequence` when those parts exist. Use prose when conditions or exceptions must stay connected; use bullets for independent rules and numbered lists for workflows. Preserve mandatory terms, exceptions, safety, verification, paths, and identifiers. Do not modify when rules conflict or references are missing.
+Compress only explicitly named agent rule documents such as `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, and `SKILL.md` using the standard report format without conversational preamble or throat-clearing. Precedence levels, security rules, destructive-command guards, tool names, paths, and environment variables are immutable anchors; never alter, weaken, or omit them. If an instruction document is already optimized or further reduction risks blurring contract boundaries, dropping exceptions, or losing operational meaning, leave the target document completely unchanged without phrasing or stylistic churn.
 
 #### `crisp-commit`
 
-Read `git status`, staged and unstaged diffs, targeted untracked files, and the five latest log entries to produce an evidence-based message. Make the subject self-contained; use it alone for a simple diff and add an optional shared-context paragraph plus parallel bullets only for a complex diff. Use numbered lists only for ordered changes, omit cosmetic details and speculation, describe unrelated changes separately, and keep the command consistent with the displayed message. Follow recent commit language; use English when the repository language is unclear. Select an appropriate `feat|fix|refactor|style|docs|test|chore` type and never stage or commit.
+Read `git status`, staged and unstaged diffs, targeted untracked files, and the five latest log entries to produce an evidence-based message directly with its shell snippet and zero introductory chatter. Ground claims strictly in `git diff`. Anchor material changes to exact file paths, function names, types, flags, and error codes present in `git diff` without renaming or inventing symbols. Keep generation deterministic: identical diffs and history produce identical commit messages and commands without lexical or stylistic churn. Select an appropriate `feat|fix|refactor|style|docs|test|chore` type and never stage or commit.
 
 ### 4.3 Design, Implementation, and Test Skills
 
 #### `lean-design`
 
-Define data models and state transitions first, then make invalid states unrepresentable with types, enums, and constraints. Address nulls, partial failure, concurrency, and schema mismatches before happy paths. Remove unsupported abstractions, unused parameters, and speculative extension points. Output: `Problem -> Structure -> Remove -> Implementation -> Verify`; design only.
+Define data models and state transitions first, then make invalid states unrepresentable with types, enums, and constraints. Address nulls, partial failure, concurrency, and schema mismatches before happy paths. Prove boundary invariants early: temporal contract stability, partition isolation, and atomic resource limits. Remove unsupported abstractions, unused parameters, and speculative extension points. Output: `Problem -> Structure -> Remove -> Handoff Contract`; design only.
 
 #### `lean-mode`
 
-Make the smallest code change that satisfies an approved requirement, design, or TDD slice. Reuse existing code, helpers, types, dependencies, standard-library features, and platform primitives. Measure before optimizing. Fix bugs at the shared root cause and run the narrowest repository-native verification.
+Make the smallest code change that satisfies an approved requirement, design, or TDD slice. Reuse existing code, helpers, types, dependencies, standard-library features, and platform primitives. Invariant boundaries (authorization, partition isolation, atomic transitions, serialization stability) are non-negotiable and cannot be minimized. Measure before optimizing. Fix bugs at the shared root cause and run the narrowest repository-native verification.
 
 #### `tdd-plan`
 
@@ -163,13 +165,13 @@ Inspect code, tests, runners, and fixtures, then express contracts as conditions
 
 #### `lean-test`
 
-Test observable public boundaries with the smallest set covering representative success, applicable empty/boundary/transition states, exposed invalid input or failure, and confirmed regressions. Control time, randomness, and async completion deterministically. Do not weaken assertions or modify production code.
+Test observable public boundaries with the smallest set covering representative success, applicable empty/boundary/transition states, temporal contract evolution, partition isolation, exposed invalid input or failure, and confirmed regressions. Control time, randomness, and async completion deterministically. Do not weaken assertions or modify production code.
 
 ### 4.4 Review Skills
 
 #### `lean-review`
 
-Assume the change is wrong and falsify semantic preservation, scope, structure, YAGNI, boundary integrity, duplication, and dead surfaces. Every finding includes location, reproduction condition, failure mechanism, evidence, and the smallest alternative. Use P1/P2/P3 and the defined tags. Review only; do not modify files.
+Assume the change is wrong and falsify semantic preservation, temporal contract stability, scope, structure, YAGNI, boundary and partition integrity, resource contention, duplication, and dead surfaces using the 8 core review vectors. Every finding includes priority, location, tag, issue, concrete counterexample evidence, and minimal action with inline suggestions and CI blocking verdict. Review only; do not modify files.
 
 #### `sql-orm-indicator-audit`
 

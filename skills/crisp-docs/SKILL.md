@@ -17,9 +17,9 @@ Compress explicitly named documents without weakening their meaning, usability, 
 
 - **Named targets only:** Process only documents explicitly named or unambiguously selected; do not rewrite a documentation tree by default.
 - **Supported prose:** Markdown, plain text, and other human-readable documentation. Do not modify source code, configuration, generated files, lockfiles, or machine-readable data as prose.
-- **In-place editing:** Edit targeted files in place unless the request is review, analysis, or no-edit.
+- **In-place editing:** Edit targeted files in place unless the request is review, analysis, or no-edit. Emit only the required report or edits without conversational preamble or commentary.
 - **Audience first:** Preserve audience, purpose, language, voice, and formality unless asked otherwise.
-- **Structure preservation:** Keep headings, links, anchors, lists, tables, code blocks, frontmatter, identifiers, commands, paths, numbers, and machine-readable text intact. Change surrounding explanation only when safe.
+- **Lossless preservation and convergence:** Keep headings, links, anchors, lists, tables, code blocks, frontmatter, identifiers, commands, paths, numbers, environment variables, and machine-readable text strictly intact. If the document is already concise or further reduction risks dropping anchors or introducing ambiguity, leave the target document completely unchanged without synonym or stylistic churn.
 
 ## Reader-first form
 

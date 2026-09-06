@@ -16,7 +16,9 @@ Compress explicitly named agent instruction documents without weakening operatio
 
 ## Operating contract
 
-Report using this skill's own format: `Outcome -> Scope -> Analysis -> Verification -> Next`. Report-only requests use the same structure without editing files.
+Report using this skill's own format: `Outcome -> Scope -> Analysis -> Verification -> Next` without conversational preamble, throat-clearing, or process narrative. Report-only requests use the same structure without editing files.
+
+Precedence levels, security rules, destructive-command guards, tool names, paths, and environment variables are immutable anchors; never alter, weaken, or omit them. If an instruction document is already optimized or further reduction risks blurring contract boundaries, dropping exceptions, or losing operational meaning, leave the target document completely unchanged without phrasing or stylistic churn, and report why under Outcome.
 
 ## Reader-first form
 

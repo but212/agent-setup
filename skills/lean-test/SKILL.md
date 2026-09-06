@@ -22,8 +22,8 @@ Design and write the fewest deterministic tests proving observable behavior and 
 | :--- | :--- | :--- |
 | **Domain logic** | Pure calculations and transitions | Explicit inputs -> outputs; state table |
 | **State machine** | Invariants and valid/invalid transitions | Allowed transitions pass; invalid transitions reject |
-| **Boundary / API** | Serialization, validation, status codes | Status, error payload, and boundary gates |
-| **Integration** | Persistence and transactions | Durable effects, rollback, ordering, conflict behavior |
+| **Boundary / API** | Serialization, validation, partition gates | Status, payload, schema evolution, and scope isolation |
+| **Integration** | Persistence, transactions, resources | Durable effects, rollback, contention, ordering invariants |
 | **External adapter** | Adapter's public contract | Translated result/error at the controlled I/O boundary |
 
 ## Case selection
@@ -34,7 +34,9 @@ Choose only applicable distinguishing cases:
 2. Empty or boundary input.
 3. Each meaningful state transition, including rejected transitions.
 4. Exposed invalid-input or failure path.
-5. Confirmed regression case.
+5. Contract evolution or schema backward-compatibility boundary.
+6. Partition boundary isolation or unauthorized cross-scope access.
+7. Confirmed regression case.
 
 For stateful behavior, express cases as a transition table (`state x event -> next state or error`) and assert invariants after each transition. Do not manufacture cases solely to improve coverage percentages.
 

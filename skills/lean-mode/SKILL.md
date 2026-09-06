@@ -28,9 +28,10 @@ Stop at the first applicable rung:
 
 ## Invariant boundaries (never minimize)
 
-- Input sanitization and authorization gates at trust boundaries
+- Input sanitization, authorization gates, and partition isolation at trust boundaries
 - Explicit error handling that prevents data corruption, silent failure, or lost context
-- Atomic state transitions (DB transactions, concurrency guards, compare-and-swap, or equivalent)
+- Atomic state transitions, concurrency guards, and bounded resource acquisition
+- Serialization format stability and backward compatibility across version transitions
 - Resource ownership, cleanup, and cancellation at I/O boundaries
 - Explicit domain contracts established by `lean-design`
 

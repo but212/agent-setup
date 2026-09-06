@@ -18,11 +18,11 @@ Audit changes or repositories for semantic regressions, state explosions, and ar
 
 ## Review vectors
 
-1. **`[semantic]`**: Observable domain contract violation or broken lifecycle, ownership, failure path, or return behavior.
+1. **`[semantic]`**: Observable domain contract violation, temporal contract drift (unversioned breaking changes to public serialization or wire interfaces), or broken lifecycle, ownership, and failure paths.
 2. **`[state]`**: Data model permits contradictory or impossible states (boolean-flag sprawl, loose optionals, missing sum types).
 3. **`[indirection]`**: Single-implementation interface, forwarding wrapper, pass-through DTO, or premature abstraction (YAGNI).
-4. **`[effect]`**: Core computation tainted with hidden I/O, untracked time/entropy, global mutable state, or unclear resource ownership.
-5. **`[boundary]`**: Weakened validation, swallowed errors, missing security/permission checks, non-atomic transition, or broken retry/idempotency boundary.
+4. **`[effect]`**: Core computation tainted with hidden I/O, unbounded resource acquisition or lock contention, untracked time/entropy, global mutable state, or leaked transaction boundaries.
+5. **`[boundary]`**: Weakened validation, partition or trust scope leaks (unauthorized cross-domain access), missing permission gates, non-atomic transition, or broken retry/idempotency boundary.
 6. **`[shrink]`**: Complex imperative logic where a clear standard-library or idiomatic primitive is sufficient without hiding required complexity.
 7. **`[delete]`**: Dead code, orphaned types, unreachable branches, or unused parameters.
 8. **`[surgical]`**: Unrelated refactoring or scope creep in the reviewed change.
@@ -32,10 +32,11 @@ Audit changes or repositories for semantic regressions, state explosions, and ar
 Discard formatting, naming, and stylistic preferences. Do not report an issue unless it demonstrates at least one of:
 
 1. An executable failing input or state.
-2. A race, leak, resource, or trust-boundary bug.
-3. A measurable reduction in structural complexity or removal of unsupported surface area.
+2. A race, leak, unbounded resource contention, or trust/partition boundary violation.
+3. An observable contract or serialization break across temporal or version boundaries.
+4. A measurable reduction in structural complexity or removal of unsupported surface area.
 
-Do not recommend removing validation, error handling, security controls, accessibility mechanisms, or required business complexity.
+Do not recommend removing validation, error handling, security controls, accessibility mechanisms, or required business complexity. Reject speculative performance, scalability, or migration concerns without an executable, reproducible failure trigger.
 
 ## Workflow
 
@@ -63,7 +64,10 @@ For each finding:
 - **Tag**: One tag from the taxonomy above
 - **Issue**: Precise description of the defect
 - **Evidence / Counterexample**: Concrete input, call trace, race, or code fact demonstrating failure
-- **Minimal Action**: The smallest diff or replacement pattern
+- **Minimal Action**: The smallest diff or replacement pattern (prefer GitHub ````suggestion` blocks for inline diffs)
+
+Summary status:
+- `Blocking`: `Yes ([P1] or [P2] findings present)` | `No (Clean or [P3] advisory only)`
 
 If no issues exist for diff scope: `Diff is lean. No evidence-backed issues detected.`
 If no issues exist for repo scope: `Repository is lean. No over-engineering detected.`
