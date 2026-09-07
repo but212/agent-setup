@@ -45,6 +45,8 @@ The skill contracts define prompt engineering as input/output interfaces and a c
 
 ## 2. Skill Catalog
 
+Each `skills/*/SKILL.md` declares scalar `role`, `activation`, and `modification-authority` frontmatter fields. The validator compares these fields exactly with the catalog row, so routing and write authority have one machine-checked source of parity.
+
 | Skill | Role | Activation | Modification authority |
 | --- | --- | --- | --- |
 | `challenge` | Selects a challenge path using repository evidence | `/challenge`, assumption review | None |
@@ -62,7 +64,7 @@ The skill contracts define prompt engineering as input/output interfaces and a c
 | `mark-plan` | Tracks execution through `.plans/` files | Planning mode or checklist request | Plan file |
 | `tdd-plan` | Creates an implementation-ready TDD plan | TDD plan request | None |
 | `sql-orm-indicator-audit` | Audits SQL and ORM query risks | Explicit audit request | None (read-only) |
-| `spec-drive` | Coordinates contract-centered SDD | `/spec-drive`, `/sdd`, contract-sensitive change | Contract coordination only |
+| `spec-drive` | Coordinates contract-centered SDD | `/spec-drive`, contract-sensitive change | Contract coordination only |
 
 ## 3. Routing and Handoffs
 
@@ -95,7 +97,7 @@ The skill contracts define prompt engineering as input/output interfaces and a c
 
 When `mark-plan` is active, `.plans/YYYY-MM-DD/<task-name>.md` is the execution SSOT. Create the ISO-date folder for new plans and search all date folders when reusing one.
 
-- State: `planned -> in-progress -> complete|cancelled`, or `in-progress <-> blocked`.
+- State: `planned -> in-progress|cancelled`, `in-progress -> blocked|complete|cancelled`, or `blocked -> in-progress`.
 - Do not execute checklist items while the plan is `planned` and awaiting approval.
 - Each checklist item has acceptance criterion IDs, target paths, and a verification command.
 - Check items only after verification; record failures, decisions, and deviations immediately.
@@ -123,11 +125,13 @@ When `mark-plan` is active, `.plans/YYYY-MM-DD/<task-name>.md` is the execution 
 - Use the Fast path only when the change is reversible, local, does not alter public APIs, schemas, authentication, state transitions, or domain invariants, and has no material ambiguity.
 - Otherwise ask one material decision at a time with a recommendation, reason, counterargument, and decision request.
 - Propose a `context.md` update for new domain terms and an ADR for hard-to-reverse choices.
+- When `mark-plan` is active, hand the confirmed decision summary to it for plan recording; challenge remains read-only.
 
 #### `challenge-light`
 
 - Confirm goals, constraints, approach, validation, and risks for early ideas without repository evidence.
 - Use the Fast path only when reversibility, locality, decision clarity, and minimal inspection all hold.
+- When `mark-plan` is active, hand the confirmed decision summary to it for plan recording; challenge remains read-only.
 
 ### 4.2 Crisp Skills
 
@@ -212,7 +216,7 @@ Adopt a law only when supported by at least two distinct cases, repeated cross-b
 - [ ] No authority conflict exists between the plan and permanent specifications.
 - [ ] The actual `skills/*/SKILL.md` files match the catalog's names, activation rules, and modification authority.
 - [ ] Markdown content is ASCII-only.
-- [ ] `python3 scripts/validate-skills.py` passes when the validation script exists, including dated plan-path and Markdown ASCII validation.
+- [ ] `python3 scripts/validate-skills.py` and `python3 -m unittest discover -s tests -v` pass when the validation script and tests exist, including dated plan-path, Markdown ASCII, deployment, and catalog validation.
 
 ## 6. Stabilization Policy
 

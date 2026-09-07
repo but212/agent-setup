@@ -1,5 +1,8 @@
 ---
 name: crisp
+role: Compresses response prose
+activation: "`/crisp`, `/crisp on`"
+modification-authority: None
 description: >
   Compresses answers and prose for clarity, force, and information density
   without removing meaning needed for correctness. Use for output style, not

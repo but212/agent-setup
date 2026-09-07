@@ -1,5 +1,8 @@
 ---
 name: lean-design
+role: Designs around states, types, and boundaries
+activation: Structural, invariant, or API design request
+modification-authority: None
 description: >
   Minimalist architecture and API design that eliminates impossible states
   through algebraic data types and structural boundaries. Use for designing

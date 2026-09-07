@@ -1,5 +1,8 @@
 ---
 name: lean-test
+role: Designs, writes, or diagnoses minimal deterministic tests
+activation: Test request
+modification-authority: Test scope only
 description: >
   Designs and writes deterministic, minimal tests against public boundaries.
   Focuses on contract verification, boundary conditions, and state transitions

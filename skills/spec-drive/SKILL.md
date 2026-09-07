@@ -1,5 +1,8 @@
 ---
 name: spec-drive
+role: Coordinates contract-centered SDD
+activation: "`/spec-drive`, contract-sensitive change"
+modification-authority: Contract coordination only
 description: >
   Spec-Driven Development (SDD) orchestrator bridging crisp specification density
   with lean structural design, surgical TDD vertical slices, and living spec synchronization.
@@ -129,5 +132,5 @@ When `mark-plan` is active, use its `.plans/YYYY-MM-DD/<task-name>.md` as the ex
 
 - **Scope:** Contract orchestration and synchronization decisions; do not directly edit production code or tests.
 - **Approval:** Analysis and planning are read-only until explicit execution approval. Breaking changes also require compatibility, migration, and rollback decisions.
-- **Activate:** `/spec-drive`, `/sdd`, or when asked for spec-driven development.
+- **Activate:** `/spec-drive` or when asked for spec-driven development.
 - **Deactivate:** `stop spec-drive` or return to normal mode.

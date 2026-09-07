@@ -1,5 +1,8 @@
 ---
 name: tdd-plan
+role: Creates an implementation-ready TDD plan
+activation: TDD plan request
+modification-authority: None
 description: Create an implementation-ready TDD plan from a requirement and repository evidence.
 ---
 

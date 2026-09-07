@@ -1,5 +1,8 @@
 ---
 name: crisp-agent-docs
+role: Compresses agent rule documents
+activation: Named `SKILL.md` or similar request
+modification-authority: Named files only
 description: >
   Conservatively compress explicitly named agent instruction documents such as
   AGENTS.md, CLAUDE.md, GEMINI.md, SKILL.md, and similar Markdown files. Use

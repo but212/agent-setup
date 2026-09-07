@@ -1,5 +1,8 @@
 ---
 name: challenge-docs
+role: Repository- and documentation-grounded decision challenge
+activation: Repository or documentation exists
+modification-authority: None
 description: Challenge assumptions and stress-test a plan or technical decision grounded in codebase context, shared domain docs (context.md), and durable decision records (ADRs).
 disable-model-invocation: true
 ---
@@ -45,10 +48,10 @@ Use when any Fast-path gate fails. Inspect repository facts, docs, code, and typ
 
 ## Output & handoff
 
-After confirmation, update the active `mark-plan` plan when present; otherwise report only in chat. Hand off to `tdd-plan`, `lean-design`, or `lean-mode`; do not create a second planning artifact.
+After confirmation, hand the decision summary to active `mark-plan` for plan recording when present; otherwise report only in chat. Hand off to `tdd-plan`, `lean-design`, or `lean-mode`; do not create a second planning artifact.
 
 When resolved, output:
 
 - **Summary:** Mode (`Challenge Docs`) | Plan | Next step | Decisions | Domain term changes | ADRs affected | Challenged assumptions | Risks | Revisit triggers.
-- **Artifacts:** Record the decision and plan changes in `.plans/YYYY-MM-DD/<task-name>.md` when `mark-plan` is active; otherwise report in chat without creating ad hoc plan files.
+- **Artifacts:** `mark-plan` records the decision and plan changes in `.plans/YYYY-MM-DD/<task-name>.md` when active; otherwise report in chat without creating ad hoc plan files.
 - **Handoff:** Propose the next skill (`tdd-plan`, `lean-design`, or `lean-mode`).
