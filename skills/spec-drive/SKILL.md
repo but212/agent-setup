@@ -3,10 +3,7 @@ name: spec-drive
 role: Coordinates contract-centered SDD and plan tracking
 activation: "`/spec-drive`, contract-sensitive change, planning request"
 modification-authority: Plan file and contract coordination
-description: >
-  Spec-Driven Development (SDD) orchestrator bridging crisp specification density
-  with lean structural design, surgical TDD vertical slices, and file-backed plan
-  tracking (.plans/YYYY-MM-DD/<task-name>.md).
+description: Spec-Driven Development (SDD) orchestrator bridging crisp specification density with lean structural design, surgical TDD vertical slices, and file-backed plan tracking (.plans/YYYY-MM-DD/"task-name".md).
 ---
 
 # Spec-Driven Development (spec-drive)
@@ -15,11 +12,11 @@ Drive complex or contract-sensitive changes through high-density specifications,
 
 ## Operating Contract
 
-`spec-drive` coordinates the requirement lifecycle: `lean-design` owns structural modeling, `lean-mode` owns production code changes, and `.plans/YYYY-MM-DD/<task-name>.md` tracks execution state.
+`spec-drive` coordinates the requirement lifecycle: `lean-design` owns structural modeling, `lean-mode` owns production code changes, and `.plans/YYYY-MM-DD/"task-name".md` tracks execution state.
 
 1. **Crisp over Bloat:** Express concrete observable behavior, invariants, and input/output contracts; omit speculative requirements and decoration.
 2. **Lean over Patchwork:** Eliminate impossible states before implementing logic; write only the code needed to satisfy contracts.
-3. **Execution SSOT:** Track execution through `.plans/YYYY-MM-DD/<task-name>.md`. Synchronize permanent domain rules and architecture into repository documentation.
+3. **Execution SSOT:** Track execution through `.plans/YYYY-MM-DD/"task-name".md`. Synchronize permanent domain rules and architecture into repository documentation.
 4. **Authority Separation:** Permanent specifications govern domain rules and public contracts; plan files track execution progress and verification history.
 5. **Approval Boundary:** Planning ends in review. Produce only a `planned` plan or analysis before explicit approval; do not modify production code, tests, or execute checklist items without explicit approval.
 6. **Composed Activation:** When `/crisp` is active with `/spec-drive`, `spec-drive` coordinates the task while `crisp` controls response prose density.
@@ -29,11 +26,11 @@ Drive complex or contract-sensitive changes through high-density specifications,
 When planning is requested or non-trivial execution begins:
 
 1. **Search & Reuse:** Search `.plans/` across all date folders. Reuse an existing `planned`, `in-progress`, or `blocked` plan for the task. Never silently resume a `complete` or `cancelled` plan without asking.
-2. **Path Convention:** Create `.plans/YYYY-MM-DD/<task-name>.md` using the plan creation date in ISO format and a lowercase kebab-case task name.
+2. **Path Convention:** Create `.plans/YYYY-MM-DD/"task-name".md` using the plan creation date in ISO format and a lowercase kebab-case task name.
 3. **State Transitions:**
-   - `planned -> in-progress | cancelled`
-   - `in-progress -> blocked | complete | cancelled`
-   - `blocked -> in-progress`
+   - `planned -" in-progress | cancelled`
+   - `in-progress -" blocked | complete | cancelled`
+   - `blocked -" in-progress`
 4. **Completion Rule:** Check checklist items only after verification passes. Do not mark the plan complete while criteria, checklist items, or blockers remain unresolved.
 
 ## The 4-Phase SDD Pipeline
