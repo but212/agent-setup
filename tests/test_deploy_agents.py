@@ -7,35 +7,8 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 POWERSHELL = shutil.which("pwsh") or shutil.which("powershell")
-
-
-def find_bash():
-    if sys.platform != "win32":
-        return shutil.which("bash") or shutil.which("sh")
-    candidates = [
-        Path(r"C:\Program Files\Git\bin\bash.exe"),
-        Path(r"C:\Program Files\Git\usr\bin\bash.exe"),
-    ]
-    which_bash = shutil.which("bash")
-    if which_bash and "system32" not in which_bash.lower():
-        candidates.append(Path(which_bash))
-    for c in candidates:
-        if c.exists():
-            try:
-                res = subprocess.run(
-                    [str(c), "-c", "exit 0"],
-                    capture_output=True,
-                    check=False,
-                )
-                if res.returncode == 0:
-                    return str(c)
-            except Exception:
-                pass
-    return None
-
-
-BASH = find_bash()
 
 
 def check_symlink_support():
@@ -172,6 +145,22 @@ class DeployAgentsTests(unittest.TestCase):
             (self.repo / "AGENTS.md").read_text(encoding="utf-8"),
         )
 
+    def test_python_deploy_reconciles_conflicting_node_types(self):
+        target = self.root / "target"
+        (target / "skills").mkdir(parents=True)
+        # Create a regular file where 'example' directory should be
+        conflicting_file = target / "skills" / "example"
+        conflicting_file.write_text("conflict", encoding="utf-8")
+
+        result = self.run_python_deploy(target)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue((target / "skills" / "example" / "SKILL.md").exists())
+        self.assertEqual(
+            (target / "skills" / "example" / "SKILL.md").read_text(encoding="utf-8"),
+            "example\n",
+        )
+
     def test_rejects_resolved_home_alias_before_write(self):
         result = self.run_deploy(self.home / ".")
 
@@ -193,6 +182,44 @@ class DeployAgentsTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("symlinked AGENT_HOME", result.stderr)
         self.assertEqual(sentinel.read_text(encoding="utf-8"), "keep")
+
+    @unittest.skipUnless(CAN_SYMLINK, "filesystem symlinks not supported/permitted")
+    def test_rejects_symlinked_ancestor_target_without_touching_victim(self):
+        victim = self.root / "victim"
+        victim.mkdir()
+        sentinel = victim / "keep.txt"
+        sentinel.write_text("keep", encoding="utf-8")
+        sym_parent = self.root / "sym_parent"
+        sym_parent.symlink_to(victim, target_is_directory=True)
+        target = sym_parent / "sub"
+
+        result = self.run_python_deploy(target)
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("symlinked AGENT_HOME", result.stderr)
+        self.assertEqual(sentinel.read_text(encoding="utf-8"), "keep")
+        self.assertFalse((victim / "sub").exists())
+
+    def test_has_symlink_or_reparse_in_chain_detects_ancestor(self):
+        from unittest.mock import patch
+        from scripts.deploy_agents import has_symlink_or_reparse_in_chain
+
+        sym_parent = self.root / "sym_parent"
+        path = sym_parent / "sub" / "target"
+        with patch("scripts.deploy_agents.is_symlink_or_reparse") as mock_is_sym:
+            mock_is_sym.side_effect = lambda p: p == sym_parent
+            self.assertTrue(has_symlink_or_reparse_in_chain(path))
+
+    def test_has_symlink_or_reparse_in_chain_respects_stop_at(self):
+        from unittest.mock import patch
+        from scripts.deploy_agents import has_symlink_or_reparse_in_chain
+
+        sym_parent = self.root / "sym_parent"
+        stop_at = sym_parent / "sub"
+        path = stop_at / "target"
+        with patch("scripts.deploy_agents.is_symlink_or_reparse") as mock_is_sym:
+            mock_is_sym.side_effect = lambda p: p == sym_parent
+            self.assertFalse(has_symlink_or_reparse_in_chain(path, stop_at=stop_at))
 
     @unittest.skipUnless(CAN_SYMLINK, "filesystem symlinks not supported/permitted")
     def test_rejects_symlinked_skills_without_touching_victim(self):
@@ -235,7 +262,7 @@ class DeployAgentsTests(unittest.TestCase):
         result = self.run_powershell_deploy(target)
 
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("symlinked destination", result.stderr)
+        self.assertIn("symlinked AGENT_HOME", result.stderr)
         self.assertEqual(sentinel.read_text(encoding="utf-8"), "keep")
 
     @unittest.skipUnless(POWERSHELL, "PowerShell runtime is unavailable")

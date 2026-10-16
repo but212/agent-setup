@@ -110,7 +110,7 @@ When `mark-plan` is active, `.plans/YYYY-MM-DD/<task-name>.md` is the execution 
 `scripts/deploy_agents.py` (and its wrappers `scripts/deploy-agents.sh` and `scripts/deploy-agents.ps1`) mirror repository content into the shared agent folder (`~/.agents`, overridable via `AGENT_HOME`). The CLI entry points accept `--link` (or `-Link` in PowerShell).
 
 - The deployment target is a copy destination only; the repository remains the source of truth.
-- Skills mirroring uses `rsync --delete` on POSIX and an equivalent scoped mirror on PowerShell; deletions are limited to stale copies inside `<target>/skills/`.
+- Skills mirroring uses a scoped Python mirror (with deletions limited to stale copies inside `<target>/skills/`), invoked directly or via POSIX (`sh`) and PowerShell (`ps1`) wrappers.
 - `AGENT_HOME` is canonicalized before writes; resolving to `/` or `$HOME` is refused.
 - Existing symlinked targets or destination entries (`AGENT_HOME`, `AGENTS.md`, `skills/`, or pi's agent directory) are refused before writes.
 - A real (non-symlink) file at pi's global instructions path is never overwritten; `--link` refuses instead.

@@ -24,6 +24,21 @@ def is_symlink_or_reparse(path: Path) -> bool:
         return False
 
 
+def has_symlink_or_reparse_in_chain(path: Path, stop_at: Path | None = None) -> bool:
+    curr = path if path.is_absolute() else Path.cwd() / path
+    stop = stop_at.resolve() if stop_at else None
+    while True:
+        if is_symlink_or_reparse(curr):
+            return True
+        if stop and (curr == stop_at or (curr.exists() and curr.resolve() == stop)):
+            break
+        parent = curr.parent
+        if parent == curr:
+            break
+        curr = parent
+    return False
+
+
 def get_canonical(path: Path) -> Path:
     raw = path if path.is_absolute() else Path.cwd() / path
     curr = raw
@@ -48,12 +63,16 @@ def deploy(repo_root: Path, target_arg: str | None, link: bool) -> int:
     if not target_input_str:
         target_path = home_dir / ".agents"
         target_input_str = str(target_path)
+        stop_at = home_dir
     else:
         target_path = Path(target_input_str)
         if not target_path.is_absolute():
             target_path = Path.cwd() / target_path
+            stop_at = Path.cwd().resolve()
+        else:
+            stop_at = None
 
-    if is_symlink_or_reparse(target_path):
+    if has_symlink_or_reparse_in_chain(target_path, stop_at=stop_at):
         sys.stderr.write(f"refusing symlinked AGENT_HOME: {target_input_str}\n")
         return 1
 
@@ -99,7 +118,7 @@ def deploy(repo_root: Path, target_arg: str | None, link: bool) -> int:
     pi_dir = home_dir / ".pi" / "agent"
     pi_agents = pi_dir / "AGENTS.md"
     if link:
-        if is_symlink_or_reparse(pi_dir):
+        if has_symlink_or_reparse_in_chain(pi_dir, stop_at=home_dir):
             sys.stderr.write(
                 f"refusing symlinked destination: {pi_dir} (symlinked pi agent directory: {pi_dir})\n"
             )
@@ -127,8 +146,16 @@ def deploy(repo_root: Path, target_arg: str | None, link: bool) -> int:
         target_skills.rglob("*"), key=lambda p: len(p.parts), reverse=True
     )
     for item in target_items:
+        if not (item.exists() or is_symlink_or_reparse(item)):
+            continue
         rel = item.relative_to(target_skills)
-        if rel not in source_items:
+        src = source_items.get(rel)
+        type_mismatch = src is not None and (
+            is_symlink_or_reparse(item)
+            or (src.is_dir() != item.is_dir())
+            or (src.is_file() != item.is_file())
+        )
+        if src is None or type_mismatch:
             if is_symlink_or_reparse(item) or item.is_file():
                 item.unlink()
             elif item.is_dir():

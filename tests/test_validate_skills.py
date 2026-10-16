@@ -252,6 +252,62 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("````markdown", text)
         self.assertEqual(text.count("````"), 2)
 
+    def test_empty_block_scalar_description_fails(self):
+        with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
+            repository = clone_repo_to_temp(directory)
+            skill = repository / "skills" / "crisp" / "SKILL.md"
+            text = skill.read_text(encoding="utf-8")
+            lines = text.splitlines()
+            end = lines.index("---", 1)
+            # Remove all lines from 'description:' until end of frontmatter
+            new_lines = []
+            for line in lines[:end]:
+                if line.startswith("description:"):
+                    new_lines.append("description: >")
+                    break
+                new_lines.append(line)
+            new_lines.extend(lines[end:])
+            skill.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
+
+            result = subprocess.run(
+                [sys.executable, "scripts/validate-skills.py"],
+                cwd=repository,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("missing description", result.stdout)
+
+    def test_multiline_block_scalar_description_passes(self):
+        with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
+            repository = clone_repo_to_temp(directory)
+            skill = repository / "skills" / "crisp" / "SKILL.md"
+            text = skill.read_text(encoding="utf-8")
+            lines = text.splitlines()
+            end = lines.index("---", 1)
+            new_lines = []
+            for line in lines[:end]:
+                if line.startswith("description:"):
+                    new_lines.append("description: >")
+                    new_lines.append("  Line one of description.")
+                    new_lines.append("  Line two of description.")
+                    break
+                new_lines.append(line)
+            new_lines.extend(lines[end:])
+            skill.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
+
+            result = subprocess.run(
+                [sys.executable, "scripts/validate-skills.py"],
+                cwd=repository,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

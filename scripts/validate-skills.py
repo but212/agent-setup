@@ -37,11 +37,25 @@ def frontmatter(path: Path) -> dict[str, str]:
     except ValueError as exc:
         raise ValueError("unterminated frontmatter") from exc
     values: dict[str, str] = {}
-    for line in lines[1:end]:
+    lines_slice = lines[1:end]
+    i = 0
+    while i < len(lines_slice):
+        line = lines_slice[i]
         match = re.match(r"^([A-Za-z][\w-]*):\s*(.*)$", line)
         if match:
             field = match.group(1)
             value = match.group(2).strip()
+            if value in (">", "|", ">-", "|-"):
+                block_lines: list[str] = []
+                i += 1
+                while i < len(lines_slice) and (
+                    lines_slice[i].startswith((" ", "\t")) or not lines_slice[i].strip()
+                ):
+                    if lines_slice[i].strip():
+                        block_lines.append(lines_slice[i].strip())
+                    i += 1
+                values[field] = " ".join(block_lines)
+                continue
             if value.startswith(("`", "@")):
                 raise ValueError(
                     f"{field} plain value cannot start with reserved character "
@@ -50,6 +64,7 @@ def frontmatter(path: Path) -> dict[str, str]:
             if len(value) >= 2 and value[0] == value[-1] and value[0] in "'\"":
                 value = value[1:-1]
             values[field] = value
+        i += 1
     return values
 
 
@@ -95,11 +110,6 @@ def parse_catalog_table(text: str) -> tuple[list[dict[str, str]], list[str]]:
         )
 
     return rows, errors
-
-
-def catalog_rows(text: str) -> list[dict[str, str]]:
-    rows, _ = parse_catalog_table(text)
-    return rows
 
 
 def check_ascii_markdown(root: Path = ROOT) -> list[str]:
