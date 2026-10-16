@@ -66,7 +66,7 @@ Use when any Fast-path gate fails. Inspect repository facts, docs, code, and typ
 
 ## Output & handoff
 
-After confirmation, record the decision summary in the active plan file when a plan is active; otherwise report in chat without creating ad hoc plan files. Hand off to `spec-drive`, `lean-design`, or `lean-mode`.
+After confirmation, output the decision summary in chat without modifying files. When an active plan coordinator (such as `spec-drive`) is present, hand off the confirmed decision summary to it for recording. Hand off to `spec-drive`, `lean-design`, or `lean-mode`.
 
 When resolved, output:
 

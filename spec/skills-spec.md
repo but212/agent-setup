@@ -10,7 +10,7 @@
 - Skill selection and routing based on request intent
 - Repository-grounded planning, design, implementation, testing, and review
 - Documentation and commit-message generation with invariant preservation
-- Plan file lifecycle (`.plans/YYYY-MM-DD/<task-name>.md`) and permanent specification coordination
+- Plan file lifecycle (`.plans/YYYY-MM-DD/[task-name].md`) and permanent specification coordination
 - Dependency-free validation of skill metadata, plan conventions, ASCII Markdown, and safety guards
 - Mirroring deployment of `AGENTS.md` and `skills/` into the shared agent directory
 
@@ -22,14 +22,9 @@
 
 ### Shared Invariants and Operational Rules
 
-Authoritative behavioral rules, prompt precedence, safety boundaries, and execution invariants are defined in [AGENTS.md](../AGENTS.md). All skills and maintainers adhere to:
+Authoritative behavioral rules, prompt precedence, safety boundaries, and execution invariants (including evidence priority, minimum change, boundary preservation, verifiability, and approval boundaries) are defined in [AGENTS.md](../AGENTS.md). In addition, skills and maintainers adhere to:
 
-1. **Evidence first:** Runtime behavior -> tests -> types -> schemas -> documentation.
-2. **Minimum change:** Make the smallest correct change adhering to lean-design models.
-3. **Preserve boundaries:** Keep security, validation, error handling, accessibility, and domain contracts intact.
-4. **Verifiability:** Verify changed behavior with repository-native commands.
-5. **Approval boundary:** Analysis and planning are read-only; production modifications require explicit user approval.
-6. **Single source of truth (SSOT):** Detailed skill workflows, roles, activation triggers, and modification authority belong solely to their respective `skills/*/SKILL.md` frontmatter.
+- **Single source of truth (SSOT):** Detailed skill workflows, roles, activation triggers, and modification authority belong solely to their respective `skills/*/SKILL.md` frontmatter.
 
 ## 2. Skill Catalog and Metadata
 
@@ -67,9 +62,9 @@ Frontmatter serves as the sole source of truth (SSOT) and is machine-validated b
 - When `/crisp` is combined with `/spec-drive`, `spec-drive` coordinates execution while `crisp` controls response prose density.
 - Before explicit execution approval, work remains in `planned` state.
 
-### 3.4 Plan File Rules
+### 3.4 Plan Tracking Rules
 
-When `spec-drive` execution tracking is active, `.plans/YYYY-MM-DD/<task-name>.md` is the execution SSOT:
+When `spec-drive` execution tracking is active, `.plans/YYYY-MM-DD/[task-name].md` (or a supported agent plan artifact) is the execution SSOT:
 
 - Lifecycle: `planned -> in-progress|cancelled`, `in-progress -> blocked|complete|cancelled`, or `blocked -> in-progress`.
 - Do not execute checklist items while the plan is `planned` and awaiting approval.

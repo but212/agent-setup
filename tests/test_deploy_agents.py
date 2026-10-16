@@ -167,6 +167,31 @@ class DeployAgentsTests(unittest.TestCase):
             mock_is_sym.side_effect = lambda p: p == sym_parent
             self.assertFalse(has_symlink_or_reparse_in_chain(path, stop_at=stop_at))
 
+    def test_has_symlink_or_reparse_in_chain_exempts_darwin_system_symlinks(self):
+        from unittest.mock import patch
+        from scripts.deploy_agents import has_symlink_or_reparse_in_chain
+
+        path = Path("/tmp/sub/target")
+        with patch("scripts.deploy_agents.is_symlink_or_reparse") as mock_is_sym:
+            mock_is_sym.side_effect = lambda p: p == Path("/tmp")
+            self.assertFalse(
+                has_symlink_or_reparse_in_chain(path, is_darwin=True)
+            )
+            self.assertTrue(
+                has_symlink_or_reparse_in_chain(path, is_darwin=False)
+            )
+
+    def test_has_symlink_or_reparse_in_chain_darwin_still_rejects_sub_symlinks(self):
+        from unittest.mock import patch
+        from scripts.deploy_agents import has_symlink_or_reparse_in_chain
+
+        path = Path("/tmp/sym_sub/target")
+        with patch("scripts.deploy_agents.is_symlink_or_reparse") as mock_is_sym:
+            mock_is_sym.side_effect = lambda p: p in (Path("/tmp"), Path("/tmp/sym_sub"))
+            self.assertTrue(
+                has_symlink_or_reparse_in_chain(path, is_darwin=True)
+            )
+
     @unittest.skipUnless(CAN_SYMLINK, "filesystem symlinks not supported/permitted")
     def test_rejects_symlinked_skills_without_touching_victim(self):
         target = self.root / "target"
@@ -247,6 +272,11 @@ class DeployAgentsTests(unittest.TestCase):
         stale = target / "skills" / "stale.txt"
         stale.write_text("stale", encoding="utf-8")
 
+        external_dir = self.root / "external"
+        external_dir.mkdir(parents=True)
+        sentinel = external_dir / "keep.txt"
+        sentinel.write_text("keep-me", encoding="utf-8")
+
         result = self.run_deploy(target)
 
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -256,6 +286,37 @@ class DeployAgentsTests(unittest.TestCase):
             (target / "AGENTS.md").read_text(encoding="utf-8"),
             (self.repo / "AGENTS.md").read_text(encoding="utf-8"),
         )
+        self.assertTrue(sentinel.exists())
+        self.assertEqual(sentinel.read_text(encoding="utf-8"), "keep-me")
+
+    def test_compute_mirror_actions_identifies_stale_and_copied_files(self):
+        from scripts.deploy_agents import compute_mirror_actions, ActionKind
+
+        source = self.root / "src_skills"
+        target = self.root / "dst_skills"
+        (source / "alpha").mkdir(parents=True)
+        (source / "alpha" / "SKILL.md").write_text("alpha", encoding="utf-8")
+        (target / "beta").mkdir(parents=True)
+        (target / "beta" / "stale.md").write_text("stale", encoding="utf-8")
+
+        actions = compute_mirror_actions(source, target)
+        action_kinds = [a.kind for a in actions]
+
+        self.assertIn(ActionKind.PRUNE_FILE, action_kinds)
+        self.assertIn(ActionKind.PRUNE_DIR, action_kinds)
+        self.assertIn(ActionKind.MAKE_DIR, action_kinds)
+        self.assertIn(ActionKind.COPY_FILE, action_kinds)
+
+    def test_validate_deployment_safety_returns_typed_target(self):
+        from scripts.deploy_agents import validate_deployment_safety, DeploymentTarget
+
+        target = self.root / "valid_target"
+        result = validate_deployment_safety(self.repo, str(target), link=False)
+
+        self.assertIsInstance(result, DeploymentTarget)
+        self.assertEqual(result.canonical_target, target.resolve())
+        self.assertIsNone(result.pi_dir)
+        self.assertIsNone(result.pi_agents)
 
 
 if __name__ == "__main__":

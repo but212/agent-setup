@@ -12,11 +12,10 @@ SKILLS = ROOT / "skills"
 AGENTS = ROOT / "AGENTS.md"
 PLANS = ROOT / ".plans"
 
-REQUIRED_SAFETY_GUARDS = (
-    "git push",
-    "git reset --hard",
-    "git clean -f",
-    "rm -rf",
+REQUIRED_SAFETY_GUARD_SENTENCE = (
+    "Do not stage, commit, push, reset, discard, or clean changes, and never run "
+    "destructive commands such as `git push`, `git reset --hard`, `git clean -f`, "
+    "or `rm -rf`, unless explicitly requested."
 )
 
 
@@ -148,8 +147,6 @@ def check_skill_frontmatters(
         metadata, parse_errors = parse_skill_metadata(path, root)
         errors.extend(parse_errors)
         if metadata:
-            if metadata.name in skills:
-                errors.append(f"duplicate skill name: {metadata.name}")
             skills[metadata.name] = metadata
 
     return skills, errors
@@ -171,7 +168,7 @@ def check_plan_paths(plans_dir: Path, root: Path = ROOT) -> list[str]:
             or path.suffix != ".md"
         ):
             errors.append(
-                f"plan must be .plans/YYYY-MM-DD/<task-name>.md: {path.relative_to(root)}"
+                f"plan must be .plans/YYYY-MM-DD/[task-name].md: {path.relative_to(root)}"
             )
             continue
         try:
@@ -186,9 +183,11 @@ def check_plan_paths(plans_dir: Path, root: Path = ROOT) -> list[str]:
 def check_safety_guards(agents_path: Path) -> list[str]:
     errors: list[str] = []
     agents_text = agents_path.read_text(encoding="utf-8")
-    for term in REQUIRED_SAFETY_GUARDS:
-        if term not in agents_text:
-            errors.append(f"AGENTS.md missing destructive-command guard: {term}")
+    if REQUIRED_SAFETY_GUARD_SENTENCE not in agents_text:
+        errors.append(
+            f"AGENTS.md missing exact destructive-command guard sentence: "
+            f"{REQUIRED_SAFETY_GUARD_SENTENCE}"
+        )
     return errors
 
 

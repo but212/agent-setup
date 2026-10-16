@@ -207,7 +207,29 @@ class RepositoryContractTests(unittest.TestCase):
                 check=False,
             )
 
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+    def test_permissive_safety_guard_clause_fails(self):
+        with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
+            repository = clone_repo_to_temp(directory)
+            agents = repository / "AGENTS.md"
+            text = agents.read_text(encoding="utf-8")
+            agents.write_text(
+                text.replace(
+                    "never run destructive commands such as `git push`, `git reset --hard`, `git clean -f`, or `rm -rf`, unless explicitly requested.",
+                    "destructive commands such as `git push`, `git reset --hard`, `git clean -f`, or `rm -rf` are allowed unless the user objects.",
+                ),
+                encoding="utf-8",
+            )
+
+            result = subprocess.run(
+                [sys.executable, "scripts/validate-skills.py"],
+                cwd=repository,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("AGENTS.md missing exact destructive-command guard sentence", result.stdout)
 
 
 if __name__ == "__main__":

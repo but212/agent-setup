@@ -32,6 +32,13 @@ class MirrorAction:
 
 
 @dataclass(frozen=True)
+class DeploymentTarget:
+    canonical_target: Path
+    pi_dir: Path | None = None
+    pi_agents: Path | None = None
+
+
+@dataclass(frozen=True)
 class DeploymentPlan:
     canonical_target: Path
     agents_source: Path
@@ -40,7 +47,6 @@ class DeploymentPlan:
     target_skills: Path
     mirror_actions: list[MirrorAction]
     skill_count: int
-    link: bool
     pi_dir: Path | None = None
     pi_agents: Path | None = None
 
@@ -63,10 +69,23 @@ def is_symlink_or_reparse(path: Path) -> bool:
         return False
 
 
-def has_symlink_or_reparse_in_chain(path: Path, stop_at: Path | None = None) -> bool:
-    curr = path if path.is_absolute() else Path.cwd() / path
+def is_darwin_system_symlink(path: Path) -> bool:
+    return (
+        bool(path.anchor)
+        and path.parent == Path(path.anchor)
+        and path.name.lower() in ("tmp", "var", "etc")
+    )
+
+
+def has_symlink_or_reparse_in_chain(
+    path: Path, stop_at: Path | None = None, is_darwin: bool | None = None
+) -> bool:
+    darwin = (sys.platform == "darwin") if is_darwin is None else is_darwin
+    curr = path if (path.is_absolute() or path.anchor) else Path.cwd() / path
     stop = stop_at.resolve() if stop_at else None
     while True:
+        if darwin and is_darwin_system_symlink(curr):
+            break
         if is_symlink_or_reparse(curr):
             return True
         if stop and (curr == stop_at or (curr.exists() and curr.resolve() == stop)):
@@ -94,7 +113,9 @@ def get_canonical(path: Path) -> Path:
     return canonical
 
 
-def plan_deployment(repo_root: Path, target_arg: str | None, link: bool) -> DeploymentPlan:
+def validate_deployment_safety(
+    repo_root: Path, target_arg: str | None, link: bool
+) -> DeploymentTarget:
     home_env = os.environ.get("HOME")
     home_dir = Path(home_env).resolve() if home_env else Path.home().resolve()
 
@@ -105,7 +126,7 @@ def plan_deployment(repo_root: Path, target_arg: str | None, link: bool) -> Depl
         stop_at = home_dir
     else:
         target_path = Path(target_input_str)
-        if not target_path.is_absolute():
+        if not (target_path.is_absolute() or target_path.anchor):
             target_path = Path.cwd() / target_path
             stop_at = Path.cwd().resolve()
         else:
@@ -158,7 +179,16 @@ def plan_deployment(repo_root: Path, target_arg: str | None, link: bool) -> Depl
                 f"refusing to overwrite real file {pi_agents} (not a symlink)\n"
             )
 
-    # Compute skills mirror actions
+    return DeploymentTarget(
+        canonical_target=canonical_target,
+        pi_dir=pi_dir if link else None,
+        pi_agents=pi_agents if link else None,
+    )
+
+
+def compute_mirror_actions(
+    skills_source: Path, target_skills: Path
+) -> list[MirrorAction]:
     actions: list[MirrorAction] = []
     source_items: dict[Path, Path] = {}
     for item in skills_source.rglob("*"):
@@ -191,19 +221,29 @@ def plan_deployment(repo_root: Path, target_arg: str | None, link: bool) -> Depl
         else:
             actions.append(MirrorAction(kind=ActionKind.COPY_FILE, dst=dst, src=src))
 
+    return actions
+
+
+def plan_deployment(repo_root: Path, target_arg: str | None, link: bool) -> DeploymentPlan:
+    target = validate_deployment_safety(repo_root, target_arg, link)
+    agents_source = repo_root / "AGENTS.md"
+    skills_source = repo_root / "skills"
+    target_agents = target.canonical_target / "AGENTS.md"
+    target_skills = target.canonical_target / "skills"
+
+    actions = compute_mirror_actions(skills_source, target_skills)
     skill_count = sum(1 for p in skills_source.rglob("SKILL.md") if p.is_file())
 
     return DeploymentPlan(
-        canonical_target=canonical_target,
+        canonical_target=target.canonical_target,
         agents_source=agents_source,
         target_agents=target_agents,
         skills_source=skills_source,
         target_skills=target_skills,
         mirror_actions=actions,
         skill_count=skill_count,
-        link=link,
-        pi_dir=pi_dir if link else None,
-        pi_agents=pi_agents if link else None,
+        pi_dir=target.pi_dir,
+        pi_agents=target.pi_agents,
     )
 
 
@@ -232,7 +272,7 @@ def execute_deployment(plan: DeploymentPlan) -> None:
 
     print(f"mirrored: skills/ -> {plan.target_skills} ({plan.skill_count} skills)")
 
-    if plan.link and plan.pi_dir and plan.pi_agents:
+    if plan.pi_dir and plan.pi_agents:
         plan.pi_dir.mkdir(parents=True, exist_ok=True)
         if is_symlink_or_reparse(plan.pi_agents):
             plan.pi_agents.unlink()
