@@ -3,9 +3,7 @@ name: lean-review
 role: Adversarial diff or repository review
 activation: Code review or full audit request
 modification-authority: None
-description: >
-  Adversarial review for semantic regressions, over-engineering, state sprawl,
-  and hollow abstractions across any language. Produces prioritized reports.
+description: Adversarial diff or repository review for semantic regressions, over-engineering, state sprawl, and hollow abstractions. Activate on code review, full audit, /lean-review, or "audit the whole repo".
 ---
 
 # Lean Review
@@ -16,19 +14,26 @@ Audit changes or repositories for semantic regressions, state explosions, and ar
 
 - Start from the adversarial premise that the diff contains hidden edge-case failures, impossible states, or unnecessary indirection. Compare with specifications, invariants, and pre-change behavior.
 - Read-only review: report actionable findings; do not perform arbitrary stylistic rewrites.
-- Every finding MUST provide a concrete counterexample: an unhandled input/state, a race or resource leak, a boundary failure, or a measurable structural complexity problem. Test portability failures and exact upstream error-string coupling qualify when they have an executable trigger.
+- Every finding MUST provide a concrete counterexample that a reader can evaluate as true or false without hidden context.
 - Preserve safety controls, security, validation, error handling, accessibility, and domain invariants.
 
 ## Review vectors
 
-1. **`[semantic]`**: Observable domain contract violation, temporal contract drift (unversioned breaking changes to public serialization or wire interfaces), or broken lifecycle, ownership, and failure paths.
-2. **`[state]`**: Data model permits contradictory or impossible states (boolean-flag sprawl, loose optionals, missing sum types).
-3. **`[indirection]`**: Single-implementation interface, forwarding wrapper, pass-through DTO, or premature abstraction (YAGNI).
-4. **`[effect]`**: Core computation tainted with hidden I/O, unbounded resource acquisition or lock contention, untracked time/entropy, global mutable state, or leaked transaction boundaries.
-5. **`[boundary]`**: Weakened validation, partition or trust scope leaks (unauthorized cross-domain access), missing permission gates, non-atomic transition, or broken retry/idempotency boundary.
-6. **`[shrink]`**: Complex imperative logic where a clear standard-library or idiomatic primitive is sufficient without hiding required complexity.
-7. **`[delete]`**: Dead code, orphaned types, unreachable branches, or unused parameters.
-8. **`[surgical]`**: Unrelated refactoring or scope creep in the reviewed change.
+Core:
+
+1. **`[semantic]`**: Observable domain contract violation, temporal contract drift, or broken lifecycle / ownership / failure paths.
+2. **`[state]`**: Data model permits contradictory or impossible states.
+3. **`[indirection]`**: Premature or single-implementation abstraction (YAGNI).
+4. **`[delete]`**: Dead code, orphaned types, unreachable branches, unused parameters.
+
+Secondary (use only when clearly distinct from core):
+
+- **`[effect]`**: Hidden I/O, unbounded resources, global mutable state, leaked transaction boundaries.
+- **`[boundary]`**: Weakened validation, trust/partition leaks, non-atomic transitions, broken idempotency.
+- **`[shrink]`**: Complex imperative logic replaceable by a clear stdlib/idiomatic primitive.
+- **`[surgical]`**: Unrelated refactoring or scope creep.
+
+Primary for code. For pure documentation or skill modules, map vectors onto the document's own claims, stated invariants, and reachable surface area.
 
 ## Nitpick gate
 
@@ -62,7 +67,10 @@ Use `diff` by default; use `repo` for a repository-wide or named-module audit.
 
 For each finding:
 
-- **Priority**: `[P1]` (correctness/security/crash risk) | `[P2]` (state/type or material contract defect) | `[P3]` (bloat/cleanup)
+- **Priority**:
+  - `[P1]`: Can produce incorrect observable behavior, crash, data loss, security issue, or hard invariant violation in a reachable scenario.
+  - `[P2]`: Allows impossible/contradictory states or weakens a material contract, but does not by itself produce incorrect observable behavior.
+  - `[P3]`: Structural cleanup with no contract or behavioral impact.
 - **Location**: `path/to/file.ext:line`
 - **Tag**: One tag from the taxonomy above
 - **Issue**: Precise description of the defect
@@ -70,13 +78,8 @@ For each finding:
 - **Minimal Action**: The smallest diff or replacement pattern (prefer GitHub ````suggestion` blocks for inline diffs)
 
 Summary status:
+
 - `Blocking`: `Yes ([P1] or [P2] findings present)` | `No (Clean or [P3] advisory only)`
 
 If no issues exist for diff scope: `Diff is lean. No evidence-backed issues detected.`
 If no issues exist for repo scope: `Repository is lean. No over-engineering detected.`
-
-## Controls
-
-- **Scope**: `diff` (default) is a read-only code-change review; `repo` is a read-only repository/module audit.
-- **Activate**: `/lean-review`, `/lean-review repo`, an explicit review request, or "audit the whole repo".
-- **Deactivate**: `stop lean-review` or `normal mode`.

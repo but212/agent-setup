@@ -53,5 +53,5 @@ After confirmation, hand the decision summary to active `mark-plan` for plan rec
 When resolved, output:
 
 - **Summary:** Mode (`Challenge Docs`) | Plan | Next step | Decisions | Domain term changes | ADRs affected | Challenged assumptions | Risks | Revisit triggers.
-- **Artifacts:** `mark-plan` records the decision and plan changes in `.plans/YYYY-MM-DD/<task-name>.md` when active; otherwise report in chat without creating ad hoc plan files.
+- **Artifacts:** `mark-plan` records the decision and plan changes in its active plan file when active; otherwise report in chat without creating ad hoc plan files.
 - **Handoff:** Propose the next skill (`tdd-plan`, `lean-design`, or `lean-mode`).

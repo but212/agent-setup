@@ -33,7 +33,7 @@ The skill contracts define prompt engineering as input/output interfaces and a c
 
 ### Shared Invariants
 
-1. **Evidence first:** Infer intent in this order: runtime behavior, tests, types, schemas, and documentation. Mark unverifiable facts as assumptions.
+1. **Evidence first:** Infer intent in this order: runtime behavior, tests, types, schemas, and documentation. Mark unverifiable facts as assumptions. Classify material claims as `Confirmed`, `Assumption`, or `Open decision` until evidence resolves them.
 2. **Minimum change:** Make the smallest change that satisfies the current requirement; avoid unrelated refactoring.
 3. **Preserve boundaries:** Do not remove or weaken input validation, error handling, security, authorization, accessibility, or domain invariants.
 4. **Verifiability:** Verify changed behavior with repository-native tools. Claim success only when the actual command succeeds.
@@ -41,7 +41,8 @@ The skill contracts define prompt engineering as input/output interfaces and a c
 6. **Explicit handoffs:** Hand design to implementation and test plans to implementation explicitly.
 7. **Approval boundary:** Analysis and planning are read-only by default. Do not modify code, tests, or permanent documentation without user approval.
 8. **Separate authority:** Permanent specifications govern domain rules, public contracts, and architecture; `.plans/YYYY-MM-DD/` tracks execution state by plan creation date only.
-9. **Keyboard portability:** All Markdown content is ASCII-only so it can be entered on a standard US QWERTY keyboard; use ASCII equivalents for arrows, dashes, quotes, and other Unicode punctuation.
+9. **Single source of truth:** Detailed skill workflows and operational contracts belong solely to their respective `skills/*/SKILL.md`. This specification defines catalog membership, routing, and shared invariants without duplicating internal skill contracts.
+10. **Keyboard portability:** All Markdown content is ASCII-only so it can be entered on a standard US QWERTY keyboard; use ASCII equivalents for arrows, dashes, quotes, and other Unicode punctuation.
 
 ## 2. Skill Catalog
 
@@ -106,7 +107,7 @@ When `mark-plan` is active, `.plans/YYYY-MM-DD/<task-name>.md` is the execution 
 
 ### 3.5 Deployment Mirror Rules
 
-`scripts/deploy-agents.sh` and `scripts/deploy-agents.ps1` mirror repository content into the shared agent folder (`~/.agents`, overridable via `AGENT_HOME`). The PowerShell entry point uses `-Link`; the POSIX entry point uses `--link`.
+`scripts/deploy_agents.py` (and its wrappers `scripts/deploy-agents.sh` and `scripts/deploy-agents.ps1`) mirror repository content into the shared agent folder (`~/.agents`, overridable via `AGENT_HOME`). The CLI entry points accept `--link` (or `-Link` in PowerShell).
 
 - The deployment target is a copy destination only; the repository remains the source of truth.
 - Skills mirroring uses `rsync --delete` on POSIX and an equivalent scoped mirror on PowerShell; deletions are limited to stale copies inside `<target>/skills/`.
@@ -115,96 +116,7 @@ When `mark-plan` is active, `.plans/YYYY-MM-DD/<task-name>.md` is the execution 
 - A real (non-symlink) file at pi's global instructions path is never overwritten; `--link` refuses instead.
 - Relative `AGENT_HOME` values are supported and produce an absolute pi global-instructions link.
 
-## 4. Skill Contracts
-
-### 4.1 Challenge Skills
-
-#### `challenge-docs`
-
-- Goal: Stress-test plans or decisions using the codebase, `context.md`, and ADRs.
-- Use the Fast path only when the change is reversible, local, does not alter public APIs, schemas, authentication, state transitions, or domain invariants, and has no material ambiguity.
-- Otherwise ask one material decision at a time with a recommendation, reason, counterargument, and decision request.
-- Propose a `context.md` update for new domain terms and an ADR for hard-to-reverse choices.
-- When `mark-plan` is active, hand the confirmed decision summary to it for plan recording; challenge remains read-only.
-
-#### `challenge-light`
-
-- Confirm goals, constraints, approach, validation, and risks for early ideas without repository evidence.
-- Use the Fast path only when reversibility, locality, decision clarity, and minimal inspection all hold.
-- When `mark-plan` is active, hand the confirmed decision summary to it for plan recording; challenge remains read-only.
-
-### 4.2 Crisp Skills
-
-Crisp skills produce high-density, grounded output without conversational preamble, meta-commentary, or process explanation. Across all crisp skills, exact identifiers, symbols, paths, code spans, commands, and numbers are immutable anchors; when text is already minimal or further reduction risks dropping facts or altering contracts, the skills preserve the input unaltered without synonym or stylistic churn.
-
-#### `crisp`
-
-Lead with the answer and optimize for the reader's task without conversational preamble or meta-commentary. Exact identifiers, paths, URLs, code spans, environment variables, constants, numbers, and error strings are immutable anchors. When input is already concise or reduction risks dropping facts, return it unaltered without synonym or stylistic churn. Match form to the reader's job: prose for connected reasoning, bullets for parallel items, and numbered lists only for sequence. Honor requested language, audience, format, and detail.
-
-#### `crisp-docs`
-
-Compress only explicitly named general documentation in place without conversational preamble or commentary. Keep headings, links, anchors, lists, tables, code blocks, frontmatter, identifiers, commands, paths, numbers, environment variables, and machine-readable text strictly intact. If the document is already concise or further reduction risks dropping anchors or introducing ambiguity, leave the target document completely unchanged without synonym or stylistic churn. Match form to document type: prose for concepts, numbered lists for procedures, and bullets or tables for reference material.
-
-#### `crisp-agent-docs`
-
-Compress only explicitly named agent rule documents such as `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, and `SKILL.md` using the standard report format without conversational preamble or throat-clearing. Precedence levels, security rules, destructive-command guards, tool names, paths, and environment variables are immutable anchors; never alter, weaken, or omit them. If an instruction document is already optimized or further reduction risks blurring contract boundaries, dropping exceptions, or losing operational meaning, leave the target document completely unchanged without phrasing or stylistic churn.
-
-#### `crisp-commit`
-
-Read `git status`, staged and unstaged diffs, targeted untracked files, and the five latest log entries to produce an evidence-based message directly with its shell snippet and zero introductory chatter. Ground claims strictly in `git diff`. Anchor material changes to exact file paths, function names, types, flags, and error codes present in `git diff` without renaming or inventing symbols. Keep generation deterministic: identical diffs and history produce identical commit messages and commands without lexical or stylistic churn. Select an appropriate `feat|fix|refactor|style|docs|test|chore` type and never stage or commit.
-
-### 4.3 Design, Implementation, and Test Skills
-
-#### `lean-design`
-
-Define data models and state transitions first, then make invalid states unrepresentable with types, enums, and constraints. Address nulls, partial failure, concurrency, and schema mismatches before happy paths. Prove boundary invariants early: temporal contract stability, partition isolation, and atomic resource limits. Remove unsupported abstractions, unused parameters, and speculative extension points. Output: `Problem -> Structure -> Remove -> Handoff Contract`; design only.
-
-#### `lean-mode`
-
-Make the smallest code change that satisfies an approved requirement, design, or TDD slice. Reuse existing code, helpers, types, dependencies, standard-library features, and platform primitives. Invariant boundaries (authorization, partition isolation, atomic transitions, serialization stability) are non-negotiable and cannot be minimized. Measure before optimizing. Fix bugs at the shared root cause and run the narrowest repository-native verification.
-
-#### `tdd-plan`
-
-Inspect code, tests, runners, and fixtures, then express contracts as conditions and expected results. Write vertical slices in dependency order as `Red -> Green -> Verify -> Refactor`. Plan only; do not write code. Record exact paths and commands and mark unknowns as assumptions.
-
-#### `lean-test`
-
-Test observable public boundaries with the smallest set covering representative success, applicable empty/boundary/transition states, temporal contract evolution, partition isolation, exposed invalid input or failure, and confirmed regressions. Control time, randomness, and async completion deterministically. Do not weaken assertions or modify production code.
-
-### 4.4 Review Skills
-
-#### `lean-review`
-
-Assume the change is wrong and falsify semantic preservation, temporal contract stability, scope, structure, YAGNI, boundary and partition integrity, resource contention, duplication, and dead surfaces using the 8 core review vectors. Every finding includes priority, location, tag, issue, concrete counterexample evidence, and minimal action with inline suggestions and CI blocking verdict. Review only; do not modify files.
-
-#### `sql-orm-indicator-audit`
-
-Audit raw SQL and ORM query risks using static analysis by default. Regex and language-agnostic AST specifications produce candidates, not security proofs. Dynamic plan analysis requires explicit approval, a disposable non-production environment, a read-only transaction, and a statement timeout; never execute DDL or DML as part of the audit. Report unsupported constructs and unmeasured impact honestly. Read-only audit; do not modify files.
-
-### 4.5 Coordination and Synchronization Skills
-
-#### `mark-plan`
-
-`.plans/YYYY-MM-DD/<task-name>.md` is the single source of truth for scope, decisions, progress, and verification. Wait for review during planning and switch to `in-progress` only after explicit execution approval. Check items only after verification. Do not complete a plan with unresolved criteria, checks, failures, blockers, or open questions.
-
-#### `spec-drive`
-
-Own contract coordination and delegate structural design to `lean-design`, test slices to `tdd-plan`, and production edits to `lean-mode`. Its four phases are:
-
-1. **Crisp Specification:** Define intent and boundaries, condition-to-guarantee laws, invariants and state rules, and a contracts table. Record linked invariants, test paths/names, implementation boundaries, and permanent specification paths where applicable; record verification methods for non-executable contracts.
-2. **Lean Structural Design:** Make invalid states unrepresentable and remove failure-boundary risks.
-3. **Surgical TDD:** Execute `Red/Green/Verify/Refactor` vertical slices for each contract.
-4. **Quality & Sync:** Check contract and law coverage, repository quality, and permanent specification synchronization.
-   - Classify material claims as `Confirmed`, `Assumption`, or `Open decision`.
-   - Compare the catalog with actual `skills/*/SKILL.md` names, activation rules, and modification boundaries.
-   - Check domain models, APIs, business rules, and platform invariants; update permanent specifications in the same change when affected.
-
-Adopt a law only when supported by at least two distinct cases, repeated cross-boundary evidence, or explicit domain evidence. Record scope, preconditions, exceptions, counterexamples, and linked contracts. Keep one-case restatements and unsupported generalizations at the case-contract level.
-
-- Classify changes to public inputs/outputs, error meaning, state transitions, persistence schemas, authentication, or authorization as breaking changes. Require user approval and compatibility, migration, and rollback decisions.
-- Resolve ambiguity with the user before implementation.
-
-## 5. Quality Gates
+## 4. Quality Gates
 
 - [ ] The selected skill matches the request scope and modification authority.
 - [ ] Core claims and decisions are grounded in code, tests, documentation, or explicit user requirements.
@@ -218,7 +130,7 @@ Adopt a law only when supported by at least two distinct cases, repeated cross-b
 - [ ] Markdown content is ASCII-only.
 - [ ] `python3 scripts/validate-skills.py` and `python3 -m unittest discover -s tests -v` pass when the validation script and tests exist, including dated plan-path, Markdown ASCII, deployment, and catalog validation.
 
-## 6. Stabilization Policy
+## 5. Stabilization Policy
 
 The specification remains `candidate` while any required contract, catalog, safety, documentation, or validation gate is incomplete. Promote it to `stable` only when all of the following are true:
 
@@ -232,6 +144,6 @@ The specification remains `candidate` while any required contract, catalog, safe
 
 A change that invalidates any gate returns the status to `candidate` until the gate is restored and recorded.
 
-## 7. Current Repository Documentation State
+## 6. Current Repository Documentation State
 
 The repository currently contains the 16 skill documents under `skills/`; no product code, APIs, or domain models were found. The repository now has dependency-free regression tests for deployment and catalog contracts. This document therefore defines skill operations and does not invent product contracts. When product functionality is added, document its specification separately and update this document only for skill-operation changes.

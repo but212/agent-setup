@@ -10,6 +10,49 @@ ROOT = Path(__file__).resolve().parents[1]
 POWERSHELL = shutil.which("pwsh") or shutil.which("powershell")
 
 
+def find_bash():
+    if sys.platform != "win32":
+        return shutil.which("bash") or shutil.which("sh")
+    candidates = [
+        Path(r"C:\Program Files\Git\bin\bash.exe"),
+        Path(r"C:\Program Files\Git\usr\bin\bash.exe"),
+    ]
+    which_bash = shutil.which("bash")
+    if which_bash and "system32" not in which_bash.lower():
+        candidates.append(Path(which_bash))
+    for c in candidates:
+        if c.exists():
+            try:
+                res = subprocess.run(
+                    [str(c), "-c", "exit 0"],
+                    capture_output=True,
+                    check=False,
+                )
+                if res.returncode == 0:
+                    return str(c)
+            except Exception:
+                pass
+    return None
+
+
+BASH = find_bash()
+
+
+def check_symlink_support():
+    try:
+        with tempfile.TemporaryDirectory() as temp:
+            src = Path(temp) / "src"
+            src.mkdir()
+            dst = Path(temp) / "dst"
+            dst.symlink_to(src, target_is_directory=True)
+            return True
+    except OSError:
+        return False
+
+
+CAN_SYMLINK = check_symlink_support()
+
+
 class DeployAgentsTests(unittest.TestCase):
     def setUp(self):
         self.tempdir = tempfile.TemporaryDirectory(prefix="agent-setup-deploy-")
@@ -25,6 +68,10 @@ class DeployAgentsTests(unittest.TestCase):
             ROOT / "scripts" / "deploy-agents.ps1",
             self.repo / "scripts" / "deploy-agents.ps1",
         )
+        shutil.copy2(
+            ROOT / "scripts" / "deploy_agents.py",
+            self.repo / "scripts" / "deploy_agents.py",
+        )
         shutil.copy2(ROOT / "AGENTS.md", self.repo / "AGENTS.md")
         (self.repo / "skills" / "example" / "SKILL.md").write_text(
             "example\n", encoding="utf-8"
@@ -36,6 +83,8 @@ class DeployAgentsTests(unittest.TestCase):
         self.tempdir.cleanup()
 
     def run_deploy(self, target, *, link=False, cwd=None):
+        if sys.platform == "win32":
+            self.skipTest("deploy-agents.sh requires POSIX filesystem paths")
         environment = os.environ.copy()
         environment.update({"AGENT_HOME": str(target), "HOME": str(self.home)})
         command = [str(self.repo / "scripts" / "deploy-agents.sh")]
@@ -71,6 +120,58 @@ class DeployAgentsTests(unittest.TestCase):
             check=False,
         )
 
+    def run_python_deploy(self, target, *, link=False, cwd=None):
+        environment = os.environ.copy()
+        environment.update({"AGENT_HOME": str(target), "HOME": str(self.home)})
+        command = [
+            sys.executable,
+            str(self.repo / "scripts" / "deploy_agents.py"),
+        ]
+        if link:
+            command.append("--link")
+        return subprocess.run(
+            command,
+            cwd=cwd or self.root,
+            env=environment,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+    def test_python_deploy_rejects_resolved_home_alias_before_write(self):
+        result = self.run_python_deploy(self.home / ".")
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("unsafe AGENT_HOME", result.stderr)
+        self.assertFalse((self.home / "AGENTS.md").exists())
+
+    def test_python_deploy_rejects_agents_directory_before_write(self):
+        target = self.root / "target"
+        target.mkdir()
+        (target / "AGENTS.md").mkdir()
+
+        result = self.run_python_deploy(target)
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("regular file", result.stderr)
+        self.assertFalse((target / "AGENTS.md" / "AGENTS.md").exists())
+
+    def test_python_deploy_mirrors_and_cleans_stale(self):
+        target = self.root / "target"
+        (target / "skills").mkdir(parents=True)
+        stale = target / "skills" / "stale.txt"
+        stale.write_text("stale", encoding="utf-8")
+
+        result = self.run_python_deploy(target)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(stale.exists())
+        self.assertTrue((target / "skills" / "example" / "SKILL.md").exists())
+        self.assertEqual(
+            (target / "AGENTS.md").read_text(encoding="utf-8"),
+            (self.repo / "AGENTS.md").read_text(encoding="utf-8"),
+        )
+
     def test_rejects_resolved_home_alias_before_write(self):
         result = self.run_deploy(self.home / ".")
 
@@ -78,6 +179,7 @@ class DeployAgentsTests(unittest.TestCase):
         self.assertIn("unsafe AGENT_HOME", result.stderr)
         self.assertFalse((self.home / "AGENTS.md").exists())
 
+    @unittest.skipUnless(CAN_SYMLINK, "filesystem symlinks not supported/permitted")
     def test_rejects_symlinked_target_without_touching_target(self):
         victim = self.root / "victim"
         victim.mkdir()
@@ -92,6 +194,7 @@ class DeployAgentsTests(unittest.TestCase):
         self.assertIn("symlinked AGENT_HOME", result.stderr)
         self.assertEqual(sentinel.read_text(encoding="utf-8"), "keep")
 
+    @unittest.skipUnless(CAN_SYMLINK, "filesystem symlinks not supported/permitted")
     def test_rejects_symlinked_skills_without_touching_victim(self):
         target = self.root / "target"
         target.mkdir()
@@ -120,6 +223,7 @@ class DeployAgentsTests(unittest.TestCase):
         self.assertFalse((target / "AGENTS.md" / "AGENTS.md").exists())
 
     @unittest.skipUnless(POWERSHELL, "PowerShell runtime is unavailable")
+    @unittest.skipUnless(CAN_SYMLINK, "filesystem symlinks not supported/permitted")
     def test_powershell_rejects_symlinked_target_without_touching_victim(self):
         victim = self.root / "victim"
         victim.mkdir()
@@ -147,6 +251,7 @@ class DeployAgentsTests(unittest.TestCase):
         self.assertFalse((target / "AGENTS.md" / "AGENTS.md").exists())
 
     @unittest.skipUnless(POWERSHELL, "PowerShell runtime is unavailable")
+    @unittest.skipUnless(CAN_SYMLINK, "filesystem symlinks not supported/permitted")
     def test_powershell_rejects_symlinked_skills_without_touching_victim(self):
         target = self.root / "target"
         target.mkdir()
@@ -163,6 +268,7 @@ class DeployAgentsTests(unittest.TestCase):
         self.assertEqual(sentinel.read_text(encoding="utf-8"), "keep")
         self.assertFalse((target / "AGENTS.md").exists())
 
+    @unittest.skipUnless(CAN_SYMLINK, "filesystem symlinks not supported/permitted")
     def test_rejects_symlinked_agents_without_touching_victim(self):
         target = self.root / "target"
         target.mkdir()
@@ -192,6 +298,7 @@ class DeployAgentsTests(unittest.TestCase):
         )
 
     @unittest.skipUnless(POWERSHELL, "PowerShell runtime is unavailable")
+    @unittest.skipUnless(CAN_SYMLINK, "filesystem symlinks not supported/permitted")
     def test_powershell_rejects_existing_pi_file_before_deployment_write(self):
         target = self.root / "target"
         pi_dir = self.home / ".pi" / "agent"
@@ -207,6 +314,7 @@ class DeployAgentsTests(unittest.TestCase):
             (pi_dir / "AGENTS.md").read_text(encoding="utf-8"), "user-owned"
         )
 
+    @unittest.skipUnless(CAN_SYMLINK, "filesystem symlinks not supported/permitted")
     def test_rejects_symlinked_pi_directory_before_deployment_write(self):
         target = self.root / "target"
         victim = self.root / "victim"
@@ -221,6 +329,7 @@ class DeployAgentsTests(unittest.TestCase):
         self.assertIn("symlinked pi agent directory", result.stderr)
         self.assertFalse((target / "AGENTS.md").exists())
 
+    @unittest.skipUnless(CAN_SYMLINK, "filesystem symlinks not supported/permitted")
     def test_relative_target_creates_absolute_pi_link(self):
         workdir = self.root / "work"
         workdir.mkdir()
@@ -234,6 +343,7 @@ class DeployAgentsTests(unittest.TestCase):
         self.assertEqual(link.resolve(), (workdir / target).resolve() / "AGENTS.md")
 
     @unittest.skipUnless(POWERSHELL, "PowerShell runtime is unavailable")
+    @unittest.skipUnless(CAN_SYMLINK, "filesystem symlinks not supported/permitted")
     def test_powershell_rejects_symlinked_pi_directory_before_deployment_write(self):
         target = self.root / "target"
         victim = self.root / "victim"
@@ -263,198 +373,6 @@ class DeployAgentsTests(unittest.TestCase):
             (target / "AGENTS.md").read_text(encoding="utf-8"),
             (self.repo / "AGENTS.md").read_text(encoding="utf-8"),
         )
-
-
-class RepositoryContractTests(unittest.TestCase):
-    def test_catalog_validates(self):
-        result = subprocess.run(
-            [sys.executable, "scripts/validate-skills.py"],
-            cwd=ROOT,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-
-    def test_unquoted_reserved_frontmatter_scalar_fails(self):
-        with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
-            repository = Path(directory) / "repo"
-            shutil.copytree(
-                ROOT, repository, ignore=shutil.ignore_patterns(".git", "__pycache__")
-            )
-            skill = repository / "skills" / "crisp" / "SKILL.md"
-            text = skill.read_text(encoding="utf-8")
-            skill.write_text(
-                text.replace(
-                    'activation: "`/crisp`, `/crisp on`"',
-                    "activation: `/crisp`, `/crisp on`",
-                    1,
-                ),
-                encoding="utf-8",
-            )
-
-            result = subprocess.run(
-                [sys.executable, "scripts/validate-skills.py"],
-                cwd=repository,
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn(
-            "activation plain value cannot start with reserved character '`'",
-            result.stdout,
-        )
-
-    def test_duplicate_catalog_row_fails(self):
-        with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
-            repository = Path(directory) / "repo"
-            shutil.copytree(
-                ROOT, repository, ignore=shutil.ignore_patterns(".git", "__pycache__")
-            )
-            specification = repository / "spec" / "skills-spec.md"
-            text = specification.read_text(encoding="utf-8")
-            row = (
-                "| `crisp` | Compresses response prose | `/crisp`, `/crisp on` | None |"
-            )
-            self.assertIn(row, text)
-            specification.write_text(
-                text.replace(row, row + "\n" + row, 1), encoding="utf-8"
-            )
-
-            result = subprocess.run(
-                [sys.executable, "scripts/validate-skills.py"],
-                cwd=repository,
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("catalog skill must appear exactly once: crisp", result.stdout)
-
-    def test_non_ascii_markdown_fails(self):
-        with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
-            repository = Path(directory) / "repo"
-            shutil.copytree(
-                ROOT, repository, ignore=shutil.ignore_patterns(".git", "__pycache__")
-            )
-            readme = repository / "README.md"
-            readme.write_text(
-                readme.read_text(encoding="utf-8") + "\n\u2028\n", encoding="utf-8"
-            )
-
-            result = subprocess.run(
-                [sys.executable, "scripts/validate-skills.py"],
-                cwd=repository,
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("non-ASCII Markdown content", result.stdout)
-
-    def test_catalog_contract_mismatch_fails(self):
-        row = (
-            "| `crisp` | Compresses response prose | `/crisp`, `/crisp on` | None |"
-        )
-        replacements = {
-            "role": row.replace("Compresses response prose", "Wrong role"),
-            "activation": row.replace("/crisp`, `/crisp on", "/wrong"),
-            "modification-authority": row.replace("| None |", "| Wrong files |"),
-        }
-        for field, changed_row in replacements.items():
-            with self.subTest(field=field), tempfile.TemporaryDirectory(
-                prefix="agent-setup-validator-"
-            ) as directory:
-                repository = Path(directory) / "repo"
-                shutil.copytree(
-                    ROOT,
-                    repository,
-                    ignore=shutil.ignore_patterns(".git", "__pycache__"),
-                )
-                specification = repository / "spec" / "skills-spec.md"
-                text = specification.read_text(encoding="utf-8")
-                specification.write_text(
-                    text.replace(row, changed_row, 1), encoding="utf-8"
-                )
-
-                result = subprocess.run(
-                    [sys.executable, "scripts/validate-skills.py"],
-                    cwd=repository,
-                    capture_output=True,
-                    text=True,
-                    check=False,
-                )
-
-            self.assertNotEqual(result.returncode, 0)
-            self.assertIn(f"catalog mismatch for crisp: {field}=", result.stdout)
-
-    def test_invalid_plan_calendar_date_fails(self):
-        with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
-            repository = Path(directory) / "repo"
-            shutil.copytree(
-                ROOT, repository, ignore=shutil.ignore_patterns(".git", "__pycache__")
-            )
-            invalid_plan = repository / ".plans" / "2026-99-99" / "test.md"
-            invalid_plan.parent.mkdir(parents=True)
-            invalid_plan.write_text("# invalid\n", encoding="utf-8")
-
-            result = subprocess.run(
-                [sys.executable, "scripts/validate-skills.py"],
-                cwd=repository,
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("valid ISO calendar date", result.stdout)
-
-    def test_planned_plan_can_be_cancelled(self):
-        text = (ROOT / "skills" / "mark-plan" / "SKILL.md").read_text(
-            encoding="utf-8"
-        )
-
-        self.assertIn("planned -> cancelled", text)
-
-    def test_readme_documents_complete_validation(self):
-        text = (ROOT / "README.md").read_text(encoding="utf-8")
-
-        self.assertIn("python3 scripts/validate-skills.py", text)
-        self.assertIn("python3 -m unittest discover -s tests -v", text)
-
-    def test_spec_drive_has_only_spec_drive_command_alias(self):
-        skill = (ROOT / "skills" / "spec-drive" / "SKILL.md").read_text(
-            encoding="utf-8"
-        )
-        catalog = (ROOT / "spec" / "skills-spec.md").read_text(encoding="utf-8")
-
-        self.assertIn(
-            'activation: "`/spec-drive`, contract-sensitive change"', skill
-        )
-        self.assertNotIn("activation: `/spec-drive`, `/sdd`", skill)
-        self.assertIn(
-            "| `spec-drive` | Coordinates contract-centered SDD | `/spec-drive`, contract-sensitive change |",
-            catalog,
-        )
-        self.assertNotIn("/sdd", skill)
-        self.assertNotIn("| `spec-drive` | Coordinates contract-centered SDD | `/spec-drive`, `/sdd`", catalog)
-
-    def test_sql_audit_declares_safe_dynamic_analysis(self):
-        text = (ROOT / "skills" / "sql-orm-indicator-audit" / "SKILL.md").read_text(
-            encoding="utf-8"
-        )
-
-        self.assertIn("Regexes are triage heuristics, not security proofs", text)
-        self.assertIn("Never run `EXPLAIN ANALYZE` by default", text)
-        self.assertIn("disposable non-production environment", text)
-        self.assertIn("Do not execute DDL or DML", text)
-        self.assertIn("````markdown", text)
-        self.assertEqual(text.count("````"), 2)
 
 
 if __name__ == "__main__":

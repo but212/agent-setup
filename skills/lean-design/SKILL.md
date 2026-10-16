@@ -9,50 +9,51 @@ description: >
   or refactoring types, state machines, and contracts before implementation.
 ---
 
-# Minimal Code Design
-
-Eliminate impossible states and dissolve architectural complexity through structure.
+# Lean Design
 
 ## Operating contract
 
-Consume a requirement, contract, or proposal and produce structural decisions only. `lean-design` owns state spaces, invariants, types, and boundaries; `lean-mode` owns code changes after approval. Preserve correctness, security, validation, and domain invariants. Infer intent from runtime behavior and tests, then types/schemas, then comments/docs; state assumptions when evidence is absent. Evaluate performance only with profiling or hot-path evidence.
+- Produce structural decisions only. Own state spaces, invariants, types, and boundaries; leave code changes to `lean-mode`.
+- Preserve correctness, security, validation, and domain invariants.
+- Infer intent from runtime behavior and tests, then types/schemas, then comments/docs. State assumptions when evidence is absent.
+- Evaluate performance only with profiling or hot-path evidence.
 
 ## Core principles
 
-- **Make impossible states unrepresentable**: Replace boolean-flag combinations and leaky optionals/nulls with explicit sum types (enums, tagged unions, sealed interfaces).
-- **Functional Core, Imperative Shell**: Isolate pure domain logic (deterministic transitions) from boundary I/O (time, network, database, entropy/randomness, and global mutable state).
-- **Structure determines logic**: Define data models and state transitions before writing functions. Never check invariants at runtime that the type system can prove at compile time.
-- **Contract boundaries**: Prove boundary invariants before drawing happy paths: failure domains (partial failure, retry, idempotency, concurrency), temporal contract stability (serialization and schema evolution across versions), partition isolation (trust boundaries and scope encapsulation), and atomic resource limits.
-- **Dissolve hollow indirection**: Eliminate single-implementation interfaces, 1:1 pass-through DTOs, and speculative factories/builders. Keep concrete types until polymorphic need is proven.
-- **Bounded scope**: Keep only current requirements; do not invent caching, plugin systems, or extension points without evidence.
+- **Make impossible states unrepresentable**: Prefer explicit sum types over boolean flags and leaky optionals.
+- **Functional Core, Imperative Shell**: Keep pure domain logic separate from boundary I/O.
+- **Structure determines logic**: Define models and transitions before functions; prefer compile-time proofs.
+- **Contract boundaries**: Prove failure domains, temporal stability, partition isolation, and resource limits first.
+- **Dissolve hollow indirection**: Remove single-implementation interfaces, pass-through DTOs, and speculative factories.
+- **Bounded scope**: Only current requirements. No unevidenced caching, plugins, or extension points.
 
 ## Target resolution
 
-Infer the target code or path from attached files, referenced paths, and discussed code. Ask only when genuinely ambiguous (multiple targets or no context), stating assumptions explicitly.
+Infer the target from attached files, referenced paths, and discussed code. Ask only when genuinely ambiguous; state assumptions explicitly.
 
 ## Analysis format
 
-Use canonical sections in order (omit empty sections for simple tasks):
+Use these sections in order (omit empty ones):
 
-1. **Problem** - Real problem, constraints, assumptions, and edge boundaries.
-2. **Structure** - Core sum types, state transitions, domain invariants, and resource/partition boundaries.
-3. **Remove** - Impossible states, hollow interfaces, pass-through layers, and speculative parameters.
+1. **Problem** - Real problem, constraints, assumptions, edge boundaries.
+2. **Structure** - Core sum types, state transitions, domain invariants, resource/partition boundaries.
+3. **Remove** - Impossible states, hollow interfaces, pass-through layers, speculative parameters.
 4. **Handoff Contract** - Exact type signatures, transition rules, failure behavior, and invariants for `lean-mode` / `lean-test`.
 
-Do not implement routine code. If implementation is requested, provide the grounded design and hand off to `lean-mode`.
+Do not implement routine code. Hand off implementation to `lean-mode`.
 
 ## Prohibited
 
 - Primitive obsession and unconstrained optional/nullable sprawl
-- Pure logic reaching into hidden side effects (clock, global state, or random)
+- Pure logic with hidden side effects (clock, global state, random)
 - Unevidenced full rewrites or unsupported universal abstractions
 - Replacing models with `...`, `TODO`, or pseudocode
 - Omitting validation, business logic, error handling, or return contracts
-- Unversioned breaking serialization schemas, cross-partition context leaks, or unbounded resource mutations
+- Unversioned breaking serialization, cross-partition leaks, or unbounded resource mutations
 - Premature caching or speculative plugin systems
 
 ## Controls
 
-- **Scope**: Structural design and architecture; do not implement routine code.
-- **Activate**: `/lean-design` or an explicit request involving states, types, invariants, or boundaries.
+- **Scope**: Structural design only; no routine code implementation.
+- **Activate**: `/lean-design` or explicit request involving states, types, invariants, or boundaries.
 - **Deactivate**: `stop lean-design` or `normal mode`.

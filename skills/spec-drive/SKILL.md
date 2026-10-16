@@ -21,7 +21,7 @@ Drive complex or contract-sensitive changes through high-density specifications,
 2. **Lean over Patchwork:** Eliminate impossible states before implementing logic; write only the code needed to satisfy contracts.
 3. **Bounded Generalization:** Extract `condition -> guarantee` laws only from multiple cases or explicit domain evidence. State scope, preconditions, exceptions, and counterexamples; reject one-case restatements and unsupported abstractions. Promote laws to shared rules only with cross-boundary recurrence or clear reuse evidence.
 4. **Evidence-Gated Pipeline:** Follow the 4 phases. Stop for review on breaking changes, major architectural trade-offs, genuine ambiguity, or before implementation without explicit approval.
-5. **Living Spec Sync:** Keep execution contracts in `.plans/YYYY-MM-DD/<task-name>.md` when `mark-plan` is active; synchronize permanent domain and architecture docs in the same change.
+5. **Living Spec Sync:** Keep execution contracts in `mark-plan`'s active plan file when `mark-plan` is active; synchronize permanent domain and architecture docs in the same change.
 6. **Authority Separation:** Permanent specifications govern domain rules, public contracts, and architecture; plans track execution scope and verification only.
 7. **Composed Activation:** When `/crisp` is active with `/spec-drive`, `spec-drive` coordinates the task and `crisp` controls response prose only; it does not grant edit permission.
 
@@ -126,7 +126,7 @@ When the repository defines a candidate/stable policy, remain `candidate` until 
 
 ## Plan handoff
 
-When `mark-plan` is active, use its `.plans/YYYY-MM-DD/<task-name>.md` as the execution SSOT. Put the SDD contracts, laws, invariants, and TDD slices in the plan or link them from the plan; do not create a competing plan artifact.
+When `mark-plan` is active, use its active plan file as the execution SSOT. Put the SDD contracts, laws, invariants, and TDD slices in the plan or link them from the plan; do not create a competing plan artifact.
 
 ## Controls & Revert
 

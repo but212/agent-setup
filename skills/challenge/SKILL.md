@@ -13,7 +13,7 @@ disable-model-invocation: true
 
 Inspect context and invoke exactly one sub-skill with evidence. If repository or documentation evidence exists, choose the mode instead of asking the user to choose it. The selected child owns questioning, artifacts, and the approval handoff.
 
-When `mark-plan` is active, keep planning artifacts in `.plans/YYYY-MM-DD/<task-name>.md`; otherwise report in chat and create no ad hoc plan files.
+When `mark-plan` is active, delegate artifact recording to `mark-plan`'s active plan file; otherwise report in chat and create no ad hoc plan files.
 
 ## Controls
 

@@ -33,13 +33,13 @@ See NOTICE for third-party license notices.
 - `spec/skills-spec.md` - catalog, routing, shared invariants, and stabilization policy.
 - `.plans/YYYY-MM-DD/` - tracked file-backed execution plans grouped by creation date.
 - `scripts/validate-skills.py` - dependency-free catalog and safety validation.
-- `scripts/deploy-agents.sh` / `scripts/deploy-agents.ps1` - mirror `AGENTS.md` and `skills/` into `~/.agents` (the shared agent folder); `--link` / `-Link` also symlink pi's global instructions to it.
+- `scripts/deploy_agents.py` (wrapped by `scripts/deploy-agents.sh` / `scripts/deploy-agents.ps1`) - mirror `AGENTS.md` and `skills/` into `~/.agents` (the shared agent folder); `--link` / `-Link` also symlink pi's global instructions to it.
 
 ## Use
 
 Place or copy the relevant files into an agent-enabled repository. Adapt only repository-specific commands and boundaries; do not add framework-specific assumptions to the core contracts. Before running checks, inspect the target repository's configuration, scripts, CI definitions, and documentation. Get explicit approval before implementation when a plan or contract-sensitive workflow is active.
 
-Deploy from POSIX with `scripts/deploy-agents.sh [--link]`, or from PowerShell with `./scripts/deploy-agents.ps1 [-Link]`. Set `AGENT_HOME` to override the deployment target.
+Deploy with `python3 scripts/deploy_agents.py [--link]`, from POSIX with `scripts/deploy-agents.sh [--link]`, or from PowerShell with `./scripts/deploy-agents.ps1 [-Link]`. Set `AGENT_HOME` to override the deployment target.
 
 ## Validate this setup
 

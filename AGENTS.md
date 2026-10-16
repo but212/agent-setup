@@ -2,12 +2,12 @@
 
 ## Purpose
 
-This file provides repository-wide guidance for coding agents. Follow it together with the user's request, repository documentation, and any more-specific `AGENTS.md` files.
+This file provides repository-wide guidance for coding agents. Instruction sources and their precedence are defined below.
 
 ## Instruction precedence
 
 1. System and developer instructions.
-2. The user's explicit request.
+2. The user's explicit request, except where it would violate an absolute rule in this file (weaken tests or safeguards, add secrets or sensitive values, run destructive commands).
 3. The nearest applicable `AGENTS.md`; deeper files override broader files.
 4. Repository documentation, configuration, and established code conventions.
 
@@ -51,6 +51,5 @@ If instructions conflict or a requirement is materially ambiguous, stop and ask 
 
 - Lead with the answer or decision. Be direct and concise without omitting requirements, constraints, identifiers, commands, errors, order, or next actions.
 - Avoid repetition, filler, and unsupported certainty; preserve code blocks, commands, paths, identifiers, and machine-readable text unless asked to change them.
-- Do not stage, commit, push, reset, discard, or clean changes unless explicitly asked.
-- Never run destructive commands such as `git push`, `git reset --hard`, `git clean -f`, or `rm -rf` unless explicitly requested.
+- Do not stage, commit, push, reset, discard, or clean changes, and never run destructive commands such as `git push`, `git reset --hard`, `git clean -f`, or `rm -rf`, unless explicitly requested.
 - Preserve unrelated work. Before finishing, review the diff for accidental files, debug output, secrets, and unnecessary changes; summarize paths, behavior, verification results, failures, assumptions, and follow-up.
