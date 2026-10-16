@@ -2,13 +2,52 @@
 """Mirror AGENTS.md and skills/ into shared agent directory (~/.agents)."""
 
 import argparse
+from dataclasses import dataclass
+from enum import Enum
 import os
+from pathlib import Path
 import shutil
 import sys
-from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
+
+class ActionKind(Enum):
+    MAKE_DIR = "make_dir"
+    COPY_FILE = "copy_file"
+    PRUNE_FILE = "prune_file"
+    PRUNE_DIR = "prune_dir"
+
+
+class DeploymentSafetyError(Exception):
+    """Raised when a pre-flight deployment safety invariant is violated."""
+    pass
+
+
+@dataclass(frozen=True)
+class MirrorAction:
+    kind: ActionKind
+    dst: Path
+    src: Path | None = None
+
+
+@dataclass(frozen=True)
+class DeploymentPlan:
+    canonical_target: Path
+    agents_source: Path
+    target_agents: Path
+    skills_source: Path
+    target_skills: Path
+    mirror_actions: list[MirrorAction]
+    skill_count: int
+    link: bool
+    pi_dir: Path | None = None
+    pi_agents: Path | None = None
+
+
+# ============================================================================
+# Functional Core: Safety Inspection & Deployment Planning
+# ============================================================================
 
 def is_symlink_or_reparse(path: Path) -> bool:
     try:
@@ -55,7 +94,7 @@ def get_canonical(path: Path) -> Path:
     return canonical
 
 
-def deploy(repo_root: Path, target_arg: str | None, link: bool) -> int:
+def plan_deployment(repo_root: Path, target_arg: str | None, link: bool) -> DeploymentPlan:
     home_env = os.environ.get("HOME")
     home_dir = Path(home_env).resolve() if home_env else Path.home().resolve()
 
@@ -73,115 +112,145 @@ def deploy(repo_root: Path, target_arg: str | None, link: bool) -> int:
             stop_at = None
 
     if has_symlink_or_reparse_in_chain(target_path, stop_at=stop_at):
-        sys.stderr.write(f"refusing symlinked AGENT_HOME: {target_input_str}\n")
-        return 1
+        raise DeploymentSafetyError(f"refusing symlinked AGENT_HOME: {target_input_str}\n")
 
     try:
         canonical_target = get_canonical(target_path)
     except Exception as exc:
-        sys.stderr.write(f"cannot resolve AGENT_HOME: {exc}\n")
-        return 1
+        raise DeploymentSafetyError(f"cannot resolve AGENT_HOME: {exc}\n")
 
-    # Check root or home target
     is_root = canonical_target == canonical_target.parent or (
         canonical_target.anchor and canonical_target == Path(canonical_target.anchor)
     )
     if is_root or canonical_target == home_dir:
-        sys.stderr.write(f"refusing unsafe AGENT_HOME: {target_input_str}\n")
-        return 1
+        raise DeploymentSafetyError(f"refusing unsafe AGENT_HOME: {target_input_str}\n")
 
     agents_source = repo_root / "AGENTS.md"
     skills_source = repo_root / "skills"
     if not agents_source.is_file():
-        sys.stderr.write(f"AGENTS.md not found in {repo_root}\n")
-        return 1
+        raise DeploymentSafetyError(f"AGENTS.md not found in {repo_root}\n")
     if not skills_source.is_dir():
-        sys.stderr.write(f"skills/ not found in {repo_root}\n")
-        return 1
+        raise DeploymentSafetyError(f"skills/ not found in {repo_root}\n")
 
     target_agents = canonical_target / "AGENTS.md"
     if is_symlink_or_reparse(target_agents):
-        sys.stderr.write(f"refusing symlinked destination: {target_agents}\n")
-        return 1
+        raise DeploymentSafetyError(f"refusing symlinked destination: {target_agents}\n")
     if target_agents.exists() and not target_agents.is_file():
-        sys.stderr.write(f"destination is not a regular file: {target_agents}\n")
-        return 1
+        raise DeploymentSafetyError(f"destination is not a regular file: {target_agents}\n")
 
     target_skills = canonical_target / "skills"
     if is_symlink_or_reparse(target_skills):
-        sys.stderr.write(f"refusing symlinked destination: {target_skills}\n")
-        return 1
+        raise DeploymentSafetyError(f"refusing symlinked destination: {target_skills}\n")
     if target_skills.exists() and not target_skills.is_dir():
-        sys.stderr.write(f"destination is not a directory: {target_skills}\n")
-        return 1
+        raise DeploymentSafetyError(f"destination is not a directory: {target_skills}\n")
 
     pi_dir = home_dir / ".pi" / "agent"
     pi_agents = pi_dir / "AGENTS.md"
     if link:
         if has_symlink_or_reparse_in_chain(pi_dir, stop_at=home_dir):
-            sys.stderr.write(
+            raise DeploymentSafetyError(
                 f"refusing symlinked destination: {pi_dir} (symlinked pi agent directory: {pi_dir})\n"
             )
-            return 1
         if pi_dir.exists() and not pi_dir.is_dir():
-            sys.stderr.write(f"destination is not a directory: {pi_dir}\n")
-            return 1
+            raise DeploymentSafetyError(f"destination is not a directory: {pi_dir}\n")
         if pi_agents.exists() and not is_symlink_or_reparse(pi_agents):
-            sys.stderr.write(
+            raise DeploymentSafetyError(
                 f"refusing to overwrite real file {pi_agents} (not a symlink)\n"
             )
-            return 1
 
-    canonical_target.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(agents_source, target_agents)
-    print(f"copied: AGENTS.md -> {target_agents}")
-
-    target_skills.mkdir(parents=True, exist_ok=True)
+    # Compute skills mirror actions
+    actions: list[MirrorAction] = []
     source_items: dict[Path, Path] = {}
     for item in skills_source.rglob("*"):
         source_items[item.relative_to(skills_source)] = item
 
-    # Remove stale files inside target_skills bottom-up
-    target_items = sorted(
-        target_skills.rglob("*"), key=lambda p: len(p.parts), reverse=True
-    )
-    for item in target_items:
-        if not (item.exists() or is_symlink_or_reparse(item)):
-            continue
-        rel = item.relative_to(target_skills)
-        src = source_items.get(rel)
-        type_mismatch = src is not None and (
-            is_symlink_or_reparse(item)
-            or (src.is_dir() != item.is_dir())
-            or (src.is_file() != item.is_file())
+    if target_skills.exists():
+        target_items = sorted(
+            target_skills.rglob("*"), key=lambda p: len(p.parts), reverse=True
         )
-        if src is None or type_mismatch:
-            if is_symlink_or_reparse(item) or item.is_file():
-                item.unlink()
-            elif item.is_dir():
-                shutil.rmtree(item)
+        for item in target_items:
+            if not (item.exists() or is_symlink_or_reparse(item)):
+                continue
+            rel = item.relative_to(target_skills)
+            src = source_items.get(rel)
+            type_mismatch = src is not None and (
+                is_symlink_or_reparse(item)
+                or (src.is_dir() != item.is_dir())
+                or (src.is_file() != item.is_file())
+            )
+            if src is None or type_mismatch:
+                if is_symlink_or_reparse(item) or item.is_file():
+                    actions.append(MirrorAction(kind=ActionKind.PRUNE_FILE, dst=item))
+                elif item.is_dir():
+                    actions.append(MirrorAction(kind=ActionKind.PRUNE_DIR, dst=item))
 
     for rel, src in source_items.items():
         dst = target_skills / rel
         if src.is_dir():
-            dst.mkdir(parents=True, exist_ok=True)
+            actions.append(MirrorAction(kind=ActionKind.MAKE_DIR, dst=dst, src=src))
         else:
-            dst.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(src, dst)
+            actions.append(MirrorAction(kind=ActionKind.COPY_FILE, dst=dst, src=src))
 
-    skill_count = sum(1 for p in target_skills.rglob("SKILL.md") if p.is_file())
-    print(f"mirrored: skills/ -> {target_skills} ({skill_count} skills)")
+    skill_count = sum(1 for p in skills_source.rglob("SKILL.md") if p.is_file())
 
-    if link:
-        pi_dir.mkdir(parents=True, exist_ok=True)
-        if is_symlink_or_reparse(pi_agents):
-            pi_agents.unlink()
-        target_agents_abs = target_agents.resolve()
-        pi_agents.symlink_to(target_agents_abs)
-        print(f"linked: {pi_agents} -> {target_agents_abs}")
+    return DeploymentPlan(
+        canonical_target=canonical_target,
+        agents_source=agents_source,
+        target_agents=target_agents,
+        skills_source=skills_source,
+        target_skills=target_skills,
+        mirror_actions=actions,
+        skill_count=skill_count,
+        link=link,
+        pi_dir=pi_dir if link else None,
+        pi_agents=pi_agents if link else None,
+    )
+
+
+# ============================================================================
+# Imperative Shell: Filesystem Mutations & CLI Execution
+# ============================================================================
+
+def execute_deployment(plan: DeploymentPlan) -> None:
+    plan.canonical_target.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(plan.agents_source, plan.target_agents)
+    print(f"copied: AGENTS.md -> {plan.target_agents}")
+
+    plan.target_skills.mkdir(parents=True, exist_ok=True)
+
+    for action in plan.mirror_actions:
+        if action.kind == ActionKind.PRUNE_FILE:
+            action.dst.unlink(missing_ok=True)
+        elif action.kind == ActionKind.PRUNE_DIR:
+            shutil.rmtree(action.dst, ignore_errors=True)
+        elif action.kind == ActionKind.MAKE_DIR:
+            action.dst.mkdir(parents=True, exist_ok=True)
+        elif action.kind == ActionKind.COPY_FILE:
+            action.dst.parent.mkdir(parents=True, exist_ok=True)
+            if action.src:
+                shutil.copy2(action.src, action.dst)
+
+    print(f"mirrored: skills/ -> {plan.target_skills} ({plan.skill_count} skills)")
+
+    if plan.link and plan.pi_dir and plan.pi_agents:
+        plan.pi_dir.mkdir(parents=True, exist_ok=True)
+        if is_symlink_or_reparse(plan.pi_agents):
+            plan.pi_agents.unlink()
+        target_agents_abs = plan.target_agents.resolve()
+        plan.pi_agents.symlink_to(target_agents_abs)
+        print(f"linked: {plan.pi_agents} -> {target_agents_abs}")
 
     print("done.")
-    return 0
+
+
+def deploy(repo_root: Path, target_arg: str | None, link: bool) -> int:
+    try:
+        plan = plan_deployment(repo_root, target_arg, link)
+        execute_deployment(plan)
+        return 0
+    except DeploymentSafetyError as exc:
+        sys.stderr.write(str(exc))
+        return 1
 
 
 def main() -> int:

@@ -1,31 +1,74 @@
 ---
 name: challenge
-role: Selects a challenge path using repository evidence
+role: Challenge assumptions and stress-test decisions
 activation: "`/challenge`, assumption review"
 modification-authority: None
-description: Router and entry point to challenge assumptions and stress-test a plan, decision, or idea by routing to challenge-light or challenge-docs based on repository evidence.
+description: >
+  Challenge assumptions and stress-test a plan, decision, or idea through an
+  adaptive, focused inquiry path. Operates in grounded mode when codebase, docs
+  (context.md), or ADRs exist, or light mode for early ideas without repository
+  evidence.
 disable-model-invocation: true
 ---
 
-# Mode Detection & Routing
+# Adaptive Challenge Path
+
+Challenge assumptions and stress-test a plan or technical decision before implementation.
 
 ## Operating contract
 
-Inspect context and invoke exactly one sub-skill with evidence. If repository or documentation evidence exists, choose the mode instead of asking the user to choose it. The selected child owns questioning, artifacts, and the approval handoff.
+Consume a request or technical decision and produce one confirmed decision summary. The user owns decisions and trade-offs. Challenge scope and trade-offs only; do not modify code, config, docs, tests, or implementation before confirmation.
 
-When `mark-plan` is active, delegate artifact recording to `mark-plan`'s active plan file; otherwise report in chat and create no ad hoc plan files.
+Select path based on evidence:
+
+- **Grounded mode:** Any repository, source file, test, architecture document, `context.md`, or ADR is available.
+- **Light mode:** No codebase or project documentation exists.
+
+## Fast path
+
+Use Fast path only when all gates pass:
+
+- **Grounded mode (all 6 gates):**
+  1. Reversible and inexpensive rollback.
+  2. Local to one area.
+  3. No changes to public API, schema, auth, state transitions, domain invariants, or ubiquitous language.
+  4. Minimal inspection clarifies goal, constraints, approach, and validation.
+  5. No unresolved material decisions affecting scope, behavior, or risk.
+  6. No `context.md` or ADR update required.
+
+- **Light mode (all 4 gates):**
+  1. Reversible and low-cost to adjust.
+  2. Local to one area or topic.
+  3. No unresolved material decisions affecting goals, constraints, or approach.
+  4. Minimal inspection clarifies goals, constraints, and validation criteria.
+
+Provide compact plan for user confirmation: Goal & scope | Target areas / Approach | Intended change | Tests & validation | Assumptions | Risks & escalations.
+
+## Standard path
+
+Use when any Fast-path gate fails. Inspect repository facts, docs, code, and types first; do not ask for verifiable facts. Challenge assumptions and ask material choices one at a time in dependency order.
+
+- **Questioning:** Ask the user one material decision at a time. Present 2-4 options with `(Recommended)` first.
+- **Format:** Recommendation | Why | Trade-off / Counter-argument | Decision requested.
+- **Post-answer summary:** Decision | Recommendation | Why | Risk mitigated.
+
+## Context & Documentation (Grounded mode)
+
+- **Discovery order:** 1. Repo guidance -> 2. Local docs (`context.md`, ADRs) -> 3. Target code & tests. Propose minimal `context.md` for new domain terms.
+- **Maintain `context.md`:** Propose updates for entities, value objects, invariants, boundaries, or lifecycle rules.
+- **Maintain ADRs:** Propose ADRs for hard-to-reverse or high-trade-off architectural choices.
 
 ## Controls
 
-- **Scope:** Route only; the selected child owns the remainder.
-- **Activate:** `/challenge` or an explicit request to stress-test assumptions.
-- **Deactivate:** After routing to exactly one sub-skill.
+- **Scope:** Read-only challenge; no edits before confirmation.
+- **Activate:** Explicit `/challenge` or request to stress-test assumptions.
+- **Deactivate:** After the decision summary and handoff.
 
-## Routing selection
+## Output & handoff
 
-Select exactly one path:
+After confirmation, record the decision summary in the active plan file when a plan is active; otherwise report in chat without creating ad hoc plan files. Hand off to `spec-drive`, `lean-design`, or `lean-mode`.
 
-- **`challenge-docs`:** Any repository, source file, test, architecture document, `context.md`, or ADR is available. Ground decisions in the repository; docs-only repositories use this path.
-- **`challenge-light`:** No repository or project documents are available. Challenge assumptions, trade-offs, and failure modes without repository overhead.
+When resolved, output:
 
-Do not invoke both paths. The selected child owns the remainder of the interaction.
+- **Summary:** Mode (`Challenge Grounded` or `Challenge Light`) | Plan | Next step | Decisions | Domain term changes / ADRs affected (if applicable) | Challenged assumptions | Risks & mitigations | Revisit triggers.
+- **Handoff:** Propose next skill (`spec-drive`, `lean-design`, or `lean-mode`).

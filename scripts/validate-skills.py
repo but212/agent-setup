@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Validate skill metadata, repository contracts, and ASCII-only Markdown."""
 
+from dataclasses import dataclass
 import re
 import sys
 from datetime import date
@@ -8,18 +9,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SKILLS = ROOT / "skills"
-CATALOG = ROOT / "spec" / "skills-spec.md"
 AGENTS = ROOT / "AGENTS.md"
 PLANS = ROOT / ".plans"
 
-REQUIRED_CATALOG_TERMS = (
-    "Activation",
-    "Modification authority",
-    "Challenge Routing",
-    "Implementation Routing",
-    "exactly one",
-    "user approval",
-)
 REQUIRED_SAFETY_GUARDS = (
     "git push",
     "git reset --hard",
@@ -28,7 +20,30 @@ REQUIRED_SAFETY_GUARDS = (
 )
 
 
-def frontmatter(path: Path) -> dict[str, str]:
+@dataclass(frozen=True)
+class SkillMetadata:
+    name: str
+    role: str
+    activation: str
+    modification_authority: str
+    description: str
+
+
+@dataclass(frozen=True)
+class ValidationReport:
+    skills: dict[str, SkillMetadata]
+    errors: list[str]
+
+    @property
+    def is_valid(self) -> bool:
+        return len(self.errors) == 0
+
+
+# ============================================================================
+# Functional Core: Pure parsing and verification
+# ============================================================================
+
+def parse_frontmatter_dict(path: Path) -> dict[str, str]:
     lines = path.read_text(encoding="utf-8").splitlines()
     if not lines or lines[0].strip() != "---":
         raise ValueError("missing frontmatter")
@@ -68,48 +83,37 @@ def frontmatter(path: Path) -> dict[str, str]:
     return values
 
 
-def parse_catalog_table(text: str) -> tuple[list[dict[str, str]], list[str]]:
-    rows: list[dict[str, str]] = []
+def parse_skill_metadata(path: Path, root: Path = ROOT) -> tuple[SkillMetadata | None, list[str]]:
     errors: list[str] = []
-    lines = text.splitlines()
-    in_table = False
+    try:
+        raw = parse_frontmatter_dict(path)
+    except ValueError as exc:
+        return None, [f"{path.relative_to(root)}: {exc}"]
 
-    for line in lines:
-        stripped = line.strip()
-        if not in_table:
-            if stripped.startswith("|") and "Skill" in stripped and "Role" in stripped:
-                headers = [h.strip() for h in stripped.strip("|").split("|")]
-                if (
-                    len(headers) == 4
-                    and headers[0] == "Skill"
-                    and headers[1] == "Role"
-                    and headers[2] == "Activation"
-                    and headers[3] == "Modification authority"
-                ):
-                    in_table = True
-            continue
+    expected_name = path.parent.name
+    name = raw.get("name")
+    if name != expected_name:
+        errors.append(f"{path.relative_to(root)}: name={name!r}, expected {expected_name!r}")
 
-        if not stripped.startswith("|"):
-            break
+    description = raw.get("description", "")
+    if not description:
+        errors.append(f"{path.relative_to(root)}: missing description")
 
-        if re.match(r"^\|\s*[-:]+", stripped):
-            continue
+    for field in ("role", "activation", "modification-authority"):
+        if not raw.get(field):
+            errors.append(f"{path.relative_to(root)}: missing {field}")
 
-        fields = [field.strip() for field in stripped.strip("|").split("|")]
-        if len(fields) != 4 or any(not field for field in fields):
-            errors.append(f"malformed catalog row: {line}")
-            continue
+    if errors or not name:
+        return None, errors
 
-        rows.append(
-            {
-                "name": fields[0].strip("`").strip(),
-                "role": fields[1],
-                "activation": fields[2],
-                "modification-authority": fields[3],
-            }
-        )
-
-    return rows, errors
+    metadata = SkillMetadata(
+        name=name,
+        role=raw.get("role", ""),
+        activation=raw.get("activation", ""),
+        modification_authority=raw.get("modification-authority", ""),
+        description=description,
+    )
+    return metadata, []
 
 
 def check_ascii_markdown(root: Path = ROOT) -> list[str]:
@@ -135,79 +139,20 @@ def check_ascii_markdown(root: Path = ROOT) -> list[str]:
 
 def check_skill_frontmatters(
     skills_dir: Path = SKILLS, root: Path = ROOT
-) -> tuple[dict[str, dict[str, str]], list[str]]:
+) -> tuple[dict[str, SkillMetadata], list[str]]:
     errors: list[str] = []
-    actual_names: set[str] = set()
-    metadata_by_name: dict[str, dict[str, str]] = {}
+    skills: dict[str, SkillMetadata] = {}
     skill_files = sorted(skills_dir.glob("*/SKILL.md"))
 
     for path in skill_files:
-        try:
-            metadata = frontmatter(path)
-        except ValueError as exc:
-            errors.append(f"{path.relative_to(root)}: {exc}")
-            continue
-        expected = path.parent.name
-        name = metadata.get("name")
-        if name != expected:
-            errors.append(
-                f"{path.relative_to(root)}: name={name!r}, expected {expected!r}"
-            )
-        if not metadata.get("description"):
-            errors.append(f"{path.relative_to(root)}: missing description")
-        for field in ("role", "activation", "modification-authority"):
-            if not metadata.get(field):
-                errors.append(f"{path.relative_to(root)}: missing {field}")
-        if name:
-            if name in actual_names:
-                errors.append(f"duplicate skill name: {name}")
-            actual_names.add(name)
-            metadata_by_name[name] = metadata
+        metadata, parse_errors = parse_skill_metadata(path, root)
+        errors.extend(parse_errors)
+        if metadata:
+            if metadata.name in skills:
+                errors.append(f"duplicate skill name: {metadata.name}")
+            skills[metadata.name] = metadata
 
-    return metadata_by_name, errors
-
-
-def check_catalog_parity(
-    catalog_path: Path, metadata_by_name: dict[str, dict[str, str]]
-) -> list[str]:
-    errors: list[str] = []
-    catalog_text = catalog_path.read_text(encoding="utf-8")
-    catalog_entries, parse_errors = parse_catalog_table(catalog_text)
-    errors.extend(parse_errors)
-
-    listed_names = [row["name"] for row in catalog_entries]
-    listed_counts: dict[str, int] = {}
-    for name in listed_names:
-        listed_counts[name] = listed_counts.get(name, 0) + 1
-    for name, count in sorted(listed_counts.items()):
-        if count != 1:
-            errors.append(
-                f"catalog skill must appear exactly once: {name} ({count} rows)"
-            )
-
-    actual_names = set(metadata_by_name.keys())
-    listed_name_set = set(listed_names)
-    for name in sorted(actual_names - listed_name_set):
-        errors.append(f"catalog missing skill: {name}")
-    for name in sorted(listed_name_set - actual_names):
-        errors.append(f"catalog lists absent skill: {name}")
-
-    for row in catalog_entries:
-        metadata = metadata_by_name.get(row["name"])
-        if metadata is None:
-            continue
-        for field in ("role", "activation", "modification-authority"):
-            if metadata.get(field) != row[field]:
-                errors.append(
-                    f"catalog mismatch for {row['name']}: {field}="
-                    f"{metadata.get(field)!r}, expected {row[field]!r}"
-                )
-
-    for term in REQUIRED_CATALOG_TERMS:
-        if term not in catalog_text:
-            errors.append(f"catalog missing routing/authority term: {term}")
-
-    return errors
+    return skills, errors
 
 
 def check_plan_paths(plans_dir: Path, root: Path = ROOT) -> list[str]:
@@ -247,30 +192,39 @@ def check_safety_guards(agents_path: Path) -> list[str]:
     return errors
 
 
-def main() -> int:
+def validate_repository(
+    root: Path = ROOT,
+    skills_dir: Path = SKILLS,
+    agents_path: Path = AGENTS,
+    plans_dir: Path = PLANS,
+) -> ValidationReport:
     errors: list[str] = []
-    errors.extend(check_ascii_markdown(ROOT))
+    errors.extend(check_ascii_markdown(root))
 
-    metadata_by_name, skill_errors = check_skill_frontmatters(SKILLS, ROOT)
+    skills, skill_errors = check_skill_frontmatters(skills_dir, root)
     errors.extend(skill_errors)
 
-    if CATALOG.exists():
-        errors.extend(check_catalog_parity(CATALOG, metadata_by_name))
-    else:
-        errors.append(f"catalog file not found: {CATALOG.relative_to(ROOT)}")
+    errors.extend(check_plan_paths(plans_dir, root))
+    errors.extend(check_safety_guards(agents_path))
 
-    errors.extend(check_plan_paths(PLANS, ROOT))
-    errors.extend(check_safety_guards(AGENTS))
+    return ValidationReport(skills=skills, errors=errors)
 
-    if errors:
+
+# ============================================================================
+# Imperative Shell: CLI runner and formatting
+# ============================================================================
+
+def main() -> int:
+    report = validate_repository(ROOT, SKILLS, AGENTS, PLANS)
+
+    if not report.is_valid:
         print("Skill validation failed:")
-        print("\n".join(f"- {error}" for error in errors))
+        print("\n".join(f"- {error}" for error in report.errors))
         return 1
 
-    skill_files = list(SKILLS.glob("*/SKILL.md"))
-    print(f"Validated {len(skill_files)} skills and catalog parity.")
+    print(f"Validated {len(report.skills)} skills frontmatter metadata.")
     print(
-        "Validated ASCII-only Markdown, routing/authority markers, approval, dated plan paths, and destructive-command guards."
+        "Validated ASCII-only Markdown, dated plan paths, and destructive-command guards."
     )
     return 0
 

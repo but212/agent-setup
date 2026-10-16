@@ -8,7 +8,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-POWERSHELL = shutil.which("pwsh") or shutil.which("powershell")
 
 
 def check_symlink_support():
@@ -34,14 +33,6 @@ class DeployAgentsTests(unittest.TestCase):
         (self.repo / "scripts").mkdir(parents=True)
         (self.repo / "skills" / "example").mkdir(parents=True)
         shutil.copy2(
-            ROOT / "scripts" / "deploy-agents.sh",
-            self.repo / "scripts" / "deploy-agents.sh",
-        )
-        shutil.copy2(
-            ROOT / "scripts" / "deploy-agents.ps1",
-            self.repo / "scripts" / "deploy-agents.ps1",
-        )
-        shutil.copy2(
             ROOT / "scripts" / "deploy_agents.py",
             self.repo / "scripts" / "deploy_agents.py",
         )
@@ -56,44 +47,6 @@ class DeployAgentsTests(unittest.TestCase):
         self.tempdir.cleanup()
 
     def run_deploy(self, target, *, link=False, cwd=None):
-        if sys.platform == "win32":
-            self.skipTest("deploy-agents.sh requires POSIX filesystem paths")
-        environment = os.environ.copy()
-        environment.update({"AGENT_HOME": str(target), "HOME": str(self.home)})
-        command = [str(self.repo / "scripts" / "deploy-agents.sh")]
-        if link:
-            command.append("--link")
-        return subprocess.run(
-            command,
-            cwd=cwd or self.root,
-            env=environment,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-
-    def run_powershell_deploy(self, target, *, link=False, cwd=None):
-        environment = os.environ.copy()
-        environment.update({"AGENT_HOME": str(target), "HOME": str(self.home)})
-        command = [
-            POWERSHELL,
-            "-NoProfile",
-            "-NonInteractive",
-            "-File",
-            str(self.repo / "scripts" / "deploy-agents.ps1"),
-        ]
-        if link:
-            command.append("-Link")
-        return subprocess.run(
-            command,
-            cwd=cwd or self.root,
-            env=environment,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-
-    def run_python_deploy(self, target, *, link=False, cwd=None):
         environment = os.environ.copy()
         environment.update({"AGENT_HOME": str(target), "HOME": str(self.home)})
         command = [
@@ -111,31 +64,31 @@ class DeployAgentsTests(unittest.TestCase):
             check=False,
         )
 
-    def test_python_deploy_rejects_resolved_home_alias_before_write(self):
-        result = self.run_python_deploy(self.home / ".")
+    def test_deploy_rejects_resolved_home_alias_before_write(self):
+        result = self.run_deploy(self.home / ".")
 
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("unsafe AGENT_HOME", result.stderr)
         self.assertFalse((self.home / "AGENTS.md").exists())
 
-    def test_python_deploy_rejects_agents_directory_before_write(self):
+    def test_deploy_rejects_agents_directory_before_write(self):
         target = self.root / "target"
         target.mkdir()
         (target / "AGENTS.md").mkdir()
 
-        result = self.run_python_deploy(target)
+        result = self.run_deploy(target)
 
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("regular file", result.stderr)
         self.assertFalse((target / "AGENTS.md" / "AGENTS.md").exists())
 
-    def test_python_deploy_mirrors_and_cleans_stale(self):
+    def test_deploy_mirrors_and_cleans_stale(self):
         target = self.root / "target"
         (target / "skills").mkdir(parents=True)
         stale = target / "skills" / "stale.txt"
         stale.write_text("stale", encoding="utf-8")
 
-        result = self.run_python_deploy(target)
+        result = self.run_deploy(target)
 
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertFalse(stale.exists())
@@ -145,14 +98,14 @@ class DeployAgentsTests(unittest.TestCase):
             (self.repo / "AGENTS.md").read_text(encoding="utf-8"),
         )
 
-    def test_python_deploy_reconciles_conflicting_node_types(self):
+    def test_deploy_reconciles_conflicting_node_types(self):
         target = self.root / "target"
         (target / "skills").mkdir(parents=True)
         # Create a regular file where 'example' directory should be
         conflicting_file = target / "skills" / "example"
         conflicting_file.write_text("conflict", encoding="utf-8")
 
-        result = self.run_python_deploy(target)
+        result = self.run_deploy(target)
 
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertTrue((target / "skills" / "example" / "SKILL.md").exists())
@@ -160,13 +113,6 @@ class DeployAgentsTests(unittest.TestCase):
             (target / "skills" / "example" / "SKILL.md").read_text(encoding="utf-8"),
             "example\n",
         )
-
-    def test_rejects_resolved_home_alias_before_write(self):
-        result = self.run_deploy(self.home / ".")
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("unsafe AGENT_HOME", result.stderr)
-        self.assertFalse((self.home / "AGENTS.md").exists())
 
     @unittest.skipUnless(CAN_SYMLINK, "filesystem symlinks not supported/permitted")
     def test_rejects_symlinked_target_without_touching_target(self):
@@ -193,7 +139,7 @@ class DeployAgentsTests(unittest.TestCase):
         sym_parent.symlink_to(victim, target_is_directory=True)
         target = sym_parent / "sub"
 
-        result = self.run_python_deploy(target)
+        result = self.run_deploy(target)
 
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("symlinked AGENT_HOME", result.stderr)
@@ -238,63 +184,6 @@ class DeployAgentsTests(unittest.TestCase):
         self.assertEqual(sentinel.read_text(encoding="utf-8"), "keep")
         self.assertFalse((target / "AGENTS.md").exists())
 
-    def test_rejects_agents_directory_before_write(self):
-        target = self.root / "target"
-        target.mkdir()
-        (target / "AGENTS.md").mkdir()
-
-        result = self.run_deploy(target)
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("regular file", result.stderr)
-        self.assertFalse((target / "AGENTS.md" / "AGENTS.md").exists())
-
-    @unittest.skipUnless(POWERSHELL, "PowerShell runtime is unavailable")
-    @unittest.skipUnless(CAN_SYMLINK, "filesystem symlinks not supported/permitted")
-    def test_powershell_rejects_symlinked_target_without_touching_victim(self):
-        victim = self.root / "victim"
-        victim.mkdir()
-        sentinel = victim / "keep.txt"
-        sentinel.write_text("keep", encoding="utf-8")
-        target = self.root / "target"
-        target.symlink_to(victim, target_is_directory=True)
-
-        result = self.run_powershell_deploy(target)
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("symlinked AGENT_HOME", result.stderr)
-        self.assertEqual(sentinel.read_text(encoding="utf-8"), "keep")
-
-    @unittest.skipUnless(POWERSHELL, "PowerShell runtime is unavailable")
-    def test_powershell_rejects_agents_directory_before_write(self):
-        target = self.root / "target"
-        target.mkdir()
-        (target / "AGENTS.md").mkdir()
-
-        result = self.run_powershell_deploy(target)
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("regular file", result.stderr)
-        self.assertFalse((target / "AGENTS.md" / "AGENTS.md").exists())
-
-    @unittest.skipUnless(POWERSHELL, "PowerShell runtime is unavailable")
-    @unittest.skipUnless(CAN_SYMLINK, "filesystem symlinks not supported/permitted")
-    def test_powershell_rejects_symlinked_skills_without_touching_victim(self):
-        target = self.root / "target"
-        target.mkdir()
-        victim = self.root / "victim"
-        victim.mkdir()
-        sentinel = victim / "keep.txt"
-        sentinel.write_text("keep", encoding="utf-8")
-        (target / "skills").symlink_to(victim, target_is_directory=True)
-
-        result = self.run_powershell_deploy(target)
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("symlinked destination", result.stderr)
-        self.assertEqual(sentinel.read_text(encoding="utf-8"), "keep")
-        self.assertFalse((target / "AGENTS.md").exists())
-
     @unittest.skipUnless(CAN_SYMLINK, "filesystem symlinks not supported/permitted")
     def test_rejects_symlinked_agents_without_touching_victim(self):
         target = self.root / "target"
@@ -316,23 +205,6 @@ class DeployAgentsTests(unittest.TestCase):
         (pi_dir / "AGENTS.md").write_text("user-owned", encoding="utf-8")
 
         result = self.run_deploy(target, link=True)
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("refusing to overwrite real file", result.stderr)
-        self.assertFalse((target / "AGENTS.md").exists())
-        self.assertEqual(
-            (pi_dir / "AGENTS.md").read_text(encoding="utf-8"), "user-owned"
-        )
-
-    @unittest.skipUnless(POWERSHELL, "PowerShell runtime is unavailable")
-    @unittest.skipUnless(CAN_SYMLINK, "filesystem symlinks not supported/permitted")
-    def test_powershell_rejects_existing_pi_file_before_deployment_write(self):
-        target = self.root / "target"
-        pi_dir = self.home / ".pi" / "agent"
-        pi_dir.mkdir(parents=True)
-        (pi_dir / "AGENTS.md").write_text("user-owned", encoding="utf-8")
-
-        result = self.run_powershell_deploy(target, link=True)
 
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("refusing to overwrite real file", result.stderr)
@@ -368,22 +240,6 @@ class DeployAgentsTests(unittest.TestCase):
         link = self.home / ".pi" / "agent" / "AGENTS.md"
         self.assertTrue(link.is_symlink())
         self.assertEqual(link.resolve(), (workdir / target).resolve() / "AGENTS.md")
-
-    @unittest.skipUnless(POWERSHELL, "PowerShell runtime is unavailable")
-    @unittest.skipUnless(CAN_SYMLINK, "filesystem symlinks not supported/permitted")
-    def test_powershell_rejects_symlinked_pi_directory_before_deployment_write(self):
-        target = self.root / "target"
-        victim = self.root / "victim"
-        victim.mkdir()
-        pi_parent = self.home / ".pi"
-        pi_parent.mkdir()
-        (pi_parent / "agent").symlink_to(victim, target_is_directory=True)
-
-        result = self.run_powershell_deploy(target, link=True)
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("symlinked destination", result.stderr)
-        self.assertFalse((target / "AGENTS.md").exists())
 
     def test_safe_target_is_mirrored_without_external_deletion(self):
         target = self.root / "target"

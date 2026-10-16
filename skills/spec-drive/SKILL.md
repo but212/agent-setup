@@ -1,136 +1,116 @@
 ---
 name: spec-drive
-role: Coordinates contract-centered SDD
-activation: "`/spec-drive`, contract-sensitive change"
-modification-authority: Contract coordination only
+role: Coordinates contract-centered SDD and plan tracking
+activation: "`/spec-drive`, contract-sensitive change, planning request"
+modification-authority: Plan file and contract coordination
 description: >
   Spec-Driven Development (SDD) orchestrator bridging crisp specification density
-  with lean structural design, surgical TDD vertical slices, and living spec synchronization.
-  Activate with /spec-drive.
+  with lean structural design, surgical TDD vertical slices, and file-backed plan
+  tracking (.plans/YYYY-MM-DD/<task-name>.md).
 ---
 
 # Spec-Driven Development (spec-drive)
 
-Drive complex or contract-sensitive changes through high-density specifications, structural invariant enforcement, and surgical TDD slices. Use a reduced path for simple, local changes.
+Drive complex or contract-sensitive changes through high-density specifications, structural invariant enforcement, surgical TDD slices, and file-backed execution tracking.
 
 ## Operating Contract
 
-`spec-drive` defines the requirement boundary and coordinates delegation: `lean-design` owns structure, `tdd-plan` owns test slices, and `lean-mode` owns production edits.
+`spec-drive` coordinates the requirement lifecycle: `lean-design` owns structural modeling, `lean-mode` owns production code changes, and `.plans/YYYY-MM-DD/<task-name>.md` tracks execution state.
 
 1. **Crisp over Bloat:** Express concrete observable behavior, invariants, and input/output contracts; omit speculative requirements and decoration.
 2. **Lean over Patchwork:** Eliminate impossible states before implementing logic; write only the code needed to satisfy contracts.
-3. **Bounded Generalization:** Extract `condition -> guarantee` laws only from multiple cases or explicit domain evidence. State scope, preconditions, exceptions, and counterexamples; reject one-case restatements and unsupported abstractions. Promote laws to shared rules only with cross-boundary recurrence or clear reuse evidence.
-4. **Evidence-Gated Pipeline:** Follow the 4 phases. Stop for review on breaking changes, major architectural trade-offs, genuine ambiguity, or before implementation without explicit approval.
-5. **Living Spec Sync:** Keep execution contracts in `mark-plan`'s active plan file when `mark-plan` is active; synchronize permanent domain and architecture docs in the same change.
-6. **Authority Separation:** Permanent specifications govern domain rules, public contracts, and architecture; plans track execution scope and verification only.
-7. **Composed Activation:** When `/crisp` is active with `/spec-drive`, `spec-drive` coordinates the task and `crisp` controls response prose only; it does not grant edit permission.
+3. **Execution SSOT:** Track execution through `.plans/YYYY-MM-DD/<task-name>.md`. Synchronize permanent domain rules and architecture into repository documentation.
+4. **Authority Separation:** Permanent specifications govern domain rules and public contracts; plan files track execution progress and verification history.
+5. **Approval Boundary:** Planning ends in review. Produce only a `planned` plan or analysis before explicit approval; do not modify production code, tests, or execute checklist items without explicit approval.
+6. **Composed Activation:** When `/crisp` is active with `/spec-drive`, `spec-drive` coordinates the task while `crisp` controls response prose density.
+
+## Plan File Lifecycle
+
+When planning is requested or non-trivial execution begins:
+
+1. **Search & Reuse:** Search `.plans/` across all date folders. Reuse an existing `planned`, `in-progress`, or `blocked` plan for the task. Never silently resume a `complete` or `cancelled` plan without asking.
+2. **Path Convention:** Create `.plans/YYYY-MM-DD/<task-name>.md` using the plan creation date in ISO format and a lowercase kebab-case task name.
+3. **State Transitions:**
+   - `planned -> in-progress | cancelled`
+   - `in-progress -> blocked | complete | cancelled`
+   - `blocked -> in-progress`
+4. **Completion Rule:** Check checklist items only after verification passes. Do not mark the plan complete while criteria, checklist items, or blockers remain unresolved.
 
 ## The 4-Phase SDD Pipeline
 
-Apply all four phases when the change affects domain rules, state transitions, public contracts, persistence, security, or a material architectural decision. For simple local changes, record only the relevant contract, verification, and documentation impact.
-
 ### Phase 1: Crisp Specification
 
-Establish clear boundaries and observable contracts before modifying code:
+Establish clear boundaries and observable contracts before implementation:
 
-- **Intent & Scope:** Single-paragraph summary of requirement. Explicit In-Scope vs Out-of-Scope boundaries.
-- **Generalization Pass:** Group contracts and scenarios into cases, extract bounded law candidates from their shared relations, state each law's scope, preconditions, exceptions, and counterexamples, then link accepted laws to invariants, contracts, and tests. Reject candidates that merely restate one case or add speculative scope. If no law applies, record `None` and continue.
-- **Invariants Matrix:** Allowed states, valid state transitions, and prohibited/impossible states.
+- **Scope:** Concise goal, explicit In-Scope vs Out-of-Scope boundaries.
+- **Invariants Matrix:** Allowed states, valid transitions, and prohibited states.
 - **Contracts Table:**
 
-  | ID | Behavior / Scenario | Condition / Input | Expected Result / Error |
-  | --- | --- | --- | --- |
-  | `C-01` | ... | ... | ... |
+| ID | Behavior / Scenario | Condition / Input | Expected Result / Error | Invariant | Test path/name | Verification |
+| --- | --- | --- | --- | --- | --- | --- |
+| `C-01` | ... | ... | ... | ... | ... | ... |
 
-For each contract, record linked invariants, test path and name, implementation boundary, and permanent specification path when applicable. For non-executable contracts, record the verification method.
-
-*Rules:* If requirements contain ambiguity, stop and resolve with the user before writing implementation. Classify material claims as `Confirmed`, `Assumption`, or `Open decision`.
-
-Treat changes to public inputs/outputs, error meaning, state transitions, persistence schemas, authentication, or authorization as breaking changes. Require explicit approval and compatibility, migration, and rollback decisions before implementation.
+Classify material claims as `Confirmed`, `Assumption`, or `Open decision`. Flag breaking changes to public APIs, schemas, or security for explicit approval.
 
 ### Phase 2: Lean Structural Design (lean-design)
 
-Delegate this phase to `lean-design`; do not duplicate its structural review in the specification.
+Delegate data models and type boundaries to `lean-design`:
 
-Use accepted laws as inputs to design data models and state representations that make invalid states unrepresentable:
+- Make invalid states unrepresentable using explicit types/enums.
+- Identify failure boundaries before happy paths.
+- Remove redundant abstractions and speculative extension points.
 
-- Model transitions as explicit states, enums, or constrained types (avoid primitive obsession and loose booleans).
-- Identify failure boundaries (nulls, boundary violations, data constraints, unhandled exceptions) before happy paths.
-- Remove redundant abstractions, unused parameters, and speculative extension points.
+### Phase 3: Surgical TDD Implementation
 
-### Phase 3: Surgical TDD Implementation (tdd-plan & lean-mode)
+Execute implementation in small vertical slices mapped 1:1 to the Contracts Table in dependency order:
 
-Delegate test slicing to `tdd-plan` and production changes to `lean-mode`; `spec-drive` tracks contract coverage but does not implement either.
-
-Execute implementation in small, vertical slices mapped 1:1 to the Contracts Table in dependency order. For each accepted law, include a representative case and a boundary or failure case in the verification plan:
-
-1. **Red:** Write smallest deterministic test exercising contract `C-NN`. Prove it fails with expected failure.
+1. **Red:** Write smallest deterministic test exercising contract `C-NN`. Prove it fails as expected.
 2. **Green:** Write minimal surgical code to make test pass (`lean-mode`). Touch only scoped files.
-3. **Verify:** Run repository-native test runner proving slice passes without regressions.
-4. **Refactor:** Remove duplication or polish structure exposed after Green (or `None`).
+3. **Verify:** Run repository-native command proving slice passes without regressions.
+4. **Refactor:** Remove concrete duplication or simplify structure exposed after Green (or `None`).
 
-### Phase 4: Quality Gate & Spec Synchronization
+### Phase 4: Review, Living Spec Sync & Finish
 
-Before declaring done, enforce repository quality boundaries:
+- Run full repository test suite.
+- Synchronize permanent documentation (`AGENTS.md`, architecture specs) with any changed contracts.
+- Mark plan complete only when every item and acceptance criterion is verified.
 
-1. **Contract Coverage:** Every defined contract that is executable and in scope has a passing automated test; document non-executable contracts and their verification method.
-2. **Law Coverage:** Every accepted law is linked to an invariant or contract and has executable verification where practical. Do not promote a law to `context.md` or a shared rule without repeated cross-boundary evidence or explicit domain justification.
-3. **Code Quality:** Run the project formatter immediately before the final quality set, then pass all repository-native formatting, linting, and static analysis checks. Run build-sharing commands sequentially; a runner timeout or inconclusive diagnostic is not a pass and requires a controlled rerun.
-4. **Spec Synchronization:**
-   - Check if changes alter domain models, API contracts, business rules, or platform invariants.
-   - Classify material claims as `Confirmed`, `Assumption`, or `Open decision`.
-   - Update repository specification documents (e.g., `docs/spec/`, architecture decision records, or contract references) in the same change.
-   - Compare the skills catalog with actual `skills/*/SKILL.md` names, activation rules, and modification boundaries.
-   - Run any repository-native catalog or policy validator and record its exact result.
+## Plan File Format
 
-## Output Format
-
-When invoking `spec-drive`, present the task progress systematically:
+When creating a plan file, use this structure:
 
 ```markdown
-# Spec: [Feature / Task Name]
+# Plan: [Task name]
 
-## 1. Intent & Boundaries
-- In-Scope: ...
-- Out-of-Scope: ...
-- Assumptions: ...
+- Status: `planned`
+- Updated: [YYYY-MM-DD]
+- Owner: [agent or user]
 
-## 2. General Laws
-| ID | Law | Scope / Preconditions | Limits / Counterexample | Linked Contracts |
-|---|---|---|---|---|
-| `L-01` | ... | ... | ... | `C-01` |
+## Goal
+[One concise outcome]
 
-## 3. Invariants & State Rules
-- Valid States: ...
-- Forbidden States: ...
+## Scope
+- In: [explicit boundaries]
+- Out: [explicit exclusions]
 
-## 4. Contracts Table
-| ID | Behavior | Condition / Input | Expected Output / Error | Invariant | Test path/name | Implementation boundary | Permanent spec |
-|---|---|---|---|---|---|---|---|
-| C-01 | ... | ... | ... | ... | ... | ... | ... |
+## Evidence and assumptions
+- Confirmed: [paths, existing behavior, commands]
+- Assumption: [unverified fact], or `None`
 
-## 5. TDD Slices
-- Slice 1 (C-01): Red (`[test path]`) -> Green (`[src path]`) -> Verify (`[cmd]`)
-...
+## Acceptance criteria
+- [ ] `C-01` - [Observable requirement]
 
-## 6. Quality & Spec Sync Check
-- [ ] Contract tests passing
-- [ ] Accepted laws linked to invariants or contracts and covered by representative plus boundary/failure tests
-- [ ] Linter & static analysis passing
-- [ ] Repository specs synchronized (or confirmed unchanged)
+## Checklist
+- [ ] `C-01` **[Step name]** - `[target paths]`; verify: `[command or result]`
+
+## Contracts
+| ID | Behavior | Condition or Input | Expected Result | Invariant | Test path/name | Verification |
+| --- | --- | --- | --- | --- | --- | --- |
+
+## TDD Slices
+### 1. [Slice name]
+- Red: `[test path]` - `[test name and expected failure]`
+- Green: `[source path]` - `[smallest required change]`
+- Verify: `[command]`
+- Refactor: `[concrete change]` or `None`
 ```
-
-## Stabilization handoff
-
-When the repository defines a candidate/stable policy, remain `candidate` until catalog parity, routing coverage, safety review, documentation consistency, and repository-native validation all pass. Record unresolved breaking-change decisions, blockers, and open questions instead of promoting the status optimistically.
-
-## Plan handoff
-
-When `mark-plan` is active, use its active plan file as the execution SSOT. Put the SDD contracts, laws, invariants, and TDD slices in the plan or link them from the plan; do not create a competing plan artifact.
-
-## Controls & Revert
-
-- **Scope:** Contract orchestration and synchronization decisions; do not directly edit production code or tests.
-- **Approval:** Analysis and planning are read-only until explicit execution approval. Breaking changes also require compatibility, migration, and rollback decisions.
-- **Activate:** `/spec-drive` or when asked for spec-driven development.
-- **Deactivate:** `stop spec-drive` or return to normal mode.

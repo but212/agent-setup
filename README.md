@@ -4,7 +4,7 @@ A framework- and language-agnostic operating baseline for coding agents.
 
 ## What it provides
 
-- Framework-neutral skill contracts for challenge, design, implementation, testing, review, planning, SQL/ORM auditing, and specification.
+- Framework-neutral skill contracts for challenge, design, implementation, testing, review, and specification.
 - Explicit routing, handoffs, modification authority, approval boundaries, and evidence-first deterministic verification.
 - Minimal-change and safety guidance for preserving user work and refusing destructive commands unless explicitly requested.
 - ASCII-only Markdown content for direct entry on a standard US QWERTY keyboard.
@@ -14,7 +14,7 @@ A framework- and language-agnostic operating baseline for coding agents.
 The contracts define prompt engineering as input/output interfaces and a communication protocol, not polished prose:
 
 - **Interfaces, not spells:** Define explicit inputs and authoritative outputs; do not rely on magic keywords or role-play.
-- **Decomposition:** Split complex workflows into routed skills (`challenge`, `lean-*`, `tdd-plan`, `spec-drive`) with explicit handoffs and separate authority.
+- **Decomposition:** Split complex workflows into cohesive skills (`challenge`, `lean-*`, `spec-drive`) with explicit handoffs and separate authority.
 - **Evaluation over format:** State success criteria and edge-case handling; verify with deterministic, repository-native checks.
 - **Iterative refinement:** Start with the simplest contract and add constraints only when verification exposes a need.
 
@@ -30,16 +30,16 @@ See NOTICE for third-party license notices.
 
 - `AGENTS.md` - repository-wide agent rules.
 - `skills/*/SKILL.md` - individual skill contracts.
-- `spec/skills-spec.md` - catalog, routing, shared invariants, and stabilization policy.
+- `spec/skills-spec.md` - routing, architecture, and quality gates.
 - `.plans/YYYY-MM-DD/` - tracked file-backed execution plans grouped by creation date.
-- `scripts/validate-skills.py` - dependency-free catalog and safety validation.
-- `scripts/deploy_agents.py` (wrapped by `scripts/deploy-agents.sh` / `scripts/deploy-agents.ps1`) - mirror `AGENTS.md` and `skills/` into `~/.agents` (the shared agent folder); `--link` / `-Link` also symlink pi's global instructions to it.
+- `scripts/validate-skills.py` - dependency-free frontmatter, plan path, and safety validation.
+- `scripts/deploy_agents.py` - mirror `AGENTS.md` and `skills/` into `~/.agents` (the shared agent folder); `--link` also symlinks pi's global instructions to it.
 
 ## Use
 
 Place or copy the relevant files into an agent-enabled repository. Adapt only repository-specific commands and boundaries; do not add framework-specific assumptions to the core contracts. Before running checks, inspect the target repository's configuration, scripts, CI definitions, and documentation. Get explicit approval before implementation when a plan or contract-sensitive workflow is active.
 
-Deploy with `python3 scripts/deploy_agents.py [--link]`, from POSIX with `scripts/deploy-agents.sh [--link]`, or from PowerShell with `./scripts/deploy-agents.ps1 [-Link]`. Set `AGENT_HOME` to override the deployment target.
+Deploy with `python3 scripts/deploy_agents.py [--link]`. Set `AGENT_HOME` to override the deployment target.
 
 ## Validate this setup
 
@@ -50,7 +50,7 @@ python3 scripts/validate-skills.py
 python3 -m unittest discover -s tests -v
 ```
 
-The validator checks skill frontmatter, catalog rows, routing/authority markers, dated plan paths, destructive-command guards, and ASCII-only Markdown content. The test suite covers deployment and repository contracts. These checks do not validate product behavior or ecosystem-specific workflows.
+The validator checks skill frontmatter, dated plan paths, destructive-command guards, and ASCII-only Markdown content. The test suite covers deployment and repository contracts. These checks do not validate product behavior or ecosystem-specific workflows.
 
 ## Status
 
