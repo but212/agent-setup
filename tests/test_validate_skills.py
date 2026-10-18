@@ -30,17 +30,15 @@ class RepositoryContractTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
-    def test_exact_nine_skills_registered(self):
+    def test_exact_seven_skills_registered(self):
         skills = sorted(p.name for p in (ROOT / "skills").iterdir() if p.is_dir())
         expected = [
             "challenge",
             "crisp",
-            "crisp-commit",
             "git-conflict",
             "lean-design",
             "lean-mode",
             "lean-review",
-            "lean-test",
             "spec-drive",
         ]
         self.assertEqual(skills, expected)
@@ -52,8 +50,8 @@ class RepositoryContractTests(unittest.TestCase):
             text = skill.read_text(encoding="utf-8")
             skill.write_text(
                 text.replace(
-                    'activation: "`/crisp`, `/crisp on`, compression request"',
-                    "activation: `/crisp`, `/crisp on`, compression request",
+                    'activation: "`/crisp`, `/crisp commit`, commit-message request, compression request"',
+                    "activation: `/crisp`, `/crisp commit`, commit-message request, compression request",
                     1,
                 ),
                 encoding="utf-8",
@@ -138,12 +136,10 @@ class RepositoryContractTests(unittest.TestCase):
         peer_skills = [
             "challenge",
             "crisp",
-            "crisp-commit",
             "git-conflict",
             "lean-design",
             "lean-mode",
             "lean-review",
-            "lean-test",
         ]
         for name in peer_skills:
             skill_file = ROOT / "skills" / name / "SKILL.md"

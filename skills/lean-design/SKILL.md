@@ -38,7 +38,7 @@ Use these sections in order (omit empty ones):
 1. **Problem** - Real problem, constraints, assumptions, edge boundaries.
 2. **Structure** - Core sum types, state transitions, domain invariants, resource/partition boundaries.
 3. **Remove** - Impossible states, hollow interfaces, pass-through layers, speculative parameters.
-4. **Handoff Contract** - Exact type signatures, transition rules, failure behavior, and invariants for `lean-mode` / `lean-test`.
+4. **Handoff Contract** - Exact type signatures, transition rules, failure behavior, and invariants for `lean-mode`.
 
 Do not implement routine code. Hand off implementation to `lean-mode`.
 
