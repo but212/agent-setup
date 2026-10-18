@@ -1,7 +1,7 @@
 ---
 name: crisp
 role: Compresses prose, docs, and commit messages
-activation: "`/crisp`, `/crisp-commit`, commit-message request, compression request"
+activation: "`/crisp`, `/crisp commit`, commit-message request, compression request"
 modification-authority: Named files only
 description: >
   Compresses response prose, generates concise evidence-based conventional
@@ -17,7 +17,7 @@ Produce the smallest clear text that preserves full meaning. Optimize expression
 
 1. **Response prose mode (default):** When no target files or commit requests are specified, compress chat output style. Do not edit files.
 2. **Document compression mode:** When explicitly named Markdown or plain-text files are targeted (e.g. `README.md`, `AGENTS.md`, `SKILL.md`, specifications), compress targeted files in place without weakening contracts.
-3. **Commit message mode:** When requested to generate a commit message or activate `/crisp-commit`, generate factual, high-density Conventional Commit messages grounded strictly in `git diff` evidence and recent `git log` language. Read-only; do not stage, commit, or edit files.
+3. **Commit message mode:** When requested to generate a commit message or activate `/crisp commit`, generate factual, high-density Conventional Commit messages grounded strictly in `git diff` evidence and recent `git log` language. Read-only; do not stage, commit, or edit files.
 
 ## Common grounding and preservation rules
 
@@ -65,7 +65,7 @@ When explicitly targeting named documentation or agent instruction documents:
 
 ## 3. Commit Message Mode (Conventional Commits)
 
-Generate factual Conventional Commit messages grounded in Git diffs without modifying files.
+Generate factual Conventional Commit messages grounded in Git diffs without modifying files. Activate via `/crisp commit` or commit-message requests.
 
 ### Workflow & Rules
 

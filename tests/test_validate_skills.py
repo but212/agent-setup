@@ -50,8 +50,8 @@ class RepositoryContractTests(unittest.TestCase):
             text = skill.read_text(encoding="utf-8")
             skill.write_text(
                 text.replace(
-                    'activation: "`/crisp`, `/crisp-commit`, commit-message request, compression request"',
-                    "activation: `/crisp`, `/crisp-commit`, commit-message request, compression request",
+                    'activation: "`/crisp`, `/crisp commit`, commit-message request, compression request"',
+                    "activation: `/crisp`, `/crisp commit`, commit-message request, compression request",
                     1,
                 ),
                 encoding="utf-8",

@@ -1,7 +1,7 @@
 ---
 name: lean-mode
 role: Makes minimal code changes and writes deterministic tests
-activation: "`/lean-mode`, `/lean-test`, implementation, test, or refactor request"
+activation: "`/lean-mode`, `/lean-mode test`, implementation, test, or refactor request"
 modification-authority: Approved code and test scope
 description: >
   Produces the smallest correct coding and test changes adhering to
@@ -47,7 +47,7 @@ Follow the repository's established error propagation model. Do not swallow, rec
 
 ## Deterministic Testing Rules
 
-When designing or writing tests:
+When designing or writing tests (activate via `/lean-mode test` or test requests):
 
 - Ground tests on public boundaries, input/output contracts, and types/schemas; never test private implementation details.
 - Control time, IDs, randomness, and concurrency without arbitrary sleeps (`sleep`, `setTimeout`). Mock only external I/O boundaries (HTTP, DB, hardware, filesystem); never mock domain entities or the SUT.
@@ -76,5 +76,5 @@ Add <mechanism> when <observable trigger>.
 ## Controls
 
 - **Scope**: Bounded coding and test implementation.
-- **Activate**: `/lean-mode`, `/lean-test`, or explicit request to implement, test, fix, or refactor code.
+- **Activate**: `/lean-mode`, `/lean-mode test`, or explicit request to implement, test, fix, or refactor code.
 - **Deactivate**: `stop lean-mode` or `normal mode`.
