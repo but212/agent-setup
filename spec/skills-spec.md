@@ -66,7 +66,7 @@ Frontmatter serves as the sole source of truth (SSOT) and is machine-validated b
 
 When `spec-drive` execution tracking is active, `.plans/YYYY-MM-DD/[task-name].md` (or a supported agent plan artifact) is the execution SSOT:
 
-- Lifecycle: `planned -> in-progress|cancelled`, `in-progress -> blocked|complete|cancelled`, or `blocked -> in-progress`.
+- Lifecycle: `planned -> in-progress|cancelled`, `in-progress -> blocked|complete|cancelled`, or `blocked -> in-progress|cancelled`.
 - Do not execute checklist items while the plan is `planned` and awaiting approval.
 - Each checklist item maps acceptance criterion IDs, target paths, and verification commands.
 - Check items only after verification passes; record deviations immediately.

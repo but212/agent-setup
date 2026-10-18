@@ -117,6 +117,13 @@ class RepositoryContractTests(unittest.TestCase):
 
         self.assertIn("planned -> in-progress | cancelled", text)
 
+    def test_blocked_plan_can_be_cancelled(self):
+        text = (ROOT / "skills" / "spec-drive" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("blocked -> in-progress | cancelled", text)
+
     def test_readme_documents_complete_validation(self):
         text = (ROOT / "README.md").read_text(encoding="utf-8")
 

@@ -8,7 +8,6 @@ description: >
   adaptive, focused inquiry path. Operates in grounded mode when codebase, docs
   (context.md), or ADRs exist, or light mode for early ideas without repository
   evidence.
-disable-model-invocation: true
 ---
 
 # Adaptive Challenge Path

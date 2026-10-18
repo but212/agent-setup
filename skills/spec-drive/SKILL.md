@@ -33,7 +33,7 @@ When planning is requested or non-trivial execution begins:
 3. **State Transitions:**
    - `planned -> in-progress | cancelled`
    - `in-progress -> blocked | complete | cancelled`
-   - `blocked -> in-progress`
+   - `blocked -> in-progress | cancelled`
 4. **Completion Rule:** Check checklist items only after verification passes. Do not mark the plan complete while criteria, checklist items, or blockers remain unresolved.
 
 ## The 4-Phase SDD Pipeline
