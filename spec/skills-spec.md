@@ -52,9 +52,8 @@ Frontmatter serves as the sole source of truth (SSOT) and is machine-validated b
 
 1. Run `lean-design` first when state representation, types, data, or API boundaries are central.
 2. Use `spec-drive` to coordinate contract-sensitive work, manage `.plans/` execution tracking, and slice TDD contracts.
-3. Use `lean-mode` for minimal production code changes mapped to contracts.
-4. Use `lean-test` for test-only work and minimal deterministic test suites.
-5. Use `lean-review` for read-only adversarial diff or repository audits.
+3. Use `lean-mode` for minimal code and deterministic test changes mapped to contracts.
+4. Use `lean-review` for read-only adversarial diff or repository audits.
 
 ### 3.3 Execution Modes and Composed Activation
 

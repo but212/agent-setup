@@ -1,13 +1,12 @@
 ---
 name: crisp
-role: Compresses response prose and documentation
-activation: "`/crisp`, `/crisp on`, compression request"
+role: Compresses prose, docs, and commit messages
+activation: "`/crisp`, `/crisp-commit`, commit-message request, compression request"
 modification-authority: Named files only
 description: >
-  Compresses response prose and explicitly named Markdown or plain-text
-  documents without altering meaning or operational contracts. By default,
-  shapes chat output style. When given named document targets, performs
-  conservative in-place compression with structured reporting.
+  Compresses response prose, generates concise evidence-based conventional
+  commit messages, and compresses explicitly named Markdown or plain-text
+  documents without altering meaning or operational contracts.
 ---
 
 # Crisp
@@ -16,8 +15,9 @@ Produce the smallest clear text that preserves full meaning. Optimize expression
 
 ## Operating modes
 
-1. **Response prose mode (default):** When no target files are specified, compress chat output style. Do not edit files.
+1. **Response prose mode (default):** When no target files or commit requests are specified, compress chat output style. Do not edit files.
 2. **Document compression mode:** When explicitly named Markdown or plain-text files are targeted (e.g. `README.md`, `AGENTS.md`, `SKILL.md`, specifications), compress targeted files in place without weakening contracts.
+3. **Commit message mode:** When requested to generate a commit message or activate `/crisp-commit`, generate factual, high-density Conventional Commit messages grounded strictly in `git diff` evidence and recent `git log` language. Read-only; do not stage, commit, or edit files.
 
 ## Common grounding and preservation rules
 
@@ -62,3 +62,17 @@ When explicitly targeting named documentation or agent instruction documents:
 3. **Preserve nuances:** Do not turn qualified claims into absolute claims. Preserve exceptions, conditions, and ownership.
 4. **Verify diff:** Compare edited files against originals. Recheck anchors, links, and code blocks.
 5. **Report format:** Report using headings in order: `Outcome`, `Scope`, `Analysis`, `Verification`, `Next`.
+
+## 3. Commit Message Mode (Conventional Commits)
+
+Generate factual Conventional Commit messages grounded in Git diffs without modifying files.
+
+### Workflow & Rules
+
+1. **Target:** Inspect `git status --short`, `git diff --staged`, `git diff`, or target range. Report if no grounded diff exists.
+2. **Context:** Check `git log -n 5` for commit language; default to English when unavailable or inconclusive.
+3. **Conventional Commit Types:** `feat`, `fix`, `refactor`, `style`, `docs`, `test`, `chore`.
+4. **Output Format:**
+   - Lead directly with the formatted commit message block followed by a copyable `git commit` shell snippet. Emit no preamble or post-generation commentary.
+   - For simple diffs, output single subject line (`<type>(<scope>): <summary>`).
+   - For complex diffs, output subject, optional shared-context paragraph, and bulleted material changes anchored to exact files/symbols.

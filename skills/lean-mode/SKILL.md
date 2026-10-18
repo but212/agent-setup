@@ -1,21 +1,22 @@
 ---
 name: lean-mode
-role: Makes the smallest correct code change
-activation: Implementation, fix, or refactor request
-modification-authority: Approved code scope
+role: Makes minimal code changes and writes deterministic tests
+activation: "`/lean-mode`, `/lean-test`, implementation, test, or refactor request"
+modification-authority: Approved code and test scope
 description: >
-  Produces the smallest correct coding change adhering to lean-design models.
-  Use for writing, refactoring, fixing code, and managing dependencies.
-  Do not use for prose compression or read-only review; use `lean-review`.
+  Produces the smallest correct coding and test changes adhering to
+  lean-design models. Use for writing code, refactoring, fixing bugs, and
+  creating deterministic minimal tests. Do not use for prose compression
+  or read-only review; use `lean-review`.
 ---
 
 # Lean Mode
 
-Choose the smallest correct change for coding tasks based on approved structural models.
+Choose the smallest correct change for coding and testing tasks based on approved structural models.
 
 ## Operating contract
 
-- Consume an approved requirement, structural design (`lean-design`), or failing test (`lean-test`) and produce the minimal correct code change.
+- Consume an approved requirement or structural design (`lean-design`) and produce the minimal correct code and test changes.
 - Before editing, trace execution end-to-end through runtime behavior, tests, types, and call boundaries.
 - Fix root causes at shared boundaries, not caller symptoms.
 - Preserve `lean-design` contracts.
@@ -44,9 +45,18 @@ Stop at the first applicable rung:
 
 Follow the repository's established error propagation model. Do not swallow, reclassify, or duplicate handling without evidence.
 
+## Deterministic Testing Rules
+
+When designing or writing tests:
+
+- Ground tests on public boundaries, input/output contracts, and types/schemas; never test private implementation details.
+- Control time, IDs, randomness, and concurrency without arbitrary sleeps (`sleep`, `setTimeout`). Mock only external I/O boundaries (HTTP, DB, hardware, filesystem); never mock domain entities or the SUT.
+- Focus assertions on contract values, statuses, errors, and durable effects - not incidental call order or intermediate shape.
+- Choose distinguishing cases: success path, boundary/empty input, state transitions, exposed invalid input, and regression cases.
+
 ## Scope rules
 
-- Use `lean-test` for test-only changes and `lean-review` for read-only audits.
+- Use `lean-review` for read-only audits.
 - Use `spec-drive` for contract-sensitive or materially architectural changes.
 - Do not add abstractions, factories, interfaces, or dependencies without demonstrated need.
 
@@ -56,7 +66,7 @@ Run the narrowest repository-native check that covers the changed behavior and e
 
 ## Output format
 
-Lead immediately with the code change. When mechanisms are intentionally omitted:
+Lead immediately with the code/test change. When mechanisms are intentionally omitted:
 
 ```text
 Skipped: <unnecessary abstraction/guard>.
@@ -65,6 +75,6 @@ Add <mechanism> when <observable trigger>.
 
 ## Controls
 
-- **Scope**: Bounded coding changes and implementation.
-- **Activate**: `/lean-mode` or explicit request to implement, fix, or refactor code.
+- **Scope**: Bounded coding and test implementation.
+- **Activate**: `/lean-mode`, `/lean-test`, or explicit request to implement, test, fix, or refactor code.
 - **Deactivate**: `stop lean-mode` or `normal mode`.
