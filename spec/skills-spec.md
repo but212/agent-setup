@@ -1,6 +1,6 @@
 # Agent Skills Integration Specification
 
-- Status: `candidate`
+- Status: `stable`
 - Purpose: Define repository agent skills architecture, operating boundaries, routing interactions, and validation contracts.
 
 ## 1. Scope and Core Architecture
@@ -81,11 +81,11 @@ When `spec-drive` execution tracking is active, `.plans/YYYY-MM-DD/[task-name].m
 
 ## 4. Quality Gates
 
-- [ ] Every skill frontmatter defines valid `name`, `role`, `activation`, and `modification-authority`.
-- [ ] Claims and decisions are grounded in code, tests, or explicit requirements.
-- [ ] Read-only skills make no file modifications.
-- [ ] Markdown files are strictly ASCII-only.
-- [ ] `python3 scripts/validate-skills.py` and `python3 -m unittest discover -s tests -v` pass.
+- [x] Every skill frontmatter defines valid `name`, `role`, `activation`, and `modification-authority`.
+- [x] Claims and decisions are grounded in code, tests, or explicit requirements.
+- [x] Read-only skills make no file modifications.
+- [x] Markdown files are strictly ASCII-only.
+- [x] `python3 scripts/validate-skills.py` and `python3 -m unittest discover -s tests -v` pass.
 
 ## 5. Stabilization Policy
 

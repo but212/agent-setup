@@ -11,6 +11,8 @@ ROOT = Path(__file__).resolve().parent.parent
 SKILLS = ROOT / "skills"
 AGENTS = ROOT / "AGENTS.md"
 PLANS = ROOT / ".plans"
+SPEC = ROOT / "spec" / "skills-spec.md"
+README = ROOT / "README.md"
 
 REQUIRED_SAFETY_GUARD_SENTENCE = (
     "Do not stage, commit, push, reset, discard, or clean changes, and never run "
@@ -191,11 +193,59 @@ def check_safety_guards(agents_path: Path) -> list[str]:
     return errors
 
 
+def check_spec_gates(
+    spec_path: Path, readme_path: Path, root: Path = ROOT
+) -> list[str]:
+    errors: list[str] = []
+    if not spec_path.exists():
+        errors.append(f"missing specification file: {spec_path.relative_to(root)}")
+        return errors
+
+    spec_text = spec_path.read_text(encoding="utf-8")
+    status_match = re.search(r"^- Status:\s*`([^`]+)`", spec_text, re.MULTILINE)
+    if not status_match:
+        errors.append(f"{spec_path.relative_to(root)}: missing or invalid Status field")
+        return errors
+
+    status = status_match.group(1).strip()
+    if status == "stable":
+        gates_match = re.search(
+            r"## 4\. Quality Gates\s*\n(.*?)(?=\n##|\Z)", spec_text, re.DOTALL
+        )
+        if not gates_match:
+            errors.append(f"{spec_path.relative_to(root)}: missing '## 4. Quality Gates' section")
+        else:
+            unchecked = re.findall(r"^\s*-\s*\[ \]", gates_match.group(1), re.MULTILINE)
+            if unchecked:
+                errors.append(
+                    f"{spec_path.relative_to(root)}: status is 'stable' but has {len(unchecked)} unchecked quality gate(s)"
+                )
+
+    if readme_path.exists():
+        readme_text = readme_path.read_text(encoding="utf-8")
+        readme_match = re.search(
+            r"The skill specification is currently `([^`]+)`\.", readme_text
+        )
+        if not readme_match:
+            errors.append(
+                f"{readme_path.relative_to(root)}: missing 'The skill specification is currently `...`.' statement"
+            )
+        elif readme_match.group(1) != status:
+            errors.append(
+                f"{readme_path.relative_to(root)}: status `{readme_match.group(1)}` does not match "
+                f"{spec_path.relative_to(root)} status `{status}`"
+            )
+
+    return errors
+
+
 def validate_repository(
     root: Path = ROOT,
     skills_dir: Path = SKILLS,
     agents_path: Path = AGENTS,
     plans_dir: Path = PLANS,
+    spec_path: Path = SPEC,
+    readme_path: Path = README,
 ) -> ValidationReport:
     errors: list[str] = []
     errors.extend(check_ascii_markdown(root))
@@ -205,6 +255,7 @@ def validate_repository(
 
     errors.extend(check_plan_paths(plans_dir, root))
     errors.extend(check_safety_guards(agents_path))
+    errors.extend(check_spec_gates(spec_path, readme_path, root))
 
     return ValidationReport(skills=skills, errors=errors)
 
@@ -214,7 +265,7 @@ def validate_repository(
 # ============================================================================
 
 def main() -> int:
-    report = validate_repository(ROOT, SKILLS, AGENTS, PLANS)
+    report = validate_repository(ROOT, SKILLS, AGENTS, PLANS, SPEC, README)
 
     if not report.is_valid:
         print("Skill validation failed:")
@@ -223,7 +274,7 @@ def main() -> int:
 
     print(f"Validated {len(report.skills)} skills frontmatter metadata.")
     print(
-        "Validated ASCII-only Markdown, dated plan paths, and destructive-command guards."
+        "Validated ASCII-only Markdown, dated plan paths, destructive-command guards, and spec gates."
     )
     return 0
 

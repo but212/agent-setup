@@ -299,6 +299,46 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("AGENTS.md missing exact destructive-command guard sentence", result.stdout)
 
+    def test_spec_stable_with_unchecked_gate_fails(self):
+        with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
+            repository = clone_repo_to_temp(directory)
+            spec = repository / "spec" / "skills-spec.md"
+            spec_text = spec.read_text(encoding="utf-8").replace("- [x]", "- [ ]", 1)
+            spec.write_text(spec_text, encoding="utf-8")
+
+            result = subprocess.run(
+                [sys.executable, "scripts/validate-skills.py"],
+                cwd=repository,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("unchecked quality gate", result.stdout)
+
+    def test_spec_status_readme_mismatch_fails(self):
+        with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
+            repository = clone_repo_to_temp(directory)
+            readme = repository / "README.md"
+            readme_text = readme.read_text(encoding="utf-8").replace(
+                "specification is currently `stable`",
+                "specification is currently `candidate`",
+                1,
+            )
+            readme.write_text(readme_text, encoding="utf-8")
+
+            result = subprocess.run(
+                [sys.executable, "scripts/validate-skills.py"],
+                cwd=repository,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("does not match", result.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

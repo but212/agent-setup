@@ -54,4 +54,4 @@ The validator checks skill frontmatter, dated plan paths, destructive-command gu
 
 ## Status
 
-The skill specification is currently `candidate`. Promotion criteria are defined in `spec/skills-spec.md`; candidate status should remain until those gates are verified and recorded.
+The skill specification is currently `stable`. Promotion criteria defined in `spec/skills-spec.md` are verified and recorded.
