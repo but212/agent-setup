@@ -44,6 +44,7 @@ If instructions conflict or a requirement is materially ambiguous, stop and ask 
 ## Documentation and synchronization
 
 - Update permanent documentation when behavior, contracts, architecture, operational requirements, or domain rules change.
+- Permanent specifications govern architecture and domain specs, `context.md` (domain terms), and ADRs (hard-to-reverse decisions); plans track execution only.
 - Preserve commands, paths, identifiers, conditions, exceptions, links, and machine-readable content; do not invent unsupported requirements.
 - Keep documentation concise, factual, and consistent with implementation.
 

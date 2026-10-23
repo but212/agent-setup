@@ -9,7 +9,7 @@
 
 - Skill selection and routing based on request intent
 - Repository-grounded planning, design, implementation, testing, and review
-- Documentation and commit-message generation with invariant preservation
+- Response prose and documentation compression with invariant preservation
 - Plan file lifecycle (`.plans/YYYY-MM-DD/[task-name].md`) and permanent specification coordination
 - Dependency-free validation of skill metadata, plan conventions, ASCII Markdown, and safety guards
 - Mirroring deployment of `AGENTS.md` and `skills/` into the shared agent directory
@@ -55,10 +55,10 @@ Frontmatter serves as the sole source of truth (SSOT) and is machine-validated b
 3. Use `lean-mode` for minimal code and deterministic test changes mapped to contracts.
 4. Use `lean-review` for read-only adversarial diff or repository audits.
 
-### 3.3 Execution Modes and Composed Activation
+### 3.3 Execution Modes
 
 - `spec-drive` coordinates contract changes and defaults to a read-only specification and plan.
-- When `/crisp` is combined with `/spec-drive`, `spec-drive` coordinates execution while `crisp` controls response prose density.
+
 - Before explicit execution approval, work remains in `planned` state.
 
 ### 3.4 Plan Tracking Rules
@@ -67,8 +67,9 @@ When `spec-drive` execution tracking is active, `.plans/YYYY-MM-DD/[task-name].m
 
 - Lifecycle: `planned -> in-progress|cancelled`, `in-progress -> blocked|complete|cancelled`, or `blocked -> in-progress|cancelled`.
 - Do not execute checklist items while the plan is `planned` and awaiting approval.
-- Each checklist item maps acceptance criterion IDs, target paths, and verification commands.
-- Check items only after verification passes; record deviations immediately.
+- Plan structure contains Goal, Scope, Evidence and assumptions, Contracts, Invariants, TDD slices and checklist, and Decisions and deviations.
+- Each TDD slice item maps contract IDs (`C-NN`), Red/Green/Refactor/Verify steps, and verification commands.
+- Check items only after verification passes; record deviations immediately under Decisions and deviations.
 
 ### 3.5 Deployment Mirror Rules
 

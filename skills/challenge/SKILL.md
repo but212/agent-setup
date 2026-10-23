@@ -25,23 +25,16 @@ Select path based on evidence:
 
 ## Fast path
 
-Use Fast path only when all gates pass:
+Use Fast path only when all applicable gates pass:
 
-- **Grounded mode (all 6 gates):**
-  1. Reversible and inexpensive rollback.
-  2. Local to one area.
-  3. No changes to public API, schema, auth, state transitions, domain invariants, or ubiquitous language.
-  4. Minimal inspection clarifies goal, constraints, approach, and validation.
-  5. No unresolved material decisions affecting scope, behavior, or risk.
-  6. No `context.md` or ADR update required.
+1. Reversible and inexpensive rollback.
+2. Local to one area.
+3. No changes to public API, schema, auth, state transitions, domain invariants, or ubiquitous language. *(Grounded only)*
+4. Minimal inspection clarifies goal, constraints, approach, and validation.
+5. No unresolved material decisions affecting scope, behavior, or risk.
+6. No `context.md` or ADR update required. *(Grounded only)*
 
-- **Light mode (all 4 gates):**
-  1. Reversible and low-cost to adjust.
-  2. Local to one area or topic.
-  3. No unresolved material decisions affecting goals, constraints, or approach.
-  4. Minimal inspection clarifies goals, constraints, and validation criteria.
-
-Provide compact plan for user confirmation: Goal & scope | Target areas / Approach | Intended change | Tests & validation | Assumptions | Risks & escalations.
+Grounded mode requires all 6 gates; Light mode requires gates 1, 2, 4, and 5. When all applicable gates pass, output the short-form decision summary for user confirmation. Do not write plan files; `challenge` produces only in-chat decision summaries.
 
 ## Standard path
 
@@ -65,9 +58,13 @@ Use when any Fast-path gate fails. Inspect repository facts, docs, code, and typ
 
 ## Output & handoff
 
-After confirmation, output the decision summary in chat without modifying files. When an active plan coordinator (such as `spec-drive`) is present, hand off the confirmed decision summary to it for recording. Hand off to `spec-drive`, `lean-design`, or `lean-mode`.
+After confirmation, output the decision summary in chat without modifying files or writing plan files (`spec-drive` owns plan files). When an active plan coordinator (such as `spec-drive`) is present, hand off the confirmed decision summary to it for recording.
 
-When resolved, output:
+When resolved, output one unified decision summary:
 
-- **Summary:** Mode (`Challenge Grounded` or `Challenge Light`) | Plan | Next step | Decisions | Domain term changes / ADRs affected (if applicable) | Challenged assumptions | Risks & mitigations | Revisit triggers.
-- **Handoff:** Propose next skill (`spec-drive`, `lean-design`, or `lean-mode`).
+- **Decision Summary:** Mode (`Challenge Grounded` or `Challenge Light`) | Path (`Fast` or `Standard`) | Next step | Decisions | Domain term changes / ADRs affected (if applicable) | Challenged assumptions | Risks & mitigations | Revisit triggers.
+  - *Fast path:* short form omitting domain terms, ADRs, and revisit triggers if unaffected.
+  - *Standard path:* full form above.
+- **Handoff:**
+  - Fast path: hand off directly to Implementation Engine (default: `lean-mode`) for execution, or to Plan Coordinator (default: `spec-drive`) if a formal plan is requested.
+  - Standard path: hand off to Plan Coordinator (default: `spec-drive`) (or Structural Designer, default: `lean-design`, if structural modeling is required); never hand off directly from Standard path to Implementation Engine (default: `lean-mode`).

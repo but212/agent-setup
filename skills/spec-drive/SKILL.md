@@ -15,14 +15,13 @@ Drive complex or contract-sensitive changes through high-density specifications,
 
 ## Operating Contract
 
-`spec-drive` coordinates the requirement lifecycle: `lean-design` owns structural modeling, `lean-mode` owns production code changes, and `.plans/YYYY-MM-DD/[task-name].md` (or an agent plan artifact) tracks execution state.
+`spec-drive` coordinates the requirement lifecycle through role adapters: Structural Designer (default: `lean-design`) owns structural modeling, Implementation Engine (default: `lean-mode`) owns production code changes, Review Gate (default: `lean-review`) audits changes, and `.plans/YYYY-MM-DD/[task-name].md` (or an agent plan artifact) tracks execution state.
 
 1. **Crisp over Bloat:** Express concrete observable behavior, invariants, and input/output contracts; omit speculative requirements and decoration.
 2. **Lean over Patchwork:** Eliminate impossible states before implementing logic; write only the code needed to satisfy contracts.
-3. **Execution SSOT:** Track execution through `.plans/YYYY-MM-DD/[task-name].md` or an agent plan artifact. Synchronize permanent domain rules and architecture into repository documentation.
+3. **Execution SSOT:** Track execution through `.plans/YYYY-MM-DD/[task-name].md` or an agent plan artifact. Synchronize permanent domain rules and architecture into permanent specifications.
 4. **Authority Separation:** Permanent specifications govern domain rules and public contracts; plan files track execution progress and verification history.
 5. **Approval Boundary:** Planning ends in review. Produce only a `planned` plan or analysis before explicit approval; do not modify production code, tests, or execute checklist items without explicit approval.
-6. **Composed Activation:** When `/crisp` is active with `/spec-drive`, `spec-drive` coordinates the task while `crisp` controls response prose density.
 
 ## Plan Tracking Lifecycle
 
@@ -43,7 +42,6 @@ When planning is requested or non-trivial execution begins:
 Establish clear boundaries and observable contracts before implementation:
 
 - **Scope:** Concise goal, explicit In-Scope vs Out-of-Scope boundaries.
-- **Invariants Matrix:** Allowed states, valid transitions, and prohibited states.
 - **Contracts Table:**
 
 | ID | Behavior / Scenario | Condition / Input | Expected Result / Error | Invariant | Test path/name | Verification |
@@ -52,28 +50,33 @@ Establish clear boundaries and observable contracts before implementation:
 
 Classify material claims as `Confirmed`, `Assumption`, or `Open decision`. Flag breaking changes to public APIs, schemas, or security for explicit approval.
 
-### Phase 2: Lean Structural Design (lean-design)
+### Phase 2: Structural Design Quality Gate (default: `lean-design`)
 
-Delegate data models and type boundaries to `lean-design`:
+Delegate structural modeling to the Structural Designer role (default: `lean-design`) when states, types, schemas, or API boundaries change. If no structural model changes, record `None: <reason>` in the plan's Invariants section.
+The Structural Design Quality Gate ensures:
 
-- Make invalid states unrepresentable using explicit types/enums.
-- Identify failure boundaries before happy paths.
-- Remove redundant abstractions and speculative extension points.
+- Makes invalid states unrepresentable using explicit types/enums.
+- Identifies failure boundaries before happy paths.
+- Assigns persistent `I-NN` IDs to explicit invariants and references their enforcement location.
+- Contracts Table `Invariant` column references these `I-NN` IDs.
 
-### Phase 3: Surgical TDD Implementation
+### Phase 3: Surgical TDD Implementation (default: `lean-mode`)
 
-Execute implementation in small vertical slices mapped 1:1 to the Contracts Table in dependency order:
+Execute implementation in small vertical slices mapped 1:1 to the Contracts Table in dependency order using the Implementation Engine role (default: `lean-mode`):
 
 1. **Red:** Write smallest deterministic test exercising contract `C-NN`. Prove it fails as expected.
 2. **Green:** Write minimal surgical code to make test pass (`lean-mode`). Touch only scoped files.
-3. **Verify:** Run repository-native command proving slice passes without regressions.
-4. **Refactor:** Remove concrete duplication or simplify structure exposed after Green (or `None`).
+3. **Refactor:** Remove concrete duplication or simplify structure exposed after Green (or `None`).
+4. **Verify:** Run repository-native command proving slice passes without regressions.
 
-### Phase 4: Review, Living Spec Sync & Finish
+### Phase 4: Review Quality Gate, Living Spec Sync & Finish (default: `lean-review`)
 
+- Enforce the Review Quality Gate: run Review Gate (default: `lean-review`) diff against the changes.
+- If `Blocking: Yes` (P1 or P2 findings exist): add a surgical fix slice to the plan, apply the minimal fix via Implementation Engine (`lean-mode`), and re-run Review Gate (`lean-review`) diff until `Blocking: No`.
+- If P3 findings exist: record them under Decisions and deviations as non-blocking notes.
 - Run full repository test suite.
-- Synchronize permanent documentation (`AGENTS.md`, architecture specs) with any changed contracts.
-- Mark plan complete only when every item and acceptance criterion is verified.
+- Synchronize permanent specifications (architecture specs, `context.md`, ADRs) with any changed contracts.
+- Mark plan complete only when `Blocking: No`, all checklist slices are checked, and verification passes.
 
 ## Plan File Format
 
@@ -97,20 +100,20 @@ When creating a plan file, use this structure:
 - Confirmed: [paths, existing behavior, commands]
 - Assumption: [unverified fact], or `None`
 
-## Acceptance criteria
-- [ ] `C-01` - [Observable requirement]
-
-## Checklist
-- [ ] `C-01` **[Step name]** - `[target paths]`; verify: `[command or result]`
-
 ## Contracts
 | ID | Behavior | Condition or Input | Expected Result | Invariant | Test path/name | Verification |
 | --- | --- | --- | --- | --- | --- | --- |
 
-## TDD Slices
-### 1. [Slice name]
-- Red: `[test path]` - `[test name and expected failure]`
-- Green: `[source path]` - `[smallest required change]`
-- Verify: `[command]`
-- Refactor: `[concrete change]` or `None`
+## Invariants
+[Invariants defined by lean-design with I-NN IDs and code locations, or None: <reason>]
+
+## TDD slices and checklist
+- [ ] 1. [Slice name] (`C-01`)
+  - Red: `[test path]` - `[test name and expected failure]`
+  - Green: `[source path]` - `[smallest required change]`
+  - Refactor: `[concrete change]` or `None`
+  - Verify: `[command]`
+
+## Decisions and deviations
+- [Date]: [Context and decision or deviation note]
 ```

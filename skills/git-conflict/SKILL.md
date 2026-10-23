@@ -14,7 +14,7 @@ Apply when `git pull`, merge, rebase, cherry-pick, or push reports a conflict, n
 
 - Preserve unrelated working-tree changes and protected data.
 - Never use `git reset --hard`, `git clean`, force-push, or broad `ours`/`theirs` checkout as an automatic recovery.
-- Do not stash, commit, or push unless the user explicitly requests that operation or the approved task necessarily requires completing the integration.
+- Do not stash, commit, or push unless the user explicitly requests that operation.
 - Read both versions of every conflicted file and the relevant schema, specification, callers, and tests before editing.
 - Treat the current code, documented invariants, and executable tests as evidence; state unresolved assumptions instead of silently choosing a public-contract change.
 
@@ -26,9 +26,9 @@ Run bounded, read-only inspection before changing files:
 
 ```bash
 git status --short --branch
-git rev-parse -q --verify MERGE_HEAD || true
-git rev-parse -q --verify REBASE_HEAD || true
-git rev-parse -q --verify CHERRY_PICK_HEAD || true
+git rev-parse -q --verify MERGE_HEAD
+git rev-parse -q --verify REBASE_HEAD
+git rev-parse -q --verify CHERRY_PICK_HEAD
 git log --oneline --decorate --graph -12
 ```
 
@@ -90,7 +90,7 @@ Before staging, inspect the final diff for accidental files, secrets, debug outp
 
 ```bash
 git diff --cached --check
-git status --porcelain=v1 | grep -E '^(U|AA|DD|AU|UA|DU)' || true
+git diff --cached --name-only --diff-filter=U
 ```
 
 ### 5. Finish safely

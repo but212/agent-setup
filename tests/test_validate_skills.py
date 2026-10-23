@@ -19,6 +19,35 @@ def clone_repo_to_temp(directory: str) -> Path:
 
 
 class RepositoryContractTests(unittest.TestCase):
+    def test_crisp_has_no_commit_mode(self):
+        skill = (ROOT / "skills" / "crisp" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertNotIn("Commit Message Mode", skill)
+        self.assertNotIn("/crisp commit", skill)
+        self.assertNotIn("Conventional Commits", skill)
+
+    def test_skills_use_role_based_adapters(self):
+        challenge = (ROOT / "skills" / "challenge" / "SKILL.md").read_text(encoding="utf-8")
+        lean_design = (ROOT / "skills" / "lean-design" / "SKILL.md").read_text(encoding="utf-8")
+        lean_review = (ROOT / "skills" / "lean-review" / "SKILL.md").read_text(encoding="utf-8")
+
+        self.assertIn("Implementation Engine (default: `lean-mode`)", challenge)
+        self.assertIn("Plan Coordinator (default: `spec-drive`)", challenge)
+        self.assertIn("Implementation Engine (default: `lean-mode`)", lean_design)
+        self.assertIn("Implementation Engine (default: `lean-mode`)", lean_review)
+        self.assertIn("Plan Coordinator (default: `spec-drive`)", lean_review)
+
+    def test_spec_drive_protocol_gates(self):
+        skill = (ROOT / "skills" / "spec-drive" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("Quality Gate", skill)
+        self.assertIn("Structural Designer (default: `lean-design`)", skill)
+        self.assertIn("Implementation Engine (default: `lean-mode`)", skill)
+        self.assertIn("Review Gate (default: `lean-review`)", skill)
+
+    def test_lean_mode_subcontracts(self):
+        skill = (ROOT / "skills" / "lean-mode" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("## Sub-Contract 1: Minimal Implementation", skill)
+        self.assertIn("## Sub-Contract 2: Deterministic Testing", skill)
+
     def test_catalog_validates(self):
         result = subprocess.run(
             [sys.executable, "scripts/validate-skills.py"],
@@ -50,8 +79,8 @@ class RepositoryContractTests(unittest.TestCase):
             text = skill.read_text(encoding="utf-8")
             skill.write_text(
                 text.replace(
-                    'activation: "`/crisp`, `/crisp commit`, commit-message request, compression request"',
-                    "activation: `/crisp`, `/crisp commit`, commit-message request, compression request",
+                    'activation: "`/crisp`, compression request"',
+                    "activation: `/crisp`, compression request",
                     1,
                 ),
                 encoding="utf-8",
@@ -209,6 +238,42 @@ class RepositoryContractTests(unittest.TestCase):
                 text=True,
                 check=False,
             )
+
+    def test_git_conflict_requires_explicit_commit_request(self):
+        skill = (ROOT / "skills" / "git-conflict" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertNotIn("necessarily requires completing the integration", skill)
+        self.assertIn(
+            "Do not stash, commit, or push unless the user explicitly requests that operation.",
+            skill,
+        )
+
+    def test_git_conflict_commands_are_shell_neutral(self):
+        skill = (ROOT / "skills" / "git-conflict" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertNotIn("|| true", skill)
+        self.assertNotIn("grep", skill)
+        self.assertIn("git diff --cached --name-only --diff-filter=U", skill)
+
+    def test_spec_drive_verifies_after_refactor(self):
+        skill = (ROOT / "skills" / "spec-drive" / "SKILL.md").read_text(encoding="utf-8")
+        red_idx = skill.find("1. **Red:**")
+        green_idx = skill.find("2. **Green:**")
+        refactor_idx = skill.find("3. **Refactor:**")
+        verify_idx = skill.find("4. **Verify:**")
+        self.assertTrue(red_idx < green_idx < refactor_idx < verify_idx)
+
+    def test_spec_drive_phase4_runs_lean_review(self):
+        skill = (ROOT / "skills" / "spec-drive" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("lean-review", skill)
+        self.assertIn("Blocking: No", skill)
+
+    def test_spec_drive_has_no_invariants_matrix(self):
+        skill = (ROOT / "skills" / "spec-drive" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertNotIn("Invariants Matrix", skill)
+
+    def test_lean_review_hands_off_blocking_findings(self):
+        skill = (ROOT / "skills" / "lean-review" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("lean-mode", skill)
+        self.assertIn("Blocking: Yes", skill)
 
     def test_permissive_safety_guard_clause_fails(self):
         with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
