@@ -13,55 +13,52 @@ description: >
 
 ## Operating contract
 
-- Structural decisions only. Own state spaces, invariants, types, schemas, and boundaries. Code changes go to Implementation Engine (default: `lean-mode`).
+- Structural decisions only (state spaces, invariants, types, schemas, boundaries). Code changes go to Implementation Engine (default: `lean-mode`).
 - Preserve correctness, security, validation, and domain invariants.
-- Infer intent from runtime behavior and tests, then types/schemas, then comments/docs. State assumptions when evidence is absent.
+- Infer intent from runtime behavior and tests, then types/schemas, then docs. State assumptions when evidence is absent.
 - Evaluate performance only with profiling or hot-path evidence.
 
 ## Core principles
 
-- **Make impossible states unrepresentable**: explicit sum types over boolean flags and leaky optionals.
-- **Data enforces invariants**: put each invariant in the data representation, not in convention, call order, or scattered conditionals. Pick the strongest mechanism the representation can express, in priority order:
-  1. `type`: sum types, newtypes, non-empty collections, values with a sole constructor.
-  2. `schema`: DB and serialization constraints (UNIQUE, CHECK, FOREIGN KEY, NOT NULL, versioned schemas).
-  3. `boundary`: parse untrusted input once into domain types; inside the boundary, accept only the parsed type.
-  4. `runtime`: explicit checks in the core, only when 1 to 3 cannot express the invariant.
-  This order is a priority, not a universal rule. Cross-row and temporal invariants usually cannot be typed. Enforce them with schema constraints plus transactions, or with one documented runtime check at the single point of violation.
-- **Functional Core, Imperative Shell**: pure domain logic separate from boundary I/O.
-- **Structure determines logic**: define models and transitions before functions; prefer compile-time proofs.
-- **Contract boundaries**: prove failure domains, temporal stability, partition isolation, and resource limits first.
-- **Dissolve hollow indirection**: remove single-implementation interfaces, pass-through DTOs, and speculative factories.
-- **Bounded scope**: current requirements only. No unevidenced caching, plugins, or extension points.
+- **Make impossible states unrepresentable:** explicit sum types over boolean flags and optional sprawl.
+- **Data enforces invariants:** embed invariants in data representations rather than conventions or scattered checks. Priority order:
+  1. `type`: sum types, newtypes, non-empty collections, single constructors.
+  2. `schema`: DB/serialization constraints (UNIQUE, CHECK, FOREIGN KEY, NOT NULL, versioning).
+  3. `boundary`: parse untrusted input once into validated domain types.
+  4. `runtime`: explicit core checks only when 1-3 cannot express the invariant (e.g. cross-row or temporal rules).
+- **Functional Core, Imperative Shell:** isolate pure domain logic from boundary I/O.
+- **Structure determines logic:** models and transitions precede functions; prefer compile-time proofs.
+- **Contract boundaries:** establish failure domains, temporal stability, partition isolation, and resource limits first.
+- **Dissolve hollow indirection:** eliminate single-implementation interfaces, pass-through DTOs, and speculative factories.
+- **Bounded scope:** satisfy current requirements only; reject unevidenced caching, plugins, or extensions.
 
 ## Target resolution
 
-Infer the target from attached files, referenced paths, and discussed code. Ask only when genuinely ambiguous; state assumptions.
+Infer targets from attached files, referenced paths, and code context. State assumptions; ask only when genuinely ambiguous.
 
 ## Analysis format
 
-Use these sections in order; omit empty ones:
+Use sections in order; omit empty ones:
 
-1. **Problem**: real problem, constraints, assumptions, edge boundaries.
-2. **Structure**: core sum types, state transitions, domain invariants with persistent `I-NN` IDs, resource/partition boundaries. Tag each invariant `type`, `schema`, `boundary`, or `runtime`.
-3. **Remove**: impossible states, hollow interfaces, pass-through layers, speculative parameters.
-4. **Handoff Contract**: exact type signatures, transition rules, failure behavior, and `I-NN` invariants for Implementation Engine (default: `lean-mode`). Give each `I-NN` invariant its enforcement location. A `runtime` location must state why `type`, `schema`, and `boundary` cannot express it.
-
-Do not implement routine code. Hand off to Implementation Engine (default: `lean-mode`).
+1. **Problem:** core problem, constraints, assumptions, boundaries.
+2. **Structure:** sum types, state transitions, persistent `I-NN` invariants tagged `type`, `schema`, `boundary`, or `runtime`, and partition boundaries.
+3. **Remove:** impossible states, hollow interfaces, pass-through layers, speculative parameters.
+4. **Handoff Contract:** exact type signatures, transition rules, failure behaviors, and `I-NN` invariants with enforcement locations for Implementation Engine (default: `lean-mode`). State why `runtime` locations cannot use `type`, `schema`, or `boundary`.
 
 ## Prohibited
 
-- Primitive obsession; unconstrained optional/nullable sprawl
-- Invariants held only by convention (caller order, comments, docs) when a type, schema, or boundary can carry them
-- Runtime-only enforcement without stating why the data representation cannot express it
-- Pure logic with hidden side effects (clock, global state, random)
-- Unevidenced full rewrites or unsupported universal abstractions
-- Placeholders in models (`...`, `TODO`, pseudocode)
-- Omitting validation, business logic, error handling, or return contracts
-- Unversioned breaking serialization, cross-partition leaks, unbounded resource mutations
-- Premature caching or speculative plugin systems
+- Primitive obsession and unconstrained nullable sprawl.
+- Invariants enforced by convention (caller order, comments) when types, schemas, or boundaries can hold them.
+- Runtime-only checks without justification.
+- Hidden side effects in pure logic (clock, global state, random).
+- Unevidenced full rewrites or speculative universal abstractions.
+- Placeholders in models (`...`, `TODO`, pseudocode).
+- Omitting validation, business logic, error handling, or return contracts.
+- Unversioned breaking serialization, cross-partition leaks, or unbounded mutations.
+- Premature caching or speculative plugin systems.
 
 ## Controls
 
-- **Scope**: structural design only; no routine code implementation.
-- **Activate**: `/lean-design` or explicit request on states, types, invariants, or boundaries.
-- **Deactivate**: `stop lean-design` or `normal mode`.
+- **Scope:** structural design only; no routine code implementation.
+- **Activate:** `/lean-design` or explicit request on states, types, invariants, or boundaries.
+- **Deactivate:** `stop lean-design` or `normal mode`.
