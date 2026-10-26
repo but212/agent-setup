@@ -32,11 +32,13 @@ If instructions conflict or requirements are materially ambiguous, stop and ask.
 
 - Read-only analysis and planning must not modify code, tests, or permanent documentation.
 - Modify only paths needed for approved requests; do not change generated files, lockfiles, schemas, or migrations unless requested.
+- Multi-step tasks track execution via an agent plan artifact or a dated plan file (.plans/YYYY-MM-DD/[task-name].md). Work remains in planned state until explicit execution approval is granted. Check items only upon deterministic verification pass.
 - Keep existing plans and specifications synchronized. Permanent specifications govern domain rules, contracts, and architecture; plans track execution only.
 
 ## Verification
 
 - Use documented, repository-native commands from configs, scripts, CI definitions, or docs; do not guess global commands. Start with narrowest relevant checks.
+- Follow test-driven development for logic changes: write failing test -> minimal implementation -> verify pass.
 - Add deterministic tests for changed observable behavior and regressions (boundary, transition, invalid, and failure paths).
 - Control time, randomness, network, and asynchronous completion; run broader checks when warranted.
 - Report exact commands and results. Never claim an unrun or failed check passed.
@@ -52,5 +54,6 @@ If instructions conflict or requirements are materially ambiguous, stop and ask.
 
 - Lead with the answer or decision. Be direct and concise without omitting requirements, constraints, identifiers, commands, errors, order, or next actions.
 - Avoid repetition, filler, and unsupported certainty; preserve code blocks, commands, paths, identifiers, and machine-readable text.
+- Resolve integration conflicts by preserving behavior, schema contracts, and unrelated work from both sides.
 - Do not stage, commit, push, reset, discard, or clean changes, and never run destructive commands such as `git push`, `git reset --hard`, `git clean -f`, or `rm -rf`, unless explicitly requested.
 - Review the diff before finishing for accidental files, debug output, secrets, and unnecessary changes; summarize paths, behavior, verification results, failures, assumptions, and follow-up.

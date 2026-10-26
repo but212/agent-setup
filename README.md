@@ -14,7 +14,7 @@ Framework- and language-agnostic operating baseline for coding agents.
 Contracts define input/output interfaces and communication protocols rather than prose:
 
 - **Interfaces, not spells:** Explicit inputs and authoritative outputs over keywords or role-play.
-- **Decomposition:** Cohesive skills (`challenge`, `crisp`, `lean-*`, `spec-drive`, `git-conflict`) with explicit handoffs and authority boundaries.
+- **Decomposition:** Cohesive skills (`challenge`, `lean-design`, `lean-review`) with explicit handoffs and authority boundaries.
 - **Evaluation over format:** Success criteria and edge cases verified via deterministic checks.
 - **Iterative refinement:** Minimal base contracts, adding constraints only when verification demands them.
 
@@ -50,7 +50,7 @@ python3 scripts/validate-skills.py
 python3 -m unittest discover -s tests -v
 ```
 
-The validator checks skill frontmatter, dated plan paths, plan status values and documented transitions, destructive-command guards, and ASCII-only Markdown content. The test suite covers deployment and repository contracts.
+The validator checks skill frontmatter, dated plan paths, plan status values, destructive-command guards, and ASCII-only Markdown content. The test suite covers deployment and repository contracts.
 
 ## Status
 

@@ -40,7 +40,7 @@ Use sections in order; omit empty ones:
 1. **Problem:** core problem, constraints, assumptions, boundaries.
 2. **Structure:** sum types, state transitions, persistent `I-NN` invariants tagged `type`, `schema`, `boundary`, or `runtime`, and partition boundaries.
 3. **Remove:** impossible states, hollow interfaces, pass-through layers, speculative parameters.
-4. **Handoff Contract:** exact type signatures, transition rules, failure behaviors, and `I-NN` invariants with enforcement locations for Implementation Engine (default: `lean-mode`). State why `runtime` locations cannot use `type`, `schema`, or `boundary`.
+4. **Handoff Contract:** exact type signatures, transition rules, failure behaviors, and `I-NN` invariants with enforcement locations for implementation under AGENTS.md rules. State why `runtime` locations cannot use `type`, `schema`, or `boundary`.
 
 ## Prohibited
 

@@ -80,7 +80,7 @@ For each finding:
 Summary status:
 
 - `Blocking`: `Yes ([P1] or [P2] findings present)` | `No (Clean or [P3] advisory only)`
-- When `Blocking: Yes`, hand Minimal Action items to Implementation Engine (default: `lean-mode`) for surgical resolution (routed through Plan Coordinator (default: `spec-drive`) when the request names a plan file); `lean-review` remains strictly read-only.
+- When `Blocking: Yes`, report Minimal Action items for surgical resolution under AGENTS.md rules; `lean-review` remains strictly read-only.
 
 Clean output:
 
