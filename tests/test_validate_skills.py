@@ -339,6 +339,85 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("does not match", result.stdout)
 
+    def test_spec_drive_registers_all_roles(self):
+        spec_drive = (ROOT / "skills" / "spec-drive" / "SKILL.md").read_text(encoding="utf-8")
+        roles = ("Plan Coordinator", "Structural Designer", "Implementation Engine", "Review Gate")
+
+        self.assertIn("### Role Registry", spec_drive)
+        for role in roles:
+            self.assertIn(f"| {role} |", spec_drive)
+
+    def test_verification_record_gates_plan_checklist(self):
+        lean_mode = (ROOT / "skills" / "lean-mode" / "SKILL.md").read_text(encoding="utf-8")
+        spec_drive = (ROOT / "skills" / "spec-drive" / "SKILL.md").read_text(encoding="utf-8")
+
+        self.assertIn("Result: pass | fail | inconclusive", lean_mode)
+        self.assertIn("check the item only on `Result: pass`", spec_drive)
+
+    def test_spec_routes_implementation_skills(self):
+        spec = (ROOT / "spec" / "skills-spec.md").read_text(encoding="utf-8")
+        routing = spec.split("### 3.2 Implementation Routing", 1)[1].split("### 3.3", 1)[0]
+
+        for name in ("lean-design", "spec-drive", "lean-mode", "lean-review", "git-conflict"):
+            self.assertIn(f"`{name}`", routing)
+
+    def test_planned_plan_status_passes(self):
+        with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
+            repository = clone_repo_to_temp(directory)
+            plan = repository / ".plans" / "2026-01-01" / "task.md"
+            plan.parent.mkdir(parents=True)
+            plan.write_text("# Plan: task\n\n- Status: `planned`\n", encoding="utf-8")
+
+            result = subprocess.run(
+                [sys.executable, "scripts/validate-skills.py"],
+                cwd=repository,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_unknown_plan_status_fails(self):
+        with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
+            repository = clone_repo_to_temp(directory)
+            plan = repository / ".plans" / "2026-01-01" / "task.md"
+            plan.parent.mkdir(parents=True)
+            plan.write_text("# Plan: task\n\n- Status: `done`\n", encoding="utf-8")
+
+            result = subprocess.run(
+                [sys.executable, "scripts/validate-skills.py"],
+                cwd=repository,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("unknown status 'done'", result.stdout)
+
+    def test_transition_table_drift_fails(self):
+        with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
+            repository = clone_repo_to_temp(directory)
+            skill = repository / "skills" / "spec-drive" / "SKILL.md"
+            text = skill.read_text(encoding="utf-8").replace(
+                "blocked -> in-progress | cancelled",
+                "blocked -> in-progress",
+                1,
+            )
+            skill.write_text(text, encoding="utf-8")
+
+            result = subprocess.run(
+                [sys.executable, "scripts/validate-skills.py"],
+                cwd=repository,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("missing plan transition `blocked -> in-progress | cancelled`", result.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

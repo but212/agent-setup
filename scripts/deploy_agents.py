@@ -52,7 +52,7 @@ class DeploymentPlan:
 
 
 # ============================================================================
-# Functional Core: Safety Inspection & Deployment Planning
+# Read-only Planning: Safety Inspection & Deployment Planning
 # ============================================================================
 
 def is_symlink_or_reparse(path: Path) -> bool:

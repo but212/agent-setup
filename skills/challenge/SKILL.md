@@ -56,7 +56,7 @@ Triggered when any Fast-path gate fails. Inspect repository facts, docs, code, a
 
 ## Output & handoff
 
-Output the decision summary in chat upon confirmation. When an active plan coordinator is present, hand off to it for recording.
+Output the decision summary in chat upon confirmation. When the request names a plan file, hand off to Plan Coordinator (default: `spec-drive`) for recording.
 
 - **Decision Summary:** Mode (`Challenge Grounded` or `Challenge Light`) | Path (`Fast` or `Standard`) | Next step | Decisions | Domain term changes / ADRs affected (if applicable) | Challenged assumptions | Risks & mitigations | Revisit triggers.
   - *Fast path:* short form omitting domain terms, ADRs, and revisit triggers if unaffected.

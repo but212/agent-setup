@@ -75,8 +75,21 @@ Add <mechanism> when <observable trigger>.
 - Delegate audits to `lean-review` and contract-sensitive planning to `spec-drive`.
 - Run the narrowest repository-native check covering changed behavior; format before the final check and inspect the diff. Treat timeouts or inconclusive runs as unverified.
 
+### Verification Record
+
+Report every verification run in this form:
+
+```text
+Command: <exact command>
+Exit: <exit code, or timeout>
+Result: pass | fail | inconclusive
+Covers: <C-NN IDs>
+```
+
+Timeouts and inconclusive runs are `Result: inconclusive`. Plan Coordinator (`spec-drive`) checks a plan item only on `Result: pass`.
+
 ## Controls
 
 - **Scope:** bounded coding and test implementation.
 - **Activate:** `/lean-mode`, `/lean-mode test`, or implementation/test/refactor request.
-- **Deactivate:** `stop lean-mode` or `normal mode`.
+- **Deactivate:** End of the request; `stop lean-mode` or `normal mode` in the same request cancels it. Modes do not carry into later requests.

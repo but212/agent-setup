@@ -17,6 +17,17 @@ Drive contract-sensitive changes via high-density specifications, structural inv
 
 `spec-drive` coordinates the requirement lifecycle through role adapters: Structural Designer (default: `lean-design`) owns structural modeling, Implementation Engine (default: `lean-mode`) owns production code changes, Review Gate (default: `lean-review`) audits changes, and `.plans/YYYY-MM-DD/[task-name].md` (or an agent plan artifact) tracks execution state.
 
+### Role Registry
+
+This table is the single source of role bindings. Other skills reference these roles by name and default only.
+
+| Role | Default skill | Owns | Input | Output |
+| --- | --- | --- | --- | --- |
+| Plan Coordinator | `spec-drive` (this skill) | `.plans/` file, lifecycle, checklist | Decision Summary (`challenge`), Blocking status (`lean-review`) | Plan file |
+| Structural Designer | `lean-design` | `I-NN` invariants, Handoff Contract | Contracts Table | Handoff Contract |
+| Implementation Engine | `lean-mode` | Code and test changes | Plan slice or Handoff Contract | Verification Record (`lean-mode`) |
+| Review Gate | `lean-review` | Findings, `Blocking` status | Diff or named files | Findings with `Blocking` |
+
 1. **Crisp over Bloat:** Observable behavior, invariants, and I/O contracts over speculative decoration.
 2. **Lean over Patchwork:** Eliminate impossible states before implementing code.
 3. **Execution SSOT:** Track execution in `.plans/YYYY-MM-DD/[task-name].md` or an agent plan artifact; sync domain rules into permanent specifications.
@@ -64,7 +75,7 @@ Implement vertical slices mapped 1:1 to the Contracts Table in dependency order 
 1. **Red:** Write smallest deterministic test exercising contract `C-NN`; prove it fails as expected.
 2. **Green:** Write minimal surgical code to pass the test (`lean-mode`) in scoped files.
 3. **Refactor:** Remove concrete duplication or simplify structure exposed after Green (or `None`).
-4. **Verify:** Run repository-native command proving the slice passes without regressions.
+4. **Verify:** Run repository-native command proving the slice passes without regressions. Report it as a Verification Record (`lean-mode` format); check the item only on `Result: pass`.
 
 ### Phase 4: Review Quality Gate, Living Spec Sync & Finish (default: `lean-review`)
 

@@ -9,7 +9,8 @@
 
 - Skill selection and routing based on request intent.
 - Repository-grounded planning, design, implementation, testing, and review.
-- Response prose and document compression with invariant preservation.
+- Response prose and document compression (`crisp`) with invariant preservation.
+- Git integration conflict resolution (`git-conflict`) with preserved unrelated work.
 - Plan lifecycle (`.plans/YYYY-MM-DD/[task-name].md`) and permanent specification synchronization.
 - Dependency-free validation of frontmatter, plan paths, ASCII Markdown, and safety guards.
 - Mirror deployment of `AGENTS.md` and `skills/` into the shared agent directory.
@@ -24,7 +25,7 @@
 
 Authoritative behavioral rules, precedence, safety boundaries, and execution invariants are defined in [AGENTS.md](../AGENTS.md).
 
-- **Single source of truth (SSOT):** Detailed workflows, roles, activation triggers, and modification authority belong exclusively to `skills/*/SKILL.md` frontmatter.
+- **Single source of truth (SSOT):** Detailed workflows, role bindings, activation triggers, and modification authority belong exclusively to `skills/*/SKILL.md`: scalar metadata in frontmatter, workflows and the `spec-drive` Role Registry in the body.
 
 ## 2. Skill Catalog and Metadata
 
@@ -54,6 +55,9 @@ Frontmatter is validated by `scripts/validate-skills.py`.
 2. Use `spec-drive` to coordinate contract-sensitive work, manage `.plans/` execution tracking, and slice TDD contracts.
 3. Use `lean-mode` for minimal code and deterministic test changes mapped to contracts.
 4. Use `lean-review` for read-only adversarial diff or repository audits.
+5. Use `git-conflict` for Git integration conflicts. It is standalone: it does not route through `spec-drive`, and its Conflict report is terminal output.
+
+Role names (Plan Coordinator, Structural Designer, Implementation Engine, Review Gate) are bound only in the `spec-drive` Role Registry. Other skills reference them by name and default.
 
 ### 3.3 Execution Modes
 
@@ -64,11 +68,11 @@ Frontmatter is validated by `scripts/validate-skills.py`.
 
 When `spec-drive` execution tracking is active, `.plans/YYYY-MM-DD/[task-name].md` (or an agent plan artifact) is the execution SSOT:
 
-- Lifecycle: `planned -> in-progress|cancelled`, `in-progress -> blocked|complete|cancelled`, or `blocked -> in-progress|cancelled`.
+- Lifecycle: `planned -> in-progress|cancelled`, `in-progress -> blocked|complete|cancelled`, or `blocked -> in-progress|cancelled`. `scripts/validate-skills.py` (`PLAN_TRANSITIONS`) enforces that `spec-drive` documents these transitions and that each plan `Status` is a known value.
 - Do not execute checklist items while `planned` and awaiting approval.
 - Plan structure: Goal, Scope, Evidence and assumptions, Contracts, Invariants, TDD slices and checklist, and Decisions and deviations.
 - Each TDD slice item maps contract IDs (`C-NN`), Red/Green/Refactor/Verify steps, and verification commands.
-- Check items only after verification passes; record deviations under Decisions and deviations.
+- Check items only on a Verification Record with `Result: pass` (`lean-mode` format); record deviations under Decisions and deviations.
 
 ### 3.5 Deployment Mirror Rules
 

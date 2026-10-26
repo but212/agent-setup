@@ -61,4 +61,4 @@ Use sections in order; omit empty ones:
 
 - **Scope:** structural design only; no routine code implementation.
 - **Activate:** `/lean-design` or explicit request on states, types, invariants, or boundaries.
-- **Deactivate:** `stop lean-design` or `normal mode`.
+- **Deactivate:** End of the request; `stop lean-design` or `normal mode` in the same request cancels it. Modes do not carry into later requests.

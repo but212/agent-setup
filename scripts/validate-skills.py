@@ -20,6 +20,13 @@ REQUIRED_SAFETY_GUARD_SENTENCE = (
     "or `rm -rf`, unless explicitly requested."
 )
 
+PLAN_STATUSES = frozenset({"planned", "in-progress", "blocked", "complete", "cancelled"})
+PLAN_TRANSITIONS = {
+    "planned": ("in-progress", "cancelled"),
+    "in-progress": ("blocked", "complete", "cancelled"),
+    "blocked": ("in-progress", "cancelled"),
+}
+
 
 @dataclass(frozen=True)
 class SkillMetadata:
@@ -41,7 +48,7 @@ class ValidationReport:
 
 
 # ============================================================================
-# Functional Core: Pure parsing and verification
+# Read-only Core: parsing and verification (no writes)
 # ============================================================================
 
 def parse_frontmatter_dict(path: Path) -> dict[str, str]:
@@ -182,6 +189,38 @@ def check_plan_paths(plans_dir: Path, root: Path = ROOT) -> list[str]:
     return errors
 
 
+def check_plan_status(plans_dir: Path, root: Path = ROOT) -> list[str]:
+    errors: list[str] = []
+    if not plans_dir.exists():
+        return errors
+
+    for path in sorted(plans_dir.glob("*/*.md")):
+        text = path.read_text(encoding="utf-8")
+        status_match = re.search(r"^- Status:\s*`([^`]+)`", text, re.MULTILINE)
+        if not status_match:
+            errors.append(f"plan missing Status field: {path.relative_to(root)}")
+        elif status_match.group(1) not in PLAN_STATUSES:
+            errors.append(
+                f"plan has unknown status {status_match.group(1)!r}: {path.relative_to(root)}"
+            )
+    return errors
+
+
+def check_transition_table(spec_drive_path: Path, root: Path = ROOT) -> list[str]:
+    if not spec_drive_path.exists():
+        return [f"missing spec-drive skill: {spec_drive_path.relative_to(root)}"]
+
+    text = spec_drive_path.read_text(encoding="utf-8")
+    errors: list[str] = []
+    for source, targets in PLAN_TRANSITIONS.items():
+        transition = f"{source} -> {' | '.join(targets)}"
+        if f"`{transition}`" not in text:
+            errors.append(
+                f"{spec_drive_path.relative_to(root)}: missing plan transition `{transition}`"
+            )
+    return errors
+
+
 def check_safety_guards(agents_path: Path) -> list[str]:
     errors: list[str] = []
     agents_text = agents_path.read_text(encoding="utf-8")
@@ -254,6 +293,8 @@ def validate_repository(
     errors.extend(skill_errors)
 
     errors.extend(check_plan_paths(plans_dir, root))
+    errors.extend(check_plan_status(plans_dir, root))
+    errors.extend(check_transition_table(skills_dir / "spec-drive" / "SKILL.md", root))
     errors.extend(check_safety_guards(agents_path))
     errors.extend(check_spec_gates(spec_path, readme_path, root))
 
@@ -274,7 +315,7 @@ def main() -> int:
 
     print(f"Validated {len(report.skills)} skills frontmatter metadata.")
     print(
-        "Validated ASCII-only Markdown, dated plan paths, destructive-command guards, and spec gates."
+        "Validated ASCII-only Markdown, dated plan paths, plan status and transitions, destructive-command guards, and spec gates."
     )
     return 0
 
