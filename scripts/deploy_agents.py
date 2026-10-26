@@ -23,12 +23,17 @@ class DeploymentSafetyError(Exception):
     """Raised when a pre-flight deployment safety invariant is violated."""
 
 
-
 @dataclass(frozen=True)
 class MirrorAction:
     kind: ActionKind
     dst: Path
     src: Path | None = None
+
+    def __post_init__(self) -> None:
+        if self.kind == ActionKind.COPY_FILE and self.src is None:
+            raise ValueError("COPY_FILE action requires a non-None src")
+        if self.kind != ActionKind.COPY_FILE and self.src is not None:
+            raise ValueError(f"{self.kind.value} action must not have a src")
 
 
 @dataclass(frozen=True)
@@ -142,7 +147,11 @@ def validate_deployment_safety(
     is_root = canonical_target == canonical_target.parent or (
         canonical_target.anchor and canonical_target == Path(canonical_target.anchor)
     )
-    if is_root or canonical_target == home_dir:
+    canonical_repo = repo_root.resolve()
+    is_in_repo = (
+        canonical_target == canonical_repo or canonical_repo in canonical_target.parents
+    )
+    if is_root or canonical_target == home_dir or is_in_repo:
         raise DeploymentSafetyError(f"refusing unsafe AGENT_HOME: {target_input_str}\n")
 
     agents_source = repo_root / "AGENTS.md"
@@ -208,16 +217,14 @@ def compute_mirror_actions(
     for rel, src in source_items.items():
         dst = target_skills / rel
         if src.is_dir():
-            actions.append(MirrorAction(kind=ActionKind.MAKE_DIR, dst=dst, src=src))
+            actions.append(MirrorAction(kind=ActionKind.MAKE_DIR, dst=dst))
         else:
             actions.append(MirrorAction(kind=ActionKind.COPY_FILE, dst=dst, src=src))
 
     return actions
 
 
-def plan_deployment(
-    repo_root: Path, target_arg: str | None
-) -> DeploymentPlan:
+def plan_deployment(repo_root: Path, target_arg: str | None) -> DeploymentPlan:
     target = validate_deployment_safety(repo_root, target_arg)
     agents_source = repo_root / "AGENTS.md"
     skills_source = repo_root / "skills"
@@ -259,8 +266,8 @@ def execute_deployment(plan: DeploymentPlan) -> None:
             action.dst.mkdir(parents=True, exist_ok=True)
         elif action.kind == ActionKind.COPY_FILE:
             action.dst.parent.mkdir(parents=True, exist_ok=True)
-            if action.src:
-                shutil.copy2(action.src, action.dst)
+            assert action.src is not None
+            shutil.copy2(action.src, action.dst)
 
     print(f"mirrored: skills/ -> {plan.target_skills} ({plan.skill_count} skills)")
     print("done.")

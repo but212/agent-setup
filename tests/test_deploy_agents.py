@@ -271,6 +271,31 @@ class DeployAgentsTests(unittest.TestCase):
         self.assertIsInstance(result, DeploymentTarget)
         self.assertEqual(result.canonical_target, target.resolve())
 
+    def test_deploy_rejects_target_inside_repo_root(self):
+        result = self.run_deploy(self.repo)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("refusing unsafe AGENT_HOME", result.stderr)
+
+        nested_target = self.repo / "nested"
+        result_nested = self.run_deploy(nested_target)
+        self.assertEqual(result_nested.returncode, 1)
+        self.assertIn("refusing unsafe AGENT_HOME", result_nested.stderr)
+
+    def test_mirror_action_enforces_source_invariants(self):
+        from scripts.deploy_agents import ActionKind, MirrorAction
+
+        with self.assertRaises(ValueError):
+            MirrorAction(kind=ActionKind.COPY_FILE, dst=Path("dst"), src=None)
+
+        with self.assertRaises(ValueError):
+            MirrorAction(kind=ActionKind.PRUNE_FILE, dst=Path("dst"), src=Path("src"))
+
+        with self.assertRaises(ValueError):
+            MirrorAction(kind=ActionKind.PRUNE_DIR, dst=Path("dst"), src=Path("src"))
+
+        with self.assertRaises(ValueError):
+            MirrorAction(kind=ActionKind.MAKE_DIR, dst=Path("dst"), src=Path("src"))
+
 
 if __name__ == "__main__":
     unittest.main()

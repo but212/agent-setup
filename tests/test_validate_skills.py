@@ -44,7 +44,9 @@ class RepositoryContractTests(unittest.TestCase):
 
     def test_agents_contains_absorbed_directives(self):
         agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
-        self.assertIn("Multi-step tasks track execution via an agent plan artifact", agents)
+        self.assertIn(
+            "Multi-step tasks track execution via an agent plan artifact", agents
+        )
         self.assertIn("Follow test-driven development for logic changes", agents)
         self.assertIn("Resolve integration conflicts by preserving behavior", agents)
         self.assertIn("do not run destructive commands", agents)
@@ -293,6 +295,47 @@ class RepositoryContractTests(unittest.TestCase):
                     content,
                     f"Found orphaned reference '{pattern}' in {skill_file.relative_to(ROOT)}",
                 )
+
+    def test_missing_agents_file_reports_error_without_crash(self):
+        import importlib
+
+        sys.path.insert(0, str(ROOT / "scripts"))
+        validator = importlib.import_module("validate-skills")
+
+        report = validator.validate_repository(
+            agents_path=ROOT / "NONEXISTENT_AGENTS.md"
+        )
+        self.assertFalse(report.is_valid)
+        self.assertTrue(any("missing AGENTS.md" in err for err in report.errors))
+
+    def test_missing_skills_dir_reports_error(self):
+        import importlib
+
+        sys.path.insert(0, str(ROOT / "scripts"))
+        validator = importlib.import_module("validate-skills")
+
+        report = validator.validate_repository(skills_dir=ROOT / "NONEXISTENT_SKILLS")
+        self.assertFalse(report.is_valid)
+        self.assertTrue(
+            any("skills directory not found" in err for err in report.errors)
+        )
+
+    def test_skills_subdir_without_skill_md_reports_error(self):
+        with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
+            repository = clone_repo_to_temp(directory)
+            orphan_subdir = repository / "skills" / "incomplete-skill"
+            orphan_subdir.mkdir(parents=True)
+
+            result = subprocess.run(
+                [sys.executable, "scripts/validate-skills.py"],
+                cwd=repository,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("incomplete-skill", result.stdout)
 
 
 if __name__ == "__main__":

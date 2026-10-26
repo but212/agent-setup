@@ -58,10 +58,7 @@ def parse_frontmatter_dict(path: Path) -> dict[str, str]:
     except ValueError as exc:
         raise ValueError("unterminated frontmatter") from exc
     values: dict[str, str] = {}
-    lines_slice = lines[1:end]
-    i = 0
-    while i < len(lines_slice):
-        line = lines_slice[i]
+    for line in lines[1:end]:
         match = re.match(r"^([A-Za-z][\w-]*):\s*(.*)$", line)
         if match:
             field = match.group(1)
@@ -76,7 +73,6 @@ def parse_frontmatter_dict(path: Path) -> dict[str, str]:
             if len(value) >= 2 and value[0] == value[-1] and value[0] in "'\"":
                 value = value[1:-1]
             values[field] = value
-        i += 1
     return values
 
 
@@ -143,7 +139,20 @@ def check_skill_frontmatters(
 ) -> tuple[dict[str, SkillMetadata], list[str]]:
     errors: list[str] = []
     skills: dict[str, SkillMetadata] = {}
+    if not skills_dir.is_dir():
+        errors.append(f"skills directory not found: {skills_dir.relative_to(root)}")
+        return skills, errors
+
+    subdirs = sorted(p for p in skills_dir.iterdir() if p.is_dir())
+    for subdir in subdirs:
+        skill_file = subdir / "SKILL.md"
+        if not skill_file.is_file():
+            errors.append(f"missing SKILL.md in {subdir.relative_to(root)}")
+
     skill_files = sorted(skills_dir.glob("*/SKILL.md"))
+    if not skill_files:
+        errors.append(f"no skills found in {skills_dir.relative_to(root)}")
+        return skills, errors
 
     for path in skill_files:
         metadata, parse_errors = parse_skill_metadata(path, root)
@@ -201,6 +210,9 @@ def check_plan_status(plans_dir: Path, root: Path = ROOT) -> list[str]:
 
 def check_safety_guards(agents_path: Path) -> list[str]:
     errors: list[str] = []
+    if not agents_path.is_file():
+        errors.append(f"missing AGENTS.md file: {agents_path}")
+        return errors
     agents_text = agents_path.read_text(encoding="utf-8")
     if REQUIRED_SAFETY_GUARD_SENTENCE not in agents_text:
         errors.append(
