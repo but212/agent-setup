@@ -1,56 +1,49 @@
 # AGENTS.md
 
-## Purpose
+## Precedence and Invariant Hierarchy
 
-Repository-wide guidance and instruction precedence for coding agents.
+System instructions establish immutable safety boundaries. Explicit user intent directs task objectives within those boundaries. Repository invariants in `AGENTS.md` govern code architecture, verification, and contracts over general conventions.
 
-## Instruction precedence
+- Clarify before modifying files only when ambiguity yields divergent behavioral outcomes or execution is blocked; proceed on reasonable default assumptions otherwise.
+- Do not stage, commit, push, reset, discard, or clean changes, and do not run destructive commands such as `git push`, `git reset --hard`, `git clean -f`, or `rm -rf`, without explicit user request.
+- Safeguards, security boundaries, and existing regression tests must never be weakened.
 
-1. System and developer instructions.
-2. User's explicit request, except where violating absolute rules below (weakening tests/safeguards, adding secrets/sensitive values, destructive commands).
-3. Nearest applicable `AGENTS.md`; deeper files override broader files.
-4. Repository documentation, configuration, and established code conventions.
+## Minimal Blast Radius and Scope Gating
 
-If instructions conflict or requirements are materially ambiguous, stop and ask. Do not silently change public contracts, data models, security boundaries, or user-visible behavior.
+Every state mutation must be the minimal closed subset resolving the approved task.
 
-## Before changing files
+- Read-only analysis must not alter files, schemas, tests, or documentation.
+- Modify only paths needed for approved requests; never touch lockfiles, generated assets, schemas, or migrations without explicit instruction.
+- Multi-step tasks track execution via an agent plan artifact for single-session workflows, or a dated plan file (.plans/YYYY-MM-DD/[task-name].md) for persistent cross-session changes. Execution of persistent plans or contract-breaking changes remains paused until explicit user approval; single-session workflows proceed on reasonable default assumptions.
+- Fix shared root causes at domain boundaries (e.g. normalize or validate once at schema or ingress rather than patching symptoms across scattered call sites). Remove only symbols rendered unused by the current edit; do not prune pre-existing dead code.
 
-- Inspect relevant source, tests, configuration, and documentation; search existing helpers, types, and patterns.
-- Identify the smallest file and symbol set satisfying the request.
-- Classify behavior claims as `Confirmed`, `Assumption`, or `Open decision` until resolved by evidence.
-- Inspect working tree first; preserve unrelated changes.
+## Contract Soundness and State Modeling
 
-## Implementation principles
+- Baseline First: Model minimal algebraic domain representations satisfying core functional invariants before applying non-functional constraints (performance optimizations, caching, concurrency, or backwards-compatibility hooks).
+- Eliminate impossible states at the type and schema level; avoid defensive branching in internal domain logic, while strictly validating and parsing untrusted inputs at external boundaries (network, storage, user input).
+- Classify external assumptions into Environment (platform facts), Requirement (intent), and Design (chosen model). Ground every constraint in observable evidence.
+- Dissolve speculative abstractions and single-impl interfaces, except where repository patterns, test mocks (e.g. traits), or established conventions explicitly warrant them; repository patterns take precedence.
 
-- Make the smallest correct change; avoid unrelated refactors, speculative abstractions, and formatting churn.
-- Prefer existing dependencies, helpers, types, and platform primitives over premature generalization.
-- Make invalid states unrepresentable; handle nulls, partial failure, concurrency, and schema mismatches deliberately.
-- Preserve public APIs, schemas, validation, error handling, authorization, accessibility, and domain invariants.
-- Fix shared root causes. Never weaken tests or safeguards; never add secrets, credentials, personal data, or sensitive values.
+## Empirical Verification and TDD
 
-## Scope and approval
+Logical deduction cannot substitute for empirical execution.
 
-- Read-only analysis and planning must not modify code, tests, or permanent documentation.
-- Modify only paths needed for approved requests; do not change generated files, lockfiles, schemas, or migrations unless requested.
-- Keep existing plans and specifications synchronized. Permanent specifications govern domain rules, contracts, and architecture; plans track execution only.
+- Follow test-driven development for logic changes: write failing test -> minimal implementation -> verify pass.
+- Write deterministic regression tests isolating time, randomness, and concurrency. Test observable contracts, transitions, and boundary failures rather than private implementation details.
+- Never assert or report verification for unrun commands, unexecuted branches, or unverified failure paths. When missing toolchains or network barriers prevent execution, explicitly report checks as Unverified with blocker details.
+- Execute repository-native test commands starting from the narrowest relevant vector.
 
-## Verification
+## Adversarial Falsification
 
-- Use documented, repository-native commands from configs, scripts, CI definitions, or docs; do not guess global commands. Start with narrowest relevant checks.
-- Add deterministic tests for changed observable behavior and regressions (boundary, transition, invalid, and failure paths).
-- Control time, randomness, network, and asynchronous completion; run broader checks when warranted.
-- Report exact commands and results. Never claim an unrun or failed check passed.
+- Scope: Active only during explicit review tasks or final diff audits; do not apply during implementation.
+- Audit changes skeptically against regressions, invalid states, and hollow indirection.
+- Every reported defect is admissible if and only if accompanied by a constructible counterexample or deterministic static evidence (e.g. zero referencing call sites, unreachable branches, single-caller pass-through wrappers):
+  - `[P1]`: Broken invariant, security breach, or data corruption.
+  - `[P2]`: Unsound contract, unhandled state transition, or unverified branch.
+  - `[P3]`: Dead symbol (report for awareness; do not delete pre-existing dead code), unneeded complexity, or structural redundancy (e.g. indirection without polymorphism or transformation).
 
-## Documentation and synchronization
+## Handoff and Integration Integrity
 
-- Update permanent documentation when behavior, contracts, architecture, operational requirements, or domain rules change.
-- Permanent specifications govern architecture specs, `context.md` (domain terms), and ADRs (hard-to-reverse decisions); plans track execution only.
-- Preserve commands, paths, identifiers, conditions, exceptions, links, and machine-readable content; do not invent unsupported requirements.
-- Keep documentation concise, factual, and consistent with implementation.
-
-## Communication and Git handoff
-
-- Lead with the answer or decision. Be direct and concise without omitting requirements, constraints, identifiers, commands, errors, order, or next actions.
-- Avoid repetition, filler, and unsupported certainty; preserve code blocks, commands, paths, identifiers, and machine-readable text.
-- Do not stage, commit, push, reset, discard, or clean changes, and never run destructive commands such as `git push`, `git reset --hard`, `git clean -f`, or `rm -rf`, unless explicitly requested.
-- Review the diff before finishing for accidental files, debug output, secrets, and unnecessary changes; summarize paths, behavior, verification results, failures, assumptions, and follow-up.
+- Deliver answers directly: lead with the decision or outcome without conversational preamble, restatements, or speculative commentary.
+- Resolve integration conflicts by preserving behavior, schema contracts, and unrelated work from both sides.
+- Audit the final diff before handoff to guarantee absence of untracked assets, debug noise, secret leakage, or incidental whitespace changes.

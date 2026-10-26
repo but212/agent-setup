@@ -7,11 +7,9 @@
 
 ### Included
 
-- Skill selection and routing based on request intent.
-- Repository-grounded planning, design, implementation, testing, and review.
-- Response prose and document compression (`crisp`) with invariant preservation.
-- Git integration conflict resolution (`git-conflict`) with preserved unrelated work.
-- Plan lifecycle (`.plans/YYYY-MM-DD/[task-name].md`) and permanent specification synchronization.
+- Skill selection and routing for interactive challenge, prose compression, structural design, and adversarial review.
+- Core implementation, TDD verification, conflict resolution, and communication invariants governed by AGENTS.md.
+- Plan tracking via agent plan artifacts or dated plan files (`.plans/YYYY-MM-DD/[task-name].md`).
 - Dependency-free validation of frontmatter, plan paths, ASCII Markdown, and safety guards.
 - Mirror deployment of `AGENTS.md` and `skills/` into the shared agent directory.
 
@@ -25,16 +23,16 @@
 
 Authoritative behavioral rules, precedence, safety boundaries, and execution invariants are defined in [AGENTS.md](../AGENTS.md).
 
-- **Single source of truth (SSOT):** Detailed workflows, role bindings, activation triggers, and modification authority belong exclusively to `skills/*/SKILL.md`: scalar metadata in frontmatter, workflows and the `spec-drive` Role Registry in the body.
+- **Single source of truth (SSOT):** Detailed workflows and activation triggers belong to `skills/*/SKILL.md` (scalar frontmatter and body). Core coding invariants (TDD, minimal changes, safety guards) belong to AGENTS.md.
 
 ## 2. Skill Catalog and Metadata
 
 Each skill in `skills/*/SKILL.md` declares scalar frontmatter fields:
 
-- `name`: Matches directory name.
+- `name`: Matches directory name (`challenge`, `crisp`, `lean-design`, `lean-review`).
 - `role`: One-line responsibility summary.
 - `activation`: Triggers and command aliases.
-- `modification-authority`: Permitted write scope.
+- `modification-authority`: Permitted write scope (`None` for read-only skills, `Named files only` for `crisp`).
 - `description`: Single-line overview of skill purpose.
 
 Frontmatter is validated by `scripts/validate-skills.py`.
@@ -49,32 +47,42 @@ Frontmatter is validated by `scripts/validate-skills.py`.
 - Light mode: Selected for early idea exploration without codebase context.
 - Questioning presents 2-4 options with `(Recommended)` first, one decision at a time.
 
-### 3.2 Implementation Routing
+### 3.2 Prose and Document Compression Routing
 
-1. Run `lean-design` first when state representations, types, schemas, or API boundaries are central.
-2. Use `spec-drive` to coordinate contract-sensitive work, manage `.plans/` execution tracking, and slice TDD contracts.
-3. Use `lean-mode` for minimal code and deterministic test changes mapped to contracts.
-4. Use `lean-review` for read-only adversarial diff or repository audits.
-5. Use `git-conflict` for Git integration conflicts. It is standalone: it does not route through `spec-drive`, and its Conflict report is terminal output.
+`crisp` compresses response prose and explicitly named Markdown or plain-text documents without altering operational contracts:
 
-Role names (Plan Coordinator, Structural Designer, Implementation Engine, Review Gate) are bound only in the `spec-drive` Role Registry. Other skills reference them by name and default.
+- Response mode: Lead with outcome, optimize density, zero filler.
+- Document mode: Inventory anchors, cut bloat, keep nuance, verify diff, report in 5 sections (`Outcome`, `Scope`, `Analysis`, `Verification`, `Next`).
+- Authority is strictly limited to named target files (`modification-authority: Named files only`).
 
-### 3.3 Execution Modes
+### 3.3 Structural Design Routing
 
-- `spec-drive` coordinates contract changes and defaults to a read-only specification and plan.
+`lean-design` models domain structures, state transitions, schemas, and boundaries before coding:
+
+- Models sum types, state machines, and algebraic invariants.
+- Eliminates impossible states and pass-through abstractions.
+- Handoff contracts provide exact type signatures and transition rules for implementation.
+
+### 3.4 Adversarial Review Routing
+
+`lean-review` performs read-only audits on diffs or repositories:
+
+- Falsifies behavior with concrete, constructible counterexamples.
+- Categorizes findings by severity (`[P1]`, `[P2]`, `[P3]`).
+- Strictly read-only (`modification-authority: None`), producing minimal action proposals for implementation.
+
+### 3.5 Direct Handoff
+
+Skills do not require an intermediary router. Each skill completes its specialized cognitive task (questioning, compressing, modeling, reviewing) and hands results directly to the user or to implementation governed by AGENTS.md.
+
+### 3.6 Plan Tracking Rules
+
+When tracking multi-step work, an agent plan artifact or a dated plan file (`.plans/YYYY-MM-DD/[task-name].md`) serves as the execution SSOT:
+
 - Work remains in `planned` state until explicit execution approval is granted.
+- Check items only upon deterministic verification pass; record deviations under decisions and deviations.
 
-### 3.4 Plan Tracking Rules
-
-When `spec-drive` execution tracking is active, `.plans/YYYY-MM-DD/[task-name].md` (or an agent plan artifact) is the execution SSOT:
-
-- Lifecycle: `planned -> in-progress|cancelled`, `in-progress -> blocked|complete|cancelled`, or `blocked -> in-progress|cancelled`. `scripts/validate-skills.py` (`PLAN_TRANSITIONS`) enforces that `spec-drive` documents these transitions and that each plan `Status` is a known value.
-- Do not execute checklist items while `planned` and awaiting approval.
-- Plan structure: Goal, Scope, Evidence and assumptions, Contracts, Invariants, TDD slices and checklist, and Decisions and deviations.
-- Each TDD slice item maps contract IDs (`C-NN`), Red/Green/Refactor/Verify steps, and verification commands.
-- Check items only on a Verification Record with `Result: pass` (`lean-mode` format); record deviations under Decisions and deviations.
-
-### 3.5 Deployment Mirror Rules
+### 3.7 Deployment Mirror Rules
 
 `scripts/deploy_agents.py` mirrors repository content into `~/.agents` (overridable via `AGENT_HOME`):
 

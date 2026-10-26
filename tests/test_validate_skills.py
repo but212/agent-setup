@@ -19,43 +19,6 @@ def clone_repo_to_temp(directory: str) -> Path:
 
 
 class RepositoryContractTests(unittest.TestCase):
-    def test_crisp_has_no_commit_mode(self):
-        skill = (ROOT / "skills" / "crisp" / "SKILL.md").read_text(encoding="utf-8")
-        self.assertNotIn("Commit Message Mode", skill)
-        self.assertNotIn("/crisp commit", skill)
-        self.assertNotIn("Conventional Commits", skill)
-
-    def test_skills_use_role_based_adapters(self):
-        challenge = (ROOT / "skills" / "challenge" / "SKILL.md").read_text(
-            encoding="utf-8"
-        )
-        lean_design = (ROOT / "skills" / "lean-design" / "SKILL.md").read_text(
-            encoding="utf-8"
-        )
-        lean_review = (ROOT / "skills" / "lean-review" / "SKILL.md").read_text(
-            encoding="utf-8"
-        )
-
-        self.assertIn("Implementation Engine (default: `lean-mode`)", challenge)
-        self.assertIn("Plan Coordinator (default: `spec-drive`)", challenge)
-        self.assertIn("Implementation Engine (default: `lean-mode`)", lean_design)
-        self.assertIn("Implementation Engine (default: `lean-mode`)", lean_review)
-        self.assertIn("Plan Coordinator (default: `spec-drive`)", lean_review)
-
-    def test_spec_drive_protocol_gates(self):
-        skill = (ROOT / "skills" / "spec-drive" / "SKILL.md").read_text(
-            encoding="utf-8"
-        )
-        self.assertIn("Quality Gate", skill)
-        self.assertIn("Structural Designer (default: `lean-design`)", skill)
-        self.assertIn("Implementation Engine (default: `lean-mode`)", skill)
-        self.assertIn("Review Gate (default: `lean-review`)", skill)
-
-    def test_lean_mode_subcontracts(self):
-        skill = (ROOT / "skills" / "lean-mode" / "SKILL.md").read_text(encoding="utf-8")
-        self.assertIn("## Sub-Contract 1: Minimal Implementation", skill)
-        self.assertIn("## Sub-Contract 2: Deterministic Testing", skill)
-
     def test_catalog_validates(self):
         result = subprocess.run(
             [sys.executable, "scripts/validate-skills.py"],
@@ -67,28 +30,34 @@ class RepositoryContractTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
-    def test_exact_seven_skills_registered(self):
+    def test_exact_four_skills_registered(self):
         skills = sorted(p.name for p in (ROOT / "skills").iterdir() if p.is_dir())
-        expected = [
-            "challenge",
-            "crisp",
-            "git-conflict",
-            "lean-design",
-            "lean-mode",
-            "lean-review",
-            "spec-drive",
-        ]
+        expected = ["challenge", "crisp", "lean-design", "lean-review"]
         self.assertEqual(skills, expected)
+
+    def test_skills_modification_authorities(self):
+        for name in ["challenge", "lean-design", "lean-review"]:
+            skill = (ROOT / "skills" / name / "SKILL.md").read_text(encoding="utf-8")
+            self.assertIn("modification-authority: None", skill)
+        crisp = (ROOT / "skills" / "crisp" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("modification-authority: Named files only", crisp)
+
+    def test_agents_contains_absorbed_directives(self):
+        agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
+        self.assertIn("Multi-step tasks track execution via an agent plan artifact", agents)
+        self.assertIn("Follow test-driven development for logic changes", agents)
+        self.assertIn("Resolve integration conflicts by preserving behavior", agents)
+        self.assertIn("do not run destructive commands", agents)
 
     def test_unquoted_reserved_frontmatter_scalar_fails(self):
         with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
             repository = clone_repo_to_temp(directory)
-            skill = repository / "skills" / "crisp" / "SKILL.md"
+            skill = repository / "skills" / "challenge" / "SKILL.md"
             text = skill.read_text(encoding="utf-8")
             skill.write_text(
                 text.replace(
-                    'activation: "`/crisp`, compression request"',
-                    "activation: `/crisp`, compression request",
+                    'activation: "`/challenge`, assumption review"',
+                    "activation: `/challenge`, assumption review",
                     1,
                 ),
                 encoding="utf-8",
@@ -107,6 +76,34 @@ class RepositoryContractTests(unittest.TestCase):
             "activation plain value cannot start with reserved character '`'",
             result.stdout,
         )
+
+    def test_block_scalar_description_fails(self):
+        with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
+            repository = clone_repo_to_temp(directory)
+            skill = repository / "skills" / "challenge" / "SKILL.md"
+            text = skill.read_text(encoding="utf-8")
+            lines = text.splitlines()
+            end = lines.index("---", 1)
+            new_lines = []
+            for line in lines[:end]:
+                if line.startswith("description:"):
+                    new_lines.append("description: >")
+                    new_lines.append("  Line one of description.")
+                    break
+                new_lines.append(line)
+            new_lines.extend(lines[end:])
+            skill.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
+
+            result = subprocess.run(
+                [sys.executable, "scripts/validate-skills.py"],
+                cwd=repository,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("description block scalar not permitted", result.stdout)
 
     def test_non_ascii_markdown_fails(self):
         with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
@@ -145,67 +142,29 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("valid ISO calendar date", result.stdout)
 
-    def test_planned_plan_can_be_cancelled(self):
-        text = (ROOT / "skills" / "spec-drive" / "SKILL.md").read_text(encoding="utf-8")
-
-        self.assertIn("planned -> in-progress | cancelled", text)
-
-    def test_blocked_plan_can_be_cancelled(self):
-        text = (ROOT / "skills" / "spec-drive" / "SKILL.md").read_text(encoding="utf-8")
-
-        self.assertIn("blocked -> in-progress | cancelled", text)
-
-    def test_readme_documents_complete_validation(self):
-        text = (ROOT / "README.md").read_text(encoding="utf-8")
-
-        self.assertIn("python3 scripts/validate-skills.py", text)
-        self.assertIn("python3 -m unittest discover -s tests -v", text)
-
-    def test_spec_drive_has_only_spec_drive_command_alias(self):
-        skill = (ROOT / "skills" / "spec-drive" / "SKILL.md").read_text(
-            encoding="utf-8"
-        )
-
-        self.assertIn(
-            'activation: "`/spec-drive`, contract-sensitive change, planning request"',
-            skill,
-        )
-        self.assertNotIn("/sdd", skill)
-
-    def test_peer_skills_do_not_hardcode_plan_paths(self):
-        peer_skills = [
-            "challenge",
-            "crisp",
-            "git-conflict",
-            "lean-design",
-            "lean-mode",
-            "lean-review",
-        ]
-        for name in peer_skills:
-            skill_file = ROOT / "skills" / name / "SKILL.md"
-            text = skill_file.read_text(encoding="utf-8")
-            self.assertNotIn(
-                ".plans/YYYY-MM-DD",
-                text,
-                f"Skill {name} hardcodes .plans/ path instead of delegating to spec-drive",
-            )
-
-    def test_block_scalar_description_fails(self):
+    def test_planned_plan_status_passes(self):
         with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
             repository = clone_repo_to_temp(directory)
-            skill = repository / "skills" / "crisp" / "SKILL.md"
-            text = skill.read_text(encoding="utf-8")
-            lines = text.splitlines()
-            end = lines.index("---", 1)
-            new_lines = []
-            for line in lines[:end]:
-                if line.startswith("description:"):
-                    new_lines.append("description: >")
-                    new_lines.append("  Line one of description.")
-                    break
-                new_lines.append(line)
-            new_lines.extend(lines[end:])
-            skill.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
+            plan = repository / ".plans" / "2026-01-01" / "task.md"
+            plan.parent.mkdir(parents=True)
+            plan.write_text("# Plan: task\n\n- Status: `planned`\n", encoding="utf-8")
+
+            result = subprocess.run(
+                [sys.executable, "scripts/validate-skills.py"],
+                cwd=repository,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_unknown_plan_status_fails(self):
+        with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
+            repository = clone_repo_to_temp(directory)
+            plan = repository / ".plans" / "2026-01-01" / "task.md"
+            plan.parent.mkdir(parents=True)
+            plan.write_text("# Plan: task\n\n- Status: `done`\n", encoding="utf-8")
 
             result = subprocess.run(
                 [sys.executable, "scripts/validate-skills.py"],
@@ -216,55 +175,20 @@ class RepositoryContractTests(unittest.TestCase):
             )
 
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("description block scalar not permitted", result.stdout)
+        self.assertIn("unknown status 'done'", result.stdout)
 
-    def test_git_conflict_requires_explicit_commit_request(self):
-        skill = (ROOT / "skills" / "git-conflict" / "SKILL.md").read_text(
-            encoding="utf-8"
-        )
-        self.assertNotIn("necessarily requires completing the integration", skill)
-        self.assertIn(
-            "Do not stash, commit, or push unless the user explicitly requests that operation.",
-            skill,
-        )
+    def test_readme_documents_complete_validation(self):
+        text = (ROOT / "README.md").read_text(encoding="utf-8")
 
-    def test_git_conflict_commands_are_shell_neutral(self):
-        skill = (ROOT / "skills" / "git-conflict" / "SKILL.md").read_text(
-            encoding="utf-8"
-        )
-        self.assertNotIn("|| true", skill)
-        self.assertNotIn("grep", skill)
-        self.assertIn("git diff --cached --name-only --diff-filter=U", skill)
-
-    def test_spec_drive_verifies_after_refactor(self):
-        skill = (ROOT / "skills" / "spec-drive" / "SKILL.md").read_text(
-            encoding="utf-8"
-        )
-        red_idx = skill.find("1. **Red:**")
-        green_idx = skill.find("2. **Green:**")
-        refactor_idx = skill.find("3. **Refactor:**")
-        verify_idx = skill.find("4. **Verify:**")
-        self.assertTrue(red_idx < green_idx < refactor_idx < verify_idx)
-
-    def test_spec_drive_phase4_runs_lean_review(self):
-        skill = (ROOT / "skills" / "spec-drive" / "SKILL.md").read_text(
-            encoding="utf-8"
-        )
-        self.assertIn("lean-review", skill)
-        self.assertIn("Blocking: No", skill)
-
-    def test_spec_drive_has_no_invariants_matrix(self):
-        skill = (ROOT / "skills" / "spec-drive" / "SKILL.md").read_text(
-            encoding="utf-8"
-        )
-        self.assertNotIn("Invariants Matrix", skill)
+        self.assertIn("python3 scripts/validate-skills.py", text)
+        self.assertIn("python3 -m unittest discover -s tests -v", text)
 
     def test_lean_review_hands_off_blocking_findings(self):
         skill = (ROOT / "skills" / "lean-review" / "SKILL.md").read_text(
             encoding="utf-8"
         )
-        self.assertIn("lean-mode", skill)
         self.assertIn("Blocking: Yes", skill)
+        self.assertIn("AGENTS.md", skill)
 
     def test_permissive_safety_guard_clause_fails(self):
         with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
@@ -273,7 +197,7 @@ class RepositoryContractTests(unittest.TestCase):
             text = agents.read_text(encoding="utf-8")
             agents.write_text(
                 text.replace(
-                    "never run destructive commands such as `git push`, `git reset --hard`, `git clean -f`, or `rm -rf`, unless explicitly requested.",
+                    "do not run destructive commands such as `git push`, `git reset --hard`, `git clean -f`, or `rm -rf`, without explicit user request.",
                     "destructive commands such as `git push`, `git reset --hard`, `git clean -f`, or `rm -rf` are allowed unless the user objects.",
                 ),
                 encoding="utf-8",
@@ -332,106 +256,43 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("does not match", result.stdout)
 
-    def test_spec_drive_registers_all_roles(self):
-        spec_drive = (ROOT / "skills" / "spec-drive" / "SKILL.md").read_text(
-            encoding="utf-8"
-        )
-        roles = (
-            "Plan Coordinator",
-            "Structural Designer",
-            "Implementation Engine",
-            "Review Gate",
-        )
+    def test_gitattributes_enforces_lf(self):
+        gitattributes = ROOT / ".gitattributes"
+        self.assertTrue(gitattributes.is_file(), ".gitattributes must exist")
+        content = gitattributes.read_text(encoding="utf-8")
+        self.assertIn("* text=auto eol=lf", content)
 
-        self.assertIn("### Role Registry", spec_drive)
-        for role in roles:
-            self.assertIn(f"| {role} |", spec_drive)
+    def test_tracked_text_files_use_lf_line_endings(self):
+        suffixes = {".md", ".py", ".sh", ".yml", ".yaml"}
+        named_files = {"LICENSE", "NOTICE", ".gitattributes", ".gitignore"}
+        crlf_files: list[str] = []
+        for path in ROOT.rglob("*"):
+            if not path.is_file():
+                continue
+            rel_parts = path.relative_to(ROOT).parts
+            if any(part.startswith((".", "__pycache__")) for part in rel_parts):
+                continue
+            if (
+                path.suffix in suffixes or path.name in named_files
+            ) and b"\r\n" in path.read_bytes():
+                crlf_files.append(str(path.relative_to(ROOT)))
+        self.assertEqual(crlf_files, [], f"Found CRLF in files: {crlf_files}")
 
-    def test_verification_record_gates_plan_checklist(self):
-        lean_mode = (ROOT / "skills" / "lean-mode" / "SKILL.md").read_text(
-            encoding="utf-8"
-        )
-        spec_drive = (ROOT / "skills" / "spec-drive" / "SKILL.md").read_text(
-            encoding="utf-8"
-        )
-
-        self.assertIn("Result: pass | fail | inconclusive", lean_mode)
-        self.assertIn("check the item only on `Result: pass`", spec_drive)
-
-    def test_spec_routes_implementation_skills(self):
-        spec = (ROOT / "spec" / "skills-spec.md").read_text(encoding="utf-8")
-        routing = spec.split("### 3.2 Implementation Routing", 1)[1].split(
-            "### 3.3", 1
-        )[0]
-
-        for name in (
-            "lean-design",
-            "spec-drive",
-            "lean-mode",
-            "lean-review",
-            "git-conflict",
-        ):
-            self.assertIn(f"`{name}`", routing)
-
-    def test_planned_plan_status_passes(self):
-        with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
-            repository = clone_repo_to_temp(directory)
-            plan = repository / ".plans" / "2026-01-01" / "task.md"
-            plan.parent.mkdir(parents=True)
-            plan.write_text("# Plan: task\n\n- Status: `planned`\n", encoding="utf-8")
-
-            result = subprocess.run(
-                [sys.executable, "scripts/validate-skills.py"],
-                cwd=repository,
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-
-    def test_unknown_plan_status_fails(self):
-        with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
-            repository = clone_repo_to_temp(directory)
-            plan = repository / ".plans" / "2026-01-01" / "task.md"
-            plan.parent.mkdir(parents=True)
-            plan.write_text("# Plan: task\n\n- Status: `done`\n", encoding="utf-8")
-
-            result = subprocess.run(
-                [sys.executable, "scripts/validate-skills.py"],
-                cwd=repository,
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("unknown status 'done'", result.stdout)
-
-    def test_transition_table_drift_fails(self):
-        with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
-            repository = clone_repo_to_temp(directory)
-            skill = repository / "skills" / "spec-drive" / "SKILL.md"
-            text = skill.read_text(encoding="utf-8").replace(
-                "blocked -> in-progress | cancelled",
-                "blocked -> in-progress",
-                1,
-            )
-            skill.write_text(text, encoding="utf-8")
-
-            result = subprocess.run(
-                [sys.executable, "scripts/validate-skills.py"],
-                cwd=repository,
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn(
-            "missing plan transition `blocked -> in-progress | cancelled`",
-            result.stdout,
-        )
+    def test_skills_have_no_orphaned_skill_references(self):
+        orphaned_patterns = ["spec-drive", "lean-mode", "git-conflict"]
+        for skill_dir in (ROOT / "skills").iterdir():
+            if not skill_dir.is_dir():
+                continue
+            skill_file = skill_dir / "SKILL.md"
+            if not skill_file.is_file():
+                continue
+            content = skill_file.read_text(encoding="utf-8")
+            for pattern in orphaned_patterns:
+                self.assertNotIn(
+                    pattern,
+                    content,
+                    f"Found orphaned reference '{pattern}' in {skill_file.relative_to(ROOT)}",
+                )
 
 
 if __name__ == "__main__":

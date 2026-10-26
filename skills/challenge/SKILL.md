@@ -12,7 +12,7 @@ Stress-test plans and technical decisions before implementation.
 
 ## Operating contract
 
-Produce one confirmed decision summary without modifying code, config, docs, tests, or plan files (`spec-drive` owns plan files). The user owns decisions and trade-offs.
+Produce one confirmed decision summary without modifying code, config, docs, tests, or plan files. The user owns decisions and trade-offs.
 
 Modes:
 - **Grounded mode:** Codebase, tests, `context.md`, or ADRs exist.
@@ -52,11 +52,11 @@ Triggered when any Fast-path gate fails. Inspect repository facts, docs, code, a
 
 ## Output & handoff
 
-Output the decision summary in chat upon confirmation. When the request names a plan file, hand off to Plan Coordinator (default: `spec-drive`) for recording.
+Output the decision summary in chat upon confirmation. When approved, hand off confirmed decisions directly to implementation under AGENTS.md rules, or to `lean-design` if structural modeling is required.
 
 - **Decision Summary:** Mode (`Challenge Grounded` or `Challenge Light`) | Path (`Fast` or `Standard`) | Next step | Decisions | Domain term changes / ADRs affected (if applicable) | Challenged assumptions | Risks & mitigations | Revisit triggers.
   - *Fast path:* short form omitting domain terms, ADRs, and revisit triggers if unaffected.
   - *Standard path:* full form above.
 - **Handoff:**
-  - Fast path: hand off directly to Implementation Engine (default: `lean-mode`) for execution, or to Plan Coordinator (default: `spec-drive`) if a formal plan is requested.
-  - Standard path: hand off to Plan Coordinator (default: `spec-drive`) (or Structural Designer, default: `lean-design`, if structural modeling is required); never hand off directly from Standard path to Implementation Engine (default: `lean-mode`).
+  - Fast path: hand off directly to implementation under AGENTS.md rules.
+  - Standard path: hand off to user for confirmation, then to `lean-design` if structural modeling is required, or directly to implementation.
