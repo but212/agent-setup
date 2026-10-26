@@ -10,31 +10,33 @@ description: Challenge assumptions and stress-test a plan, decision, or idea thr
 
 Stress-test plans and technical decisions before implementation.
 
-## Operating contract
+## Operating Contract
 
-Produce one confirmed decision summary without modifying code, config, docs, tests, or plan files. The user owns decisions and trade-offs.
+Read-only: produce one confirmed decision summary in chat without modifying code, config, docs, tests, or plan files. The user owns decisions and trade-offs.
 
 Modes:
+
 - **Grounded mode:** Codebase, tests, `context.md`, or ADRs exist.
 - **Light mode:** No codebase or project documentation exists.
 
-## Fast path
+## Fast Path
 
-Applies when all applicable gates pass:
+Applies when all applicable gates pass (Grounded: all 6; Light: 1, 2, 4, 5):
+
 1. Reversible, inexpensive rollback.
 2. Local to one area.
-3. No changes to public API, schema, auth, state transitions, invariants, or domain language. *(Grounded only)*
+3. No changes to public API, schema, auth, state transitions, invariants, or domain language *(Grounded only)*.
 4. Minimal inspection clarifies goal, constraints, approach, and validation.
 5. No unresolved material decisions affecting scope, behavior, or risk.
-6. No `context.md` or ADR update required. *(Grounded only)*
+6. No `context.md` or ADR update required *(Grounded only)*.
 
-Grounded mode requires all 6 gates; Light mode requires gates 1, 2, 4, and 5. Output the short-form decision summary in chat for user confirmation.
+Output short-form decision summary in chat for confirmation; hand off directly to implementation under AGENTS.md rules.
 
-## Standard path
+## Standard Path
 
 Triggered when any Fast-path gate fails. Inspect repository facts, docs, code, and types first; do not ask for verifiable facts.
 
-- **Questioning:** Ask one material decision at a time in dependency order. Present 2-4 options with `(Recommended)` first.
+- **Questioning:** One material decision at a time in dependency order. 2-4 options with `(Recommended)` first.
 - **Question format:** Recommendation | Why | Trade-off / Counter-argument | Decision requested.
 - **Post-answer summary:** Decision | Recommendation | Why | Risk mitigated.
 
@@ -44,19 +46,13 @@ Triggered when any Fast-path gate fails. Inspect repository facts, docs, code, a
 - **Maintain `context.md`:** Propose updates for entities, value objects, invariants, boundaries, or lifecycle rules.
 - **Maintain ADRs:** Propose ADRs for hard-to-reverse or high-trade-off architectural choices.
 
-## Controls
+## Output & Handoff
 
-- **Scope:** Read-only challenge; in-chat summaries only.
-- **Activate:** Explicit `/challenge` or assumption review request.
-- **Deactivate:** Concluded upon decision summary confirmation and handoff.
+Output decision summary in chat upon confirmation:
 
-## Output & handoff
-
-Output the decision summary in chat upon confirmation. When approved, hand off confirmed decisions directly to implementation under AGENTS.md rules, or to `lean-design` if structural modeling is required.
-
-- **Decision Summary:** Mode (`Challenge Grounded` or `Challenge Light`) | Path (`Fast` or `Standard`) | Next step | Decisions | Domain term changes / ADRs affected (if applicable) | Challenged assumptions | Risks & mitigations | Revisit triggers.
-  - *Fast path:* short form omitting domain terms, ADRs, and revisit triggers if unaffected.
-  - *Standard path:* full form above.
+- **Summary fields:** Mode (`Challenge Grounded` | `Challenge Light`) | Path (`Fast` | `Standard`) | Next step | Decisions | Domain term changes / ADRs affected (if applicable) | Challenged assumptions | Risks & mitigations | Revisit triggers.
+  - *Fast path:* Short form (omit unaffected domain terms, ADRs, revisit triggers).
+  - *Standard path:* Full form.
 - **Handoff:**
-  - Fast path: hand off directly to implementation under AGENTS.md rules.
-  - Standard path: hand off to user for confirmation, then to `lean-design` if structural modeling is required, or directly to implementation.
+  - Fast path: Direct to implementation under AGENTS.md rules.
+  - Standard path: User confirmation -> `lean-design` (if structural modeling needed) or direct to implementation.

@@ -8,60 +8,55 @@ description: Adversarial diff or repository review for semantic regressions, ove
 
 # Lean Review
 
-Audit diffs and repositories for semantic regressions, impossible states, and architectural bloat.
+Audit diffs and repositories for semantic regressions, impossible states, and architectural bloat. Strictly read-only; no stylistic churn.
 
 ## Operating contract
 
-- Assume diffs hide regressions, impossible states, or indirection; compare against specifications, invariants, and prior behavior.
-- Read-only: produce actionable findings without stylistic churn.
-- Every finding MUST include a concrete counterexample verifiable without hidden context.
-- Preserve security, validation, error handling, accessibility, and domain invariants.
+- Compare against specifications, invariants, and prior behavior.
+- Every finding MUST include a concrete, reproducible counterexample.
+- Never weaken or delete trust-boundary validation, security controls, error handling, accessibility, or domain invariants.
 
 ## Review vectors
 
 Core:
 
 1. **`[semantic]`**: domain contract violation, lifecycle/ownership drift, broken failure paths.
-2. **`[state]`**: impossible/contradictory states or invariants kept only by convention when types, schemas, or boundaries could enforce them. Show a constructible counterexample.
+2. **`[state]`**: impossible/contradictory states or invariants maintained only by convention.
 3. **`[indirection]`**: premature or single-implementation abstraction (YAGNI).
-4. **`[delete]`**: dead code, orphaned types, unreachable branches, and redundant runtime guards for unconstructible states.
+4. **`[delete]`**: dead code, orphaned types, unreachable branches, redundant guards for unconstructible states.
 
 Secondary:
 
 - **`[effect]`**: hidden I/O, unbounded resources, global state, leaked transactions.
 - **`[boundary]`**: weakened validation, partition leaks, non-atomic transitions, broken idempotency.
-- **`[shrink]`**: imperative logic replaceable by stdlib primitives.
+- **`[shrink]`**: imperative logic replaceable by standard library primitives.
 - **`[surgical]`**: unrelated refactoring or scope creep.
 
-For docs/skills, map vectors to stated claims, invariants, and reachable surfaces.
+For docs/skills: map vectors to stated claims, invariants, and reachable surfaces.
 
 ## Nitpick gate
 
-Discard formatting, naming, and style. Report only issues demonstrating:
+Discard formatting, naming, and style. Report only:
 
 1. Executable failing input or state.
 2. Race condition, leak, unbounded resource contention, or trust/partition breach.
 3. Observable contract or serialization break across versions.
 4. Measurable complexity reduction or dead surface removal.
 
-Never recommend deleting trust-boundary validation, security controls, error handling, or accessibility. Reject speculative performance concerns lacking reproducible triggers. Do not demand type encodings for invariants data models cannot express (e.g. cross-row uniqueness); schemas, transactions, or single runtime checks suffice.
+Reject ungrounded performance concerns. Accept runtime/schema checks when types cannot encode invariants (e.g. cross-row uniqueness).
 
 ## Workflow
 
-Default to `diff`; use `repo` for whole-repo or named-module audits.
+Default to `diff`; use `repo` for full repository or named modules.
 
-### `diff`
-
-1. Identify target diff (`git diff`, staged, commit range, named files).
-2. Trace changes through types, callers, transitions, and boundaries.
-3. Falsify observable behavior against review vectors.
-4. Re-read diff after formatting or external updates. Diagnostics must exit cleanly.
-
-### `repo`
-
-1. State inspection boundary and exclusions.
-2. Trace exports, call paths, types, and boundaries.
-3. Identify duplicate helpers, speculative abstractions, and dead surfaces. Report uncertainty for confirmation.
+- **`diff`**:
+  1. Identify target diff (`git diff`, staged, commit range, named files).
+  2. Trace changes through types, callers, transitions, and boundaries.
+  3. Falsify observable behavior against vectors; re-read after updates. Diagnostics must exit cleanly.
+- **`repo`**:
+  1. State boundary and exclusions.
+  2. Trace exports, call paths, types, and boundaries.
+  3. Report duplicate helpers, speculative abstractions, and dead surfaces (flag uncertainty for confirmation).
 
 ## Output format
 
@@ -80,7 +75,7 @@ For each finding:
 Summary status:
 
 - `Blocking`: `Yes ([P1] or [P2] findings present)` | `No (Clean or [P3] advisory only)`
-- When `Blocking: Yes`, report Minimal Action items for surgical resolution under AGENTS.md rules; `lean-review` remains strictly read-only.
+- When `Blocking: Yes`, report Minimal Action for surgical resolution under `AGENTS.md`.
 
 Clean output:
 
