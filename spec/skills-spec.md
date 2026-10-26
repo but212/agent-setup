@@ -7,7 +7,7 @@
 
 ### Included
 
-- Skill selection and routing for interactive challenge, structural design, and adversarial review.
+- Skill selection and routing for interactive challenge, prose compression, structural design, and adversarial review.
 - Core implementation, TDD verification, conflict resolution, and communication invariants governed by AGENTS.md.
 - Plan tracking via agent plan artifacts or dated plan files (`.plans/YYYY-MM-DD/[task-name].md`).
 - Dependency-free validation of frontmatter, plan paths, ASCII Markdown, and safety guards.
@@ -29,10 +29,10 @@ Authoritative behavioral rules, precedence, safety boundaries, and execution inv
 
 Each skill in `skills/*/SKILL.md` declares scalar frontmatter fields:
 
-- `name`: Matches directory name (`challenge`, `lean-design`, `lean-review`).
+- `name`: Matches directory name (`challenge`, `crisp`, `lean-design`, `lean-review`).
 - `role`: One-line responsibility summary.
 - `activation`: Triggers and command aliases.
-- `modification-authority`: Permitted write scope (`None`).
+- `modification-authority`: Permitted write scope (`None` for read-only skills, `Named files only` for `crisp`).
 - `description`: Single-line overview of skill purpose.
 
 Frontmatter is validated by `scripts/validate-skills.py`.
@@ -47,7 +47,15 @@ Frontmatter is validated by `scripts/validate-skills.py`.
 - Light mode: Selected for early idea exploration without codebase context.
 - Questioning presents 2-4 options with `(Recommended)` first, one decision at a time.
 
-### 3.2 Structural Design Routing
+### 3.2 Prose and Document Compression Routing
+
+`crisp` compresses response prose and explicitly named Markdown or plain-text documents without altering operational contracts:
+
+- Response mode: Lead with outcome, optimize density, zero filler.
+- Document mode: Inventory anchors, cut bloat, keep nuance, verify diff, report in 5 sections (`Outcome`, `Scope`, `Analysis`, `Verification`, `Next`).
+- Authority is strictly limited to named target files (`modification-authority: Named files only`).
+
+### 3.3 Structural Design Routing
 
 `lean-design` models domain structures, state transitions, schemas, and boundaries before coding:
 
@@ -55,7 +63,7 @@ Frontmatter is validated by `scripts/validate-skills.py`.
 - Eliminates impossible states and pass-through abstractions.
 - Handoff contracts provide exact type signatures and transition rules for implementation.
 
-### 3.3 Adversarial Review Routing
+### 3.4 Adversarial Review Routing
 
 `lean-review` performs read-only audits on diffs or repositories:
 
@@ -63,18 +71,18 @@ Frontmatter is validated by `scripts/validate-skills.py`.
 - Categorizes findings by severity (`[P1]`, `[P2]`, `[P3]`).
 - Strictly read-only (`modification-authority: None`), producing minimal action proposals for implementation.
 
-### 3.4 Direct Handoff
+### 3.5 Direct Handoff
 
-Skills do not require an intermediary router. Each skill completes its specialized cognitive task (questioning, modeling, reviewing) and hands results directly to the user or to implementation governed by AGENTS.md.
+Skills do not require an intermediary router. Each skill completes its specialized cognitive task (questioning, compressing, modeling, reviewing) and hands results directly to the user or to implementation governed by AGENTS.md.
 
-### 3.5 Plan Tracking Rules
+### 3.6 Plan Tracking Rules
 
 When tracking multi-step work, an agent plan artifact or a dated plan file (`.plans/YYYY-MM-DD/[task-name].md`) serves as the execution SSOT:
 
 - Work remains in `planned` state until explicit execution approval is granted.
 - Check items only upon deterministic verification pass; record deviations under decisions and deviations.
 
-### 3.6 Deployment Mirror Rules
+### 3.7 Deployment Mirror Rules
 
 `scripts/deploy_agents.py` mirrors repository content into `~/.agents` (overridable via `AGENT_HOME`):
 

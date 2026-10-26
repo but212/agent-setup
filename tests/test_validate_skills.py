@@ -30,15 +30,17 @@ class RepositoryContractTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
-    def test_exact_three_skills_registered(self):
+    def test_exact_four_skills_registered(self):
         skills = sorted(p.name for p in (ROOT / "skills").iterdir() if p.is_dir())
-        expected = ["challenge", "lean-design", "lean-review"]
+        expected = ["challenge", "crisp", "lean-design", "lean-review"]
         self.assertEqual(skills, expected)
 
-    def test_skills_have_read_only_authority(self):
+    def test_skills_modification_authorities(self):
         for name in ["challenge", "lean-design", "lean-review"]:
             skill = (ROOT / "skills" / name / "SKILL.md").read_text(encoding="utf-8")
             self.assertIn("modification-authority: None", skill)
+        crisp = (ROOT / "skills" / "crisp" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("modification-authority: Named files only", crisp)
 
     def test_agents_contains_absorbed_directives(self):
         agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
