@@ -2,44 +2,33 @@
 
 Deterministic, framework-agnostic operating baseline and safety contracts for coding agents.
 
-## Overview
+> For small workflows like air.
 
-`agent-setup` establishes an operating baseline for coding agents across different frameworks and models. It replaces open-ended prompts with explicit operational invariants, verifiable boundaries, and deterministic safety checks.
+## When to Use
 
-## Key Properties
+Skills are independent on-demand modalities, not a mandatory sequence:
 
-- **Contract-Driven**: Explicit inputs, outputs, and modification boundaries instead of roleplay or heuristic instructions.
-- **Verification-First**: Hard separation between executed verification and deductive inference. Unrun checks are never reported as passed.
-- **Minimal Blast Radius**: Rejection of destructive operations (`git push`, `git reset --hard`, `git clean -f`, `rm -rf`) and unrequested changes to lockfiles, schemas, or migrations.
-- **Deterministic CI**: Validated frontmatter, plan schemas, and safety assertions tested across Ubuntu, macOS, and Windows runners.
+- `/challenge`: Untested assumptions or ambiguous scope -> interview to confirm decisions.
+- `/lean-design`: State machines, sum types, or schemas -> eliminate impossible states before coding.
+- `AGENTS.md`: Standing constitution -> enforces TDD and blocks destructive actions on all tasks.
+- `/lean-review`: Diff audits and pre-merge verification -> report defects backed by concrete counterexamples.
+- `/crisp`: PRs, commit messages, or verbose documents -> compress text without semantic loss.
 
-## Architecture
+## Core Properties
 
-- **`AGENTS.md`**: Core repository constitution defining instruction precedence, safety guards, Baseline First / Constraint Projection, TDD, and Git handoff.
-- **`skills/`**: Four cohesive modal contracts:
-  - `challenge`: Focused inquiry resolving assumptions before implementation.
-  - `crisp`: Lossless compression of prose, commit messages, and explicitly named documents.
-  - `lean-design`: Minimal algebraic data modeling that makes invalid states unrepresentable.
-  - `lean-review`: Skeptical adversarial review categorizing findings (`[P1]`, `[P2]`, `[P3]`) supported by constructible counterexamples.
-- **`scripts/deploy_agents.py`**: Idempotent mirror harness synchronizing configurations to `~/.agents` with symlink and traversal protections.
-- **`scripts/validate-skills.py`**: Dependency-free validation of frontmatter metadata, ASCII-only constraints, dated plan paths, and destructive guard clauses.
+- **Contract-Driven**: Explicit inputs, outputs, and modification boundaries over roleplay or prose heuristics.
+- **Verification-First**: Hard separation of executed verification from deduction; unrun checks are never reported as passed.
+- **Minimal Blast Radius**: Rejection of destructive git actions (`git push`, `git reset --hard`, `git clean -f`, `rm -rf`) and unrequested file drift.
+- **Deterministic CI**: Multi-OS validation (Ubuntu, macOS, Windows) verifying schemas, plans, and safety invariants.
 
-## Inspirations
+## Layout and Contracts
 
-- `challenge`: Inspired by [grill-me](https://github.com/mattpocock/skills/tree/main/skills/productivity/grill-me).
-- `lean-review`: Inspired by [ponytail-review](https://github.com/DietrichGebert/ponytail/blob/main/skills/ponytail-review/SKILL.md).
-- `crisp`: Compression principles inspired by [caveman](https://github.com/JuliusBrussee/caveman).
-
-See NOTICE for third-party license notices.
-
-## Repository Layout
-
-- `AGENTS.md` - Repository-wide agent rules and safety invariants.
-- `skills/*/SKILL.md` - Modal skill contracts.
+- `AGENTS.md` - Core operating constitution defining precedence, safety guards, TDD, and handoff.
+- `skills/*/SKILL.md` - Four modal contracts: `challenge` (inquiry), `crisp` (compression), `lean-design` (types/invariants), `lean-review` (adversarial audit).
 - `spec/skills-spec.md` - Architecture specification and quality gates.
 - `.plans/YYYY-MM-DD/` - Tracked execution plans grouped by creation date.
-- `scripts/validate-skills.py` - Metadata, plan, and safety validator.
-- `scripts/deploy_agents.py` - Mirror deployment engine.
+- `scripts/deploy_agents.py` - Idempotent mirror harness for `~/.agents` (compatible with Antigravity, Gemini, and Claude Code).
+- `scripts/validate-skills.py` - Dependency-free metadata, plan, and safety validator.
 - `.github/workflows/ci.yml` - Multi-OS GitHub Actions workflow.
 
 ## Usage
@@ -69,3 +58,7 @@ The validator checks skill frontmatter, dated plan paths, plan status values, de
 ## Status
 
 The skill specification is currently `stable`. Promotion criteria defined in `spec/skills-spec.md` are verified and recorded.
+
+---
+
+Credits: `challenge` inspired by [grill-me](https://github.com/mattpocock/skills/tree/main/skills/productivity/grill-me), `lean-review` by [ponytail-review](https://github.com/DietrichGebert/ponytail/blob/main/skills/ponytail-review/SKILL.md), and `crisp` by [caveman](https://github.com/JuliusBrussee/caveman). See NOTICE.
