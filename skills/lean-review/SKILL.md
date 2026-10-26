@@ -83,5 +83,6 @@ Summary status:
 - When `Blocking: Yes`, hand Minimal Action items to Implementation Engine (default: `lean-mode`) for surgical resolution (routed through Plan Coordinator (default: `spec-drive`) when the request names a plan file); `lean-review` remains strictly read-only.
 
 Clean output:
+
 - Diff: `Diff is lean. No evidence-backed issues detected.`
 - Repo: `Repository is lean. No over-engineering detected.`

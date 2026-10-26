@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Validate skill metadata, repository contracts, and ASCII-only Markdown."""
 
-from dataclasses import dataclass
 import re
 import sys
+from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 
@@ -20,7 +20,9 @@ REQUIRED_SAFETY_GUARD_SENTENCE = (
     "or `rm -rf`, unless explicitly requested."
 )
 
-PLAN_STATUSES = frozenset({"planned", "in-progress", "blocked", "complete", "cancelled"})
+PLAN_STATUSES = frozenset(
+    {"planned", "in-progress", "blocked", "complete", "cancelled"}
+)
 PLAN_TRANSITIONS = {
     "planned": ("in-progress", "cancelled"),
     "in-progress": ("blocked", "complete", "cancelled"),
@@ -50,6 +52,7 @@ class ValidationReport:
 # ============================================================================
 # Read-only Core: parsing and verification (no writes)
 # ============================================================================
+
 
 def parse_frontmatter_dict(path: Path) -> dict[str, str]:
     lines = path.read_text(encoding="utf-8").splitlines()
@@ -91,7 +94,9 @@ def parse_frontmatter_dict(path: Path) -> dict[str, str]:
     return values
 
 
-def parse_skill_metadata(path: Path, root: Path = ROOT) -> tuple[SkillMetadata | None, list[str]]:
+def parse_skill_metadata(
+    path: Path, root: Path = ROOT
+) -> tuple[SkillMetadata | None, list[str]]:
     errors: list[str] = []
     try:
         raw = parse_frontmatter_dict(path)
@@ -101,7 +106,9 @@ def parse_skill_metadata(path: Path, root: Path = ROOT) -> tuple[SkillMetadata |
     expected_name = path.parent.name
     name = raw.get("name")
     if name != expected_name:
-        errors.append(f"{path.relative_to(root)}: name={name!r}, expected {expected_name!r}")
+        errors.append(
+            f"{path.relative_to(root)}: name={name!r}, expected {expected_name!r}"
+        )
 
     description = raw.get("description", "")
     if not description:
@@ -252,7 +259,9 @@ def check_spec_gates(
             r"## 4\. Quality Gates\s*\n(.*?)(?=\n##|\Z)", spec_text, re.DOTALL
         )
         if not gates_match:
-            errors.append(f"{spec_path.relative_to(root)}: missing '## 4. Quality Gates' section")
+            errors.append(
+                f"{spec_path.relative_to(root)}: missing '## 4. Quality Gates' section"
+            )
         else:
             unchecked = re.findall(r"^\s*-\s*\[ \]", gates_match.group(1), re.MULTILINE)
             if unchecked:
@@ -304,6 +313,7 @@ def validate_repository(
 # ============================================================================
 # Imperative Shell: CLI runner and formatting
 # ============================================================================
+
 
 def main() -> int:
     report = validate_repository(ROOT, SKILLS, AGENTS, PLANS, SPEC, README)

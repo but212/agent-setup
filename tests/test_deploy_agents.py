@@ -148,6 +148,7 @@ class DeployAgentsTests(unittest.TestCase):
 
     def test_has_symlink_or_reparse_in_chain_detects_ancestor(self):
         from unittest.mock import patch
+
         from scripts.deploy_agents import has_symlink_or_reparse_in_chain
 
         sym_parent = self.root / "sym_parent"
@@ -158,6 +159,7 @@ class DeployAgentsTests(unittest.TestCase):
 
     def test_has_symlink_or_reparse_in_chain_respects_stop_at(self):
         from unittest.mock import patch
+
         from scripts.deploy_agents import has_symlink_or_reparse_in_chain
 
         sym_parent = self.root / "sym_parent"
@@ -169,28 +171,26 @@ class DeployAgentsTests(unittest.TestCase):
 
     def test_has_symlink_or_reparse_in_chain_exempts_darwin_system_symlinks(self):
         from unittest.mock import patch
+
         from scripts.deploy_agents import has_symlink_or_reparse_in_chain
 
         path = Path("/tmp/sub/target")
         with patch("scripts.deploy_agents.is_symlink_or_reparse") as mock_is_sym:
             mock_is_sym.side_effect = lambda p: p == Path("/tmp")
-            self.assertFalse(
-                has_symlink_or_reparse_in_chain(path, is_darwin=True)
-            )
-            self.assertTrue(
-                has_symlink_or_reparse_in_chain(path, is_darwin=False)
-            )
+            self.assertFalse(has_symlink_or_reparse_in_chain(path, is_darwin=True))
+            self.assertTrue(has_symlink_or_reparse_in_chain(path, is_darwin=False))
 
     def test_has_symlink_or_reparse_in_chain_darwin_still_rejects_sub_symlinks(self):
         from unittest.mock import patch
+
         from scripts.deploy_agents import has_symlink_or_reparse_in_chain
 
         path = Path("/tmp/sym_sub/target")
         with patch("scripts.deploy_agents.is_symlink_or_reparse") as mock_is_sym:
-            mock_is_sym.side_effect = lambda p: p in (Path("/tmp"), Path("/tmp/sym_sub"))
-            self.assertTrue(
-                has_symlink_or_reparse_in_chain(path, is_darwin=True)
+            mock_is_sym.side_effect = lambda p: (
+                p in (Path("/tmp"), Path("/tmp/sym_sub"))
             )
+            self.assertTrue(has_symlink_or_reparse_in_chain(path, is_darwin=True))
 
     @unittest.skipUnless(CAN_SYMLINK, "filesystem symlinks not supported/permitted")
     def test_rejects_symlinked_skills_without_touching_victim(self):
@@ -290,7 +290,7 @@ class DeployAgentsTests(unittest.TestCase):
         self.assertEqual(sentinel.read_text(encoding="utf-8"), "keep-me")
 
     def test_compute_mirror_actions_identifies_stale_and_copied_files(self):
-        from scripts.deploy_agents import compute_mirror_actions, ActionKind
+        from scripts.deploy_agents import ActionKind, compute_mirror_actions
 
         source = self.root / "src_skills"
         target = self.root / "dst_skills"
@@ -308,7 +308,7 @@ class DeployAgentsTests(unittest.TestCase):
         self.assertIn(ActionKind.COPY_FILE, action_kinds)
 
     def test_validate_deployment_safety_returns_typed_target(self):
-        from scripts.deploy_agents import validate_deployment_safety, DeploymentTarget
+        from scripts.deploy_agents import DeploymentTarget, validate_deployment_safety
 
         target = self.root / "valid_target"
         result = validate_deployment_safety(self.repo, str(target), link=False)

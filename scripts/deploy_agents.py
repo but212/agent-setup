@@ -2,12 +2,12 @@
 """Mirror AGENTS.md and skills/ into shared agent directory (~/.agents)."""
 
 import argparse
-from dataclasses import dataclass
-from enum import Enum
 import os
-from pathlib import Path
 import shutil
 import sys
+from dataclasses import dataclass
+from enum import Enum
+from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -21,7 +21,7 @@ class ActionKind(Enum):
 
 class DeploymentSafetyError(Exception):
     """Raised when a pre-flight deployment safety invariant is violated."""
-    pass
+
 
 
 @dataclass(frozen=True)
@@ -54,6 +54,7 @@ class DeploymentPlan:
 # ============================================================================
 # Read-only Planning: Safety Inspection & Deployment Planning
 # ============================================================================
+
 
 def is_symlink_or_reparse(path: Path) -> bool:
     try:
@@ -133,11 +134,13 @@ def validate_deployment_safety(
             stop_at = None
 
     if has_symlink_or_reparse_in_chain(target_path, stop_at=stop_at):
-        raise DeploymentSafetyError(f"refusing symlinked AGENT_HOME: {target_input_str}\n")
+        raise DeploymentSafetyError(
+            f"refusing symlinked AGENT_HOME: {target_input_str}\n"
+        )
 
     try:
         canonical_target = get_canonical(target_path)
-    except Exception as exc:
+    except (OSError, RuntimeError) as exc:
         raise DeploymentSafetyError(f"cannot resolve AGENT_HOME: {exc}\n")
 
     is_root = canonical_target == canonical_target.parent or (
@@ -155,15 +158,23 @@ def validate_deployment_safety(
 
     target_agents = canonical_target / "AGENTS.md"
     if is_symlink_or_reparse(target_agents):
-        raise DeploymentSafetyError(f"refusing symlinked destination: {target_agents}\n")
+        raise DeploymentSafetyError(
+            f"refusing symlinked destination: {target_agents}\n"
+        )
     if target_agents.exists() and not target_agents.is_file():
-        raise DeploymentSafetyError(f"destination is not a regular file: {target_agents}\n")
+        raise DeploymentSafetyError(
+            f"destination is not a regular file: {target_agents}\n"
+        )
 
     target_skills = canonical_target / "skills"
     if is_symlink_or_reparse(target_skills):
-        raise DeploymentSafetyError(f"refusing symlinked destination: {target_skills}\n")
+        raise DeploymentSafetyError(
+            f"refusing symlinked destination: {target_skills}\n"
+        )
     if target_skills.exists() and not target_skills.is_dir():
-        raise DeploymentSafetyError(f"destination is not a directory: {target_skills}\n")
+        raise DeploymentSafetyError(
+            f"destination is not a directory: {target_skills}\n"
+        )
 
     pi_dir = home_dir / ".pi" / "agent"
     pi_agents = pi_dir / "AGENTS.md"
@@ -224,7 +235,9 @@ def compute_mirror_actions(
     return actions
 
 
-def plan_deployment(repo_root: Path, target_arg: str | None, link: bool) -> DeploymentPlan:
+def plan_deployment(
+    repo_root: Path, target_arg: str | None, link: bool
+) -> DeploymentPlan:
     target = validate_deployment_safety(repo_root, target_arg, link)
     agents_source = repo_root / "AGENTS.md"
     skills_source = repo_root / "skills"
@@ -250,6 +263,7 @@ def plan_deployment(repo_root: Path, target_arg: str | None, link: bool) -> Depl
 # ============================================================================
 # Imperative Shell: Filesystem Mutations & CLI Execution
 # ============================================================================
+
 
 def execute_deployment(plan: DeploymentPlan) -> None:
     plan.canonical_target.mkdir(parents=True, exist_ok=True)

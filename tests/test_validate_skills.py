@@ -26,9 +26,15 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertNotIn("Conventional Commits", skill)
 
     def test_skills_use_role_based_adapters(self):
-        challenge = (ROOT / "skills" / "challenge" / "SKILL.md").read_text(encoding="utf-8")
-        lean_design = (ROOT / "skills" / "lean-design" / "SKILL.md").read_text(encoding="utf-8")
-        lean_review = (ROOT / "skills" / "lean-review" / "SKILL.md").read_text(encoding="utf-8")
+        challenge = (ROOT / "skills" / "challenge" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        lean_design = (ROOT / "skills" / "lean-design" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        lean_review = (ROOT / "skills" / "lean-review" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
 
         self.assertIn("Implementation Engine (default: `lean-mode`)", challenge)
         self.assertIn("Plan Coordinator (default: `spec-drive`)", challenge)
@@ -37,7 +43,9 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("Plan Coordinator (default: `spec-drive`)", lean_review)
 
     def test_spec_drive_protocol_gates(self):
-        skill = (ROOT / "skills" / "spec-drive" / "SKILL.md").read_text(encoding="utf-8")
+        skill = (ROOT / "skills" / "spec-drive" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
         self.assertIn("Quality Gate", skill)
         self.assertIn("Structural Designer (default: `lean-design`)", skill)
         self.assertIn("Implementation Engine (default: `lean-mode`)", skill)
@@ -138,16 +146,12 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("valid ISO calendar date", result.stdout)
 
     def test_planned_plan_can_be_cancelled(self):
-        text = (ROOT / "skills" / "spec-drive" / "SKILL.md").read_text(
-            encoding="utf-8"
-        )
+        text = (ROOT / "skills" / "spec-drive" / "SKILL.md").read_text(encoding="utf-8")
 
         self.assertIn("planned -> in-progress | cancelled", text)
 
     def test_blocked_plan_can_be_cancelled(self):
-        text = (ROOT / "skills" / "spec-drive" / "SKILL.md").read_text(
-            encoding="utf-8"
-        )
+        text = (ROOT / "skills" / "spec-drive" / "SKILL.md").read_text(encoding="utf-8")
 
         self.assertIn("blocked -> in-progress | cancelled", text)
 
@@ -231,16 +235,10 @@ class RepositoryContractTests(unittest.TestCase):
             new_lines.extend(lines[end:])
             skill.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
 
-            result = subprocess.run(
-                [sys.executable, "scripts/validate-skills.py"],
-                cwd=repository,
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-
     def test_git_conflict_requires_explicit_commit_request(self):
-        skill = (ROOT / "skills" / "git-conflict" / "SKILL.md").read_text(encoding="utf-8")
+        skill = (ROOT / "skills" / "git-conflict" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
         self.assertNotIn("necessarily requires completing the integration", skill)
         self.assertIn(
             "Do not stash, commit, or push unless the user explicitly requests that operation.",
@@ -248,13 +246,17 @@ class RepositoryContractTests(unittest.TestCase):
         )
 
     def test_git_conflict_commands_are_shell_neutral(self):
-        skill = (ROOT / "skills" / "git-conflict" / "SKILL.md").read_text(encoding="utf-8")
+        skill = (ROOT / "skills" / "git-conflict" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
         self.assertNotIn("|| true", skill)
         self.assertNotIn("grep", skill)
         self.assertIn("git diff --cached --name-only --diff-filter=U", skill)
 
     def test_spec_drive_verifies_after_refactor(self):
-        skill = (ROOT / "skills" / "spec-drive" / "SKILL.md").read_text(encoding="utf-8")
+        skill = (ROOT / "skills" / "spec-drive" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
         red_idx = skill.find("1. **Red:**")
         green_idx = skill.find("2. **Green:**")
         refactor_idx = skill.find("3. **Refactor:**")
@@ -262,16 +264,22 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertTrue(red_idx < green_idx < refactor_idx < verify_idx)
 
     def test_spec_drive_phase4_runs_lean_review(self):
-        skill = (ROOT / "skills" / "spec-drive" / "SKILL.md").read_text(encoding="utf-8")
+        skill = (ROOT / "skills" / "spec-drive" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
         self.assertIn("lean-review", skill)
         self.assertIn("Blocking: No", skill)
 
     def test_spec_drive_has_no_invariants_matrix(self):
-        skill = (ROOT / "skills" / "spec-drive" / "SKILL.md").read_text(encoding="utf-8")
+        skill = (ROOT / "skills" / "spec-drive" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
         self.assertNotIn("Invariants Matrix", skill)
 
     def test_lean_review_hands_off_blocking_findings(self):
-        skill = (ROOT / "skills" / "lean-review" / "SKILL.md").read_text(encoding="utf-8")
+        skill = (ROOT / "skills" / "lean-review" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
         self.assertIn("lean-mode", skill)
         self.assertIn("Blocking: Yes", skill)
 
@@ -297,7 +305,9 @@ class RepositoryContractTests(unittest.TestCase):
             )
 
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("AGENTS.md missing exact destructive-command guard sentence", result.stdout)
+        self.assertIn(
+            "AGENTS.md missing exact destructive-command guard sentence", result.stdout
+        )
 
     def test_spec_stable_with_unchecked_gate_fails(self):
         with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
@@ -340,25 +350,44 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("does not match", result.stdout)
 
     def test_spec_drive_registers_all_roles(self):
-        spec_drive = (ROOT / "skills" / "spec-drive" / "SKILL.md").read_text(encoding="utf-8")
-        roles = ("Plan Coordinator", "Structural Designer", "Implementation Engine", "Review Gate")
+        spec_drive = (ROOT / "skills" / "spec-drive" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        roles = (
+            "Plan Coordinator",
+            "Structural Designer",
+            "Implementation Engine",
+            "Review Gate",
+        )
 
         self.assertIn("### Role Registry", spec_drive)
         for role in roles:
             self.assertIn(f"| {role} |", spec_drive)
 
     def test_verification_record_gates_plan_checklist(self):
-        lean_mode = (ROOT / "skills" / "lean-mode" / "SKILL.md").read_text(encoding="utf-8")
-        spec_drive = (ROOT / "skills" / "spec-drive" / "SKILL.md").read_text(encoding="utf-8")
+        lean_mode = (ROOT / "skills" / "lean-mode" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        spec_drive = (ROOT / "skills" / "spec-drive" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
 
         self.assertIn("Result: pass | fail | inconclusive", lean_mode)
         self.assertIn("check the item only on `Result: pass`", spec_drive)
 
     def test_spec_routes_implementation_skills(self):
         spec = (ROOT / "spec" / "skills-spec.md").read_text(encoding="utf-8")
-        routing = spec.split("### 3.2 Implementation Routing", 1)[1].split("### 3.3", 1)[0]
+        routing = spec.split("### 3.2 Implementation Routing", 1)[1].split(
+            "### 3.3", 1
+        )[0]
 
-        for name in ("lean-design", "spec-drive", "lean-mode", "lean-review", "git-conflict"):
+        for name in (
+            "lean-design",
+            "spec-drive",
+            "lean-mode",
+            "lean-review",
+            "git-conflict",
+        ):
             self.assertIn(f"`{name}`", routing)
 
     def test_planned_plan_status_passes(self):
@@ -416,7 +445,10 @@ class RepositoryContractTests(unittest.TestCase):
             )
 
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("missing plan transition `blocked -> in-progress | cancelled`", result.stdout)
+        self.assertIn(
+            "missing plan transition `blocked -> in-progress | cancelled`",
+            result.stdout,
+        )
 
 
 if __name__ == "__main__":
