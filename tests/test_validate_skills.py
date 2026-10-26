@@ -272,9 +272,10 @@ class RepositoryContractTests(unittest.TestCase):
             rel_parts = path.relative_to(ROOT).parts
             if any(part.startswith((".", "__pycache__")) for part in rel_parts):
                 continue
-            if path.suffix in suffixes or path.name in named_files:
-                if b"\r\n" in path.read_bytes():
-                    crlf_files.append(str(path.relative_to(ROOT)))
+            if (
+                path.suffix in suffixes or path.name in named_files
+            ) and b"\r\n" in path.read_bytes():
+                crlf_files.append(str(path.relative_to(ROOT)))
         self.assertEqual(crlf_files, [], f"Found CRLF in files: {crlf_files}")
 
     def test_skills_have_no_orphaned_skill_references(self):
