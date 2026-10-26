@@ -12,7 +12,7 @@ Stress-test plans and technical decisions before implementation.
 
 ## Operating contract
 
-Produce one confirmed decision summary without modifying code, config, docs, tests, or plan files (`spec-drive` owns plan files). The user owns decisions and trade-offs.
+Produce one confirmed decision summary without modifying code, config, docs, tests, or plan files. The user owns decisions and trade-offs.
 
 Modes:
 - **Grounded mode:** Codebase, tests, `context.md`, or ADRs exist.

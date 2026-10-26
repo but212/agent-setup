@@ -256,6 +256,43 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("does not match", result.stdout)
 
+    def test_gitattributes_enforces_lf(self):
+        gitattributes = ROOT / ".gitattributes"
+        self.assertTrue(gitattributes.is_file(), ".gitattributes must exist")
+        content = gitattributes.read_text(encoding="utf-8")
+        self.assertIn("* text=auto eol=lf", content)
+
+    def test_tracked_text_files_use_lf_line_endings(self):
+        suffixes = {".md", ".py", ".sh", ".yml", ".yaml"}
+        named_files = {"LICENSE", "NOTICE", ".gitattributes", ".gitignore"}
+        crlf_files: list[str] = []
+        for path in ROOT.rglob("*"):
+            if not path.is_file():
+                continue
+            rel_parts = path.relative_to(ROOT).parts
+            if any(part.startswith((".", "__pycache__")) for part in rel_parts):
+                continue
+            if path.suffix in suffixes or path.name in named_files:
+                if b"\r\n" in path.read_bytes():
+                    crlf_files.append(str(path.relative_to(ROOT)))
+        self.assertEqual(crlf_files, [], f"Found CRLF in files: {crlf_files}")
+
+    def test_skills_have_no_orphaned_skill_references(self):
+        orphaned_patterns = ["spec-drive", "lean-mode", "git-conflict"]
+        for skill_dir in (ROOT / "skills").iterdir():
+            if not skill_dir.is_dir():
+                continue
+            skill_file = skill_dir / "SKILL.md"
+            if not skill_file.is_file():
+                continue
+            content = skill_file.read_text(encoding="utf-8")
+            for pattern in orphaned_patterns:
+                self.assertNotIn(
+                    pattern,
+                    content,
+                    f"Found orphaned reference '{pattern}' in {skill_file.relative_to(ROOT)}",
+                )
+
 
 if __name__ == "__main__":
     unittest.main()

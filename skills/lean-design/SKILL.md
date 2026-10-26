@@ -10,7 +10,7 @@ description: Minimalist architecture and API design that eliminates impossible s
 
 ## Operating contract
 
-- Structural decisions only (state spaces, invariants, types, schemas, boundaries). Code changes go to Implementation Engine (default: `lean-mode`).
+- Structural decisions only (state spaces, invariants, types, schemas, boundaries). Code changes go to implementation under AGENTS.md rules.
 - Preserve correctness, security, validation, and domain invariants.
 - Infer intent from runtime behavior and tests, then types/schemas, then docs. State assumptions when evidence is absent.
 - Evaluate performance only with profiling or hot-path evidence.
