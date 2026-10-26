@@ -35,7 +35,7 @@ Each skill in `skills/*/SKILL.md` declares scalar frontmatter fields:
 - `role`: One-line responsibility summary.
 - `activation`: Triggers and command aliases.
 - `modification-authority`: Permitted write scope.
-- `description`: Multiline overview of skill purpose.
+- `description`: Single-line overview of skill purpose.
 
 Frontmatter is validated by `scripts/validate-skills.py`.
 
@@ -78,7 +78,6 @@ When `spec-drive` execution tracking is active, `.plans/YYYY-MM-DD/[task-name].m
 
 `scripts/deploy_agents.py` mirrors repository content into `~/.agents` (overridable via `AGENT_HOME`):
 
-- `--link` symlinks global instructions where supported.
 - Destination is a copy target; repository is the source of truth.
 - Destination permissions and path safety (preventing symlink loops or root overwrites) are validated before write.
 

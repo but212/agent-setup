@@ -3,10 +3,7 @@ name: lean-design
 role: Designs around states, types, and boundaries
 activation: Structural, invariant, or API design request
 modification-authority: None
-description: >
-  Minimalist architecture and API design that eliminates impossible states
-  through algebraic data types, schema constraints, and structural boundaries.
-  Use for designing or refactoring types, state machines, and contracts before implementation.
+description: Minimalist architecture and API design that eliminates impossible states through algebraic data types, schema constraints, and structural boundaries. Use for designing or refactoring types, state machines, and contracts before implementation.
 ---
 
 # Lean Design

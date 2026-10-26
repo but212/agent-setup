@@ -34,8 +34,6 @@ class MirrorAction:
 @dataclass(frozen=True)
 class DeploymentTarget:
     canonical_target: Path
-    pi_dir: Path | None = None
-    pi_agents: Path | None = None
 
 
 @dataclass(frozen=True)
@@ -47,8 +45,6 @@ class DeploymentPlan:
     target_skills: Path
     mirror_actions: list[MirrorAction]
     skill_count: int
-    pi_dir: Path | None = None
-    pi_agents: Path | None = None
 
 
 # ============================================================================
@@ -115,7 +111,7 @@ def get_canonical(path: Path) -> Path:
 
 
 def validate_deployment_safety(
-    repo_root: Path, target_arg: str | None, link: bool
+    repo_root: Path, target_arg: str | None
 ) -> DeploymentTarget:
     home_env = os.environ.get("HOME")
     home_dir = Path(home_env).resolve() if home_env else Path.home().resolve()
@@ -176,24 +172,8 @@ def validate_deployment_safety(
             f"destination is not a directory: {target_skills}\n"
         )
 
-    pi_dir = home_dir / ".pi" / "agent"
-    pi_agents = pi_dir / "AGENTS.md"
-    if link:
-        if has_symlink_or_reparse_in_chain(pi_dir, stop_at=home_dir):
-            raise DeploymentSafetyError(
-                f"refusing symlinked destination: {pi_dir} (symlinked pi agent directory: {pi_dir})\n"
-            )
-        if pi_dir.exists() and not pi_dir.is_dir():
-            raise DeploymentSafetyError(f"destination is not a directory: {pi_dir}\n")
-        if pi_agents.exists() and not is_symlink_or_reparse(pi_agents):
-            raise DeploymentSafetyError(
-                f"refusing to overwrite real file {pi_agents} (not a symlink)\n"
-            )
-
     return DeploymentTarget(
         canonical_target=canonical_target,
-        pi_dir=pi_dir if link else None,
-        pi_agents=pi_agents if link else None,
     )
 
 
@@ -236,9 +216,9 @@ def compute_mirror_actions(
 
 
 def plan_deployment(
-    repo_root: Path, target_arg: str | None, link: bool
+    repo_root: Path, target_arg: str | None
 ) -> DeploymentPlan:
-    target = validate_deployment_safety(repo_root, target_arg, link)
+    target = validate_deployment_safety(repo_root, target_arg)
     agents_source = repo_root / "AGENTS.md"
     skills_source = repo_root / "skills"
     target_agents = target.canonical_target / "AGENTS.md"
@@ -255,8 +235,6 @@ def plan_deployment(
         target_skills=target_skills,
         mirror_actions=actions,
         skill_count=skill_count,
-        pi_dir=target.pi_dir,
-        pi_agents=target.pi_agents,
     )
 
 
@@ -285,21 +263,12 @@ def execute_deployment(plan: DeploymentPlan) -> None:
                 shutil.copy2(action.src, action.dst)
 
     print(f"mirrored: skills/ -> {plan.target_skills} ({plan.skill_count} skills)")
-
-    if plan.pi_dir and plan.pi_agents:
-        plan.pi_dir.mkdir(parents=True, exist_ok=True)
-        if is_symlink_or_reparse(plan.pi_agents):
-            plan.pi_agents.unlink()
-        target_agents_abs = plan.target_agents.resolve()
-        plan.pi_agents.symlink_to(target_agents_abs)
-        print(f"linked: {plan.pi_agents} -> {target_agents_abs}")
-
     print("done.")
 
 
-def deploy(repo_root: Path, target_arg: str | None, link: bool) -> int:
+def deploy(repo_root: Path, target_arg: str | None) -> int:
     try:
-        plan = plan_deployment(repo_root, target_arg, link)
+        plan = plan_deployment(repo_root, target_arg)
         execute_deployment(plan)
         return 0
     except DeploymentSafetyError as exc:
@@ -312,18 +281,13 @@ def main() -> int:
         description="Mirror AGENTS.md and skills/ into shared agent folder."
     )
     parser.add_argument(
-        "--link",
-        action="store_true",
-        help="Also link pi global instructions to target AGENTS.md",
-    )
-    parser.add_argument(
         "target",
         nargs="?",
         default=None,
         help="Optional explicit destination path (overrides AGENT_HOME)",
     )
     args = parser.parse_args()
-    return deploy(REPO_ROOT, args.target, args.link)
+    return deploy(REPO_ROOT, args.target)
 
 
 if __name__ == "__main__":

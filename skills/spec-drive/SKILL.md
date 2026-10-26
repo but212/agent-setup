@@ -3,10 +3,7 @@ name: spec-drive
 role: Coordinates contract-centered SDD and plan tracking
 activation: "`/spec-drive`, contract-sensitive change, planning request"
 modification-authority: Plan file and contract coordination
-description: >
-  Spec-Driven Development (SDD) orchestrator bridging crisp specification
-  density with lean structural design, surgical TDD vertical slices, and plan
-  tracking (.plans/YYYY-MM-DD/[task-name].md or agent plan artifacts).
+description: Spec-Driven Development (SDD) orchestrator bridging crisp specification density with lean structural design, surgical TDD vertical slices, and plan tracking (.plans/YYYY-MM-DD/[task-name].md or agent plan artifacts).
 ---
 
 # Spec-Driven Development (spec-drive)

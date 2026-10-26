@@ -3,11 +3,7 @@ name: lean-mode
 role: Makes minimal code changes and writes deterministic tests
 activation: "`/lean-mode`, `/lean-mode test`, implementation, test, or refactor request"
 modification-authority: Approved code and test scope
-description: >
-  Produces the smallest correct coding and test changes adhering to
-  lean-design models. Use for writing code, refactoring, fixing bugs, and
-  creating deterministic minimal tests. Do not use for prose compression
-  or read-only review; use `lean-review`.
+description: Produces the smallest correct coding and test changes adhering to lean-design models. Use for writing code, refactoring, fixing bugs, and creating deterministic minimal tests. Do not use for prose compression or read-only review; use lean-review.
 ---
 
 # Lean Mode

@@ -33,13 +33,13 @@ See NOTICE for third-party license notices.
 - `spec/skills-spec.md` - routing, architecture, and quality gates.
 - `.plans/YYYY-MM-DD/` - tracked file-backed execution plans grouped by creation date.
 - `scripts/validate-skills.py` - dependency-free frontmatter, plan path, and safety validation.
-- `scripts/deploy_agents.py` - mirror `AGENTS.md` and `skills/` into `~/.agents` (`--link` symlinks global instructions).
+- `scripts/deploy_agents.py` - mirror `AGENTS.md` and `skills/` into `~/.agents`.
 
 ## Use
 
 Copy relevant files into the target repository. Adapt repository-specific commands and boundaries without adding framework-specific assumptions. Inspect repository configuration, scripts, CI definitions, and documentation before running checks. Obtain explicit approval before implementation when planning or contract-sensitive workflows are active.
 
-Deploy with `python3 scripts/deploy_agents.py [--link]`. Set `AGENT_HOME` to override the deployment target.
+Deploy with `python3 scripts/deploy_agents.py`. Set `AGENT_HOME` to override the deployment target.
 
 ## Validate this setup
 

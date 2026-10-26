@@ -190,7 +190,7 @@ class RepositoryContractTests(unittest.TestCase):
                 f"Skill {name} hardcodes .plans/ path instead of delegating to spec-drive",
             )
 
-    def test_empty_block_scalar_description_fails(self):
+    def test_block_scalar_description_fails(self):
         with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
             repository = clone_repo_to_temp(directory)
             skill = repository / "skills" / "crisp" / "SKILL.md"
@@ -201,6 +201,7 @@ class RepositoryContractTests(unittest.TestCase):
             for line in lines[:end]:
                 if line.startswith("description:"):
                     new_lines.append("description: >")
+                    new_lines.append("  Line one of description.")
                     break
                 new_lines.append(line)
             new_lines.extend(lines[end:])
@@ -215,25 +216,7 @@ class RepositoryContractTests(unittest.TestCase):
             )
 
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("missing description", result.stdout)
-
-    def test_multiline_block_scalar_description_passes(self):
-        with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
-            repository = clone_repo_to_temp(directory)
-            skill = repository / "skills" / "crisp" / "SKILL.md"
-            text = skill.read_text(encoding="utf-8")
-            lines = text.splitlines()
-            end = lines.index("---", 1)
-            new_lines = []
-            for line in lines[:end]:
-                if line.startswith("description:"):
-                    new_lines.append("description: >")
-                    new_lines.append("  Line one of description.")
-                    new_lines.append("  Line two of description.")
-                    break
-                new_lines.append(line)
-            new_lines.extend(lines[end:])
-            skill.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
+        self.assertIn("description block scalar not permitted", result.stdout)
 
     def test_git_conflict_requires_explicit_commit_request(self):
         skill = (ROOT / "skills" / "git-conflict" / "SKILL.md").read_text(

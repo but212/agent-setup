@@ -3,11 +3,7 @@ name: challenge
 role: Challenge assumptions and stress-test decisions
 activation: "`/challenge`, assumption review"
 modification-authority: None
-description: >
-  Challenge assumptions and stress-test a plan, decision, or idea through an
-  adaptive, focused inquiry path. Operates in grounded mode when codebase, docs
-  (context.md), or ADRs exist, or light mode for early ideas without repository
-  evidence.
+description: Challenge assumptions and stress-test a plan, decision, or idea through an adaptive, focused inquiry path. Operates in grounded mode when codebase, docs (context.md), or ADRs exist, or light mode for early ideas without repository evidence.
 ---
 
 # Adaptive Challenge Path

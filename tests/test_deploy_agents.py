@@ -46,15 +46,13 @@ class DeployAgentsTests(unittest.TestCase):
     def tearDown(self):
         self.tempdir.cleanup()
 
-    def run_deploy(self, target, *, link=False, cwd=None):
+    def run_deploy(self, target, *, cwd=None):
         environment = os.environ.copy()
         environment.update({"AGENT_HOME": str(target), "HOME": str(self.home)})
         command = [
             sys.executable,
             str(self.repo / "scripts" / "deploy_agents.py"),
         ]
-        if link:
-            command.append("--link")
         return subprocess.run(
             command,
             cwd=cwd or self.root,
@@ -223,49 +221,6 @@ class DeployAgentsTests(unittest.TestCase):
         self.assertIn("symlinked destination", result.stderr)
         self.assertEqual(victim.read_text(encoding="utf-8"), "keep")
 
-    def test_rejects_existing_pi_file_before_deployment_write(self):
-        target = self.root / "target"
-        pi_dir = self.home / ".pi" / "agent"
-        pi_dir.mkdir(parents=True)
-        (pi_dir / "AGENTS.md").write_text("user-owned", encoding="utf-8")
-
-        result = self.run_deploy(target, link=True)
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("refusing to overwrite real file", result.stderr)
-        self.assertFalse((target / "AGENTS.md").exists())
-        self.assertEqual(
-            (pi_dir / "AGENTS.md").read_text(encoding="utf-8"), "user-owned"
-        )
-
-    @unittest.skipUnless(CAN_SYMLINK, "filesystem symlinks not supported/permitted")
-    def test_rejects_symlinked_pi_directory_before_deployment_write(self):
-        target = self.root / "target"
-        victim = self.root / "victim"
-        victim.mkdir()
-        pi_parent = self.home / ".pi"
-        pi_parent.mkdir()
-        (pi_parent / "agent").symlink_to(victim, target_is_directory=True)
-
-        result = self.run_deploy(target, link=True)
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("symlinked pi agent directory", result.stderr)
-        self.assertFalse((target / "AGENTS.md").exists())
-
-    @unittest.skipUnless(CAN_SYMLINK, "filesystem symlinks not supported/permitted")
-    def test_relative_target_creates_absolute_pi_link(self):
-        workdir = self.root / "work"
-        workdir.mkdir()
-        target = Path("deployed")
-
-        result = self.run_deploy(target, link=True, cwd=workdir)
-
-        self.assertEqual(result.returncode, 0, result.stderr)
-        link = self.home / ".pi" / "agent" / "AGENTS.md"
-        self.assertTrue(link.is_symlink())
-        self.assertEqual(link.resolve(), (workdir / target).resolve() / "AGENTS.md")
-
     def test_safe_target_is_mirrored_without_external_deletion(self):
         target = self.root / "target"
         (target / "skills").mkdir(parents=True)
@@ -311,12 +266,10 @@ class DeployAgentsTests(unittest.TestCase):
         from scripts.deploy_agents import DeploymentTarget, validate_deployment_safety
 
         target = self.root / "valid_target"
-        result = validate_deployment_safety(self.repo, str(target), link=False)
+        result = validate_deployment_safety(self.repo, str(target))
 
         self.assertIsInstance(result, DeploymentTarget)
         self.assertEqual(result.canonical_target, target.resolve())
-        self.assertIsNone(result.pi_dir)
-        self.assertIsNone(result.pi_agents)
 
 
 if __name__ == "__main__":

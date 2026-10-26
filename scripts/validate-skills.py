@@ -72,16 +72,7 @@ def parse_frontmatter_dict(path: Path) -> dict[str, str]:
             field = match.group(1)
             value = match.group(2).strip()
             if value in (">", "|", ">-", "|-"):
-                block_lines: list[str] = []
-                i += 1
-                while i < len(lines_slice) and (
-                    lines_slice[i].startswith((" ", "\t")) or not lines_slice[i].strip()
-                ):
-                    if lines_slice[i].strip():
-                        block_lines.append(lines_slice[i].strip())
-                    i += 1
-                values[field] = " ".join(block_lines)
-                continue
+                raise ValueError(f"{field} block scalar not permitted")
             if value.startswith(("`", "@")):
                 raise ValueError(
                     f"{field} plain value cannot start with reserved character "

@@ -3,9 +3,7 @@ name: crisp
 role: Compresses prose and explicitly named documents
 activation: "`/crisp`, compression request"
 modification-authority: Named files only
-description: >
-  Compresses response prose and explicitly named Markdown or plain-text
-  documents without altering meaning or operational contracts.
+description: Compresses response prose and explicitly named Markdown or plain-text documents without altering meaning or operational contracts.
 ---
 
 # Crisp
