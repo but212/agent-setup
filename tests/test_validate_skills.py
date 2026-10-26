@@ -47,7 +47,7 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("Multi-step tasks track execution via an agent plan artifact", agents)
         self.assertIn("Follow test-driven development for logic changes", agents)
         self.assertIn("Resolve integration conflicts by preserving behavior", agents)
-        self.assertIn("never run destructive commands", agents)
+        self.assertIn("do not run destructive commands", agents)
 
     def test_unquoted_reserved_frontmatter_scalar_fails(self):
         with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
@@ -197,7 +197,7 @@ class RepositoryContractTests(unittest.TestCase):
             text = agents.read_text(encoding="utf-8")
             agents.write_text(
                 text.replace(
-                    "never run destructive commands such as `git push`, `git reset --hard`, `git clean -f`, or `rm -rf`, unless explicitly requested.",
+                    "do not run destructive commands such as `git push`, `git reset --hard`, `git clean -f`, or `rm -rf`, without explicit user request.",
                     "destructive commands such as `git push`, `git reset --hard`, `git clean -f`, or `rm -rf` are allowed unless the user objects.",
                 ),
                 encoding="utf-8",

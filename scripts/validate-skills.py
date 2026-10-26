@@ -15,9 +15,9 @@ SPEC = ROOT / "spec" / "skills-spec.md"
 README = ROOT / "README.md"
 
 REQUIRED_SAFETY_GUARD_SENTENCE = (
-    "Do not stage, commit, push, reset, discard, or clean changes, and never run "
+    "Do not stage, commit, push, reset, discard, or clean changes, and do not run "
     "destructive commands such as `git push`, `git reset --hard`, `git clean -f`, "
-    "or `rm -rf`, unless explicitly requested."
+    "or `rm -rf`, without explicit user request."
 )
 
 PLAN_STATUSES = frozenset(
