@@ -1,6 +1,6 @@
 # agent-setup
 
-[![skills.sh](https://skills.sh/b/but212/agent-setup)](https://skills.sh/but212/agent-setup)
+[![skills.sh](https://img.shields.io/badge/skills.sh-agent--setup-black?logo=vercel&logoColor=white)](https://skills.sh/but212/agent-setup)
 
 Operating rules and skill contracts for coding agents, in plain Markdown.
 
