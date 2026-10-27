@@ -87,7 +87,7 @@ When tracking multi-step work, an agent plan artifact or a dated plan file (`.pl
 `scripts/deploy_agents.py` mirrors repository content into `~/.agents` (overridable via `AGENT_HOME`):
 
 - Destination is a copy target; repository is the source of truth.
-- Destination permissions and path safety (preventing symlink loops or root overwrites) are validated before write.
+- Destination path safety (preventing repository, home, or root overwrites) is validated before write.
 
 ## 4. Quality Gates
 

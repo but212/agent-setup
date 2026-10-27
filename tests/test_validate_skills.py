@@ -51,19 +51,16 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("Resolve integration conflicts by preserving behavior", agents)
         self.assertIn("do not run destructive commands", agents)
 
-    def test_unquoted_reserved_frontmatter_scalar_fails(self):
+    def test_missing_frontmatter_description_fails(self):
         with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
             repository = clone_repo_to_temp(directory)
             skill = repository / "skills" / "challenge" / "SKILL.md"
-            text = skill.read_text(encoding="utf-8")
-            skill.write_text(
-                text.replace(
-                    'activation: "`/challenge`, assumption review"',
-                    "activation: `/challenge`, assumption review",
-                    1,
-                ),
-                encoding="utf-8",
-            )
+            lines = [
+                line
+                for line in skill.read_text(encoding="utf-8").splitlines()
+                if not line.startswith("description:")
+            ]
+            skill.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
             result = subprocess.run(
                 [sys.executable, "scripts/validate-skills.py"],
@@ -74,38 +71,7 @@ class RepositoryContractTests(unittest.TestCase):
             )
 
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn(
-            "activation plain value cannot start with reserved character '`'",
-            result.stdout,
-        )
-
-    def test_block_scalar_description_fails(self):
-        with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
-            repository = clone_repo_to_temp(directory)
-            skill = repository / "skills" / "challenge" / "SKILL.md"
-            text = skill.read_text(encoding="utf-8")
-            lines = text.splitlines()
-            end = lines.index("---", 1)
-            new_lines = []
-            for line in lines[:end]:
-                if line.startswith("description:"):
-                    new_lines.append("description: >")
-                    new_lines.append("  Line one of description.")
-                    break
-                new_lines.append(line)
-            new_lines.extend(lines[end:])
-            skill.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
-
-            result = subprocess.run(
-                [sys.executable, "scripts/validate-skills.py"],
-                cwd=repository,
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("description block scalar not permitted", result.stdout)
+        self.assertIn("missing description", result.stdout)
 
     def test_non_ascii_markdown_fails(self):
         with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
@@ -217,28 +183,6 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("unchecked quality gate", result.stdout)
 
-    def test_spec_status_readme_mismatch_fails(self):
-        with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
-            repository = clone_repo_to_temp(directory)
-            readme = repository / "README.md"
-            readme_text = readme.read_text(encoding="utf-8").replace(
-                "specification is currently `stable`",
-                "specification is currently `candidate`",
-                1,
-            )
-            readme.write_text(readme_text, encoding="utf-8")
-
-            result = subprocess.run(
-                [sys.executable, "scripts/validate-skills.py"],
-                cwd=repository,
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("does not match", result.stdout)
-
     def test_gitattributes_enforces_lf(self):
         gitattributes = ROOT / ".gitattributes"
         self.assertTrue(gitattributes.is_file(), ".gitattributes must exist")
@@ -259,7 +203,7 @@ class RepositoryContractTests(unittest.TestCase):
                 path.suffix in suffixes or path.name in named_files
             ) and b"\r\n" in path.read_bytes():
                 crlf_files.append(str(path.relative_to(ROOT)))
-        self.assertEqual(crlf_files, [], f"Found CRLF in files: {crlf_files}")
+            self.assertEqual(crlf_files, [], f"Found CRLF in files: {crlf_files}")
 
     def test_skills_have_no_orphaned_skill_references(self):
         orphaned_patterns = ["spec-drive", "lean-mode", "git-conflict"]

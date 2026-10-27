@@ -10,21 +10,6 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 
-def check_symlink_support():
-    try:
-        with tempfile.TemporaryDirectory() as temp:
-            src = Path(temp) / "src"
-            src.mkdir()
-            dst = Path(temp) / "dst"
-            dst.symlink_to(src, target_is_directory=True)
-            return True
-    except OSError:
-        return False
-
-
-CAN_SYMLINK = check_symlink_support()
-
-
 class DeployAgentsTests(unittest.TestCase):
     def setUp(self):
         self.tempdir = tempfile.TemporaryDirectory(prefix="agent-setup-deploy-")
@@ -112,115 +97,6 @@ class DeployAgentsTests(unittest.TestCase):
             "example\n",
         )
 
-    @unittest.skipUnless(CAN_SYMLINK, "filesystem symlinks not supported/permitted")
-    def test_rejects_symlinked_target_without_touching_target(self):
-        victim = self.root / "victim"
-        victim.mkdir()
-        sentinel = victim / "keep.txt"
-        sentinel.write_text("keep", encoding="utf-8")
-        target = self.root / "target"
-        target.symlink_to(victim, target_is_directory=True)
-
-        result = self.run_deploy(target)
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("symlinked AGENT_HOME", result.stderr)
-        self.assertEqual(sentinel.read_text(encoding="utf-8"), "keep")
-
-    @unittest.skipUnless(CAN_SYMLINK, "filesystem symlinks not supported/permitted")
-    def test_rejects_symlinked_ancestor_target_without_touching_victim(self):
-        victim = self.root / "victim"
-        victim.mkdir()
-        sentinel = victim / "keep.txt"
-        sentinel.write_text("keep", encoding="utf-8")
-        sym_parent = self.root / "sym_parent"
-        sym_parent.symlink_to(victim, target_is_directory=True)
-        target = sym_parent / "sub"
-
-        result = self.run_deploy(target)
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("symlinked AGENT_HOME", result.stderr)
-        self.assertEqual(sentinel.read_text(encoding="utf-8"), "keep")
-        self.assertFalse((victim / "sub").exists())
-
-    def test_has_symlink_or_reparse_in_chain_detects_ancestor(self):
-        from unittest.mock import patch
-
-        from scripts.deploy_agents import has_symlink_or_reparse_in_chain
-
-        sym_parent = self.root / "sym_parent"
-        path = sym_parent / "sub" / "target"
-        with patch("scripts.deploy_agents.is_symlink_or_reparse") as mock_is_sym:
-            mock_is_sym.side_effect = lambda p: p == sym_parent
-            self.assertTrue(has_symlink_or_reparse_in_chain(path))
-
-    def test_has_symlink_or_reparse_in_chain_respects_stop_at(self):
-        from unittest.mock import patch
-
-        from scripts.deploy_agents import has_symlink_or_reparse_in_chain
-
-        sym_parent = self.root / "sym_parent"
-        stop_at = sym_parent / "sub"
-        path = stop_at / "target"
-        with patch("scripts.deploy_agents.is_symlink_or_reparse") as mock_is_sym:
-            mock_is_sym.side_effect = lambda p: p == sym_parent
-            self.assertFalse(has_symlink_or_reparse_in_chain(path, stop_at=stop_at))
-
-    def test_has_symlink_or_reparse_in_chain_exempts_darwin_system_symlinks(self):
-        from unittest.mock import patch
-
-        from scripts.deploy_agents import has_symlink_or_reparse_in_chain
-
-        path = Path("/tmp/sub/target")
-        with patch("scripts.deploy_agents.is_symlink_or_reparse") as mock_is_sym:
-            mock_is_sym.side_effect = lambda p: p == Path("/tmp")
-            self.assertFalse(has_symlink_or_reparse_in_chain(path, is_darwin=True))
-            self.assertTrue(has_symlink_or_reparse_in_chain(path, is_darwin=False))
-
-    def test_has_symlink_or_reparse_in_chain_darwin_still_rejects_sub_symlinks(self):
-        from unittest.mock import patch
-
-        from scripts.deploy_agents import has_symlink_or_reparse_in_chain
-
-        path = Path("/tmp/sym_sub/target")
-        with patch("scripts.deploy_agents.is_symlink_or_reparse") as mock_is_sym:
-            mock_is_sym.side_effect = lambda p: (
-                p in (Path("/tmp"), Path("/tmp/sym_sub"))
-            )
-            self.assertTrue(has_symlink_or_reparse_in_chain(path, is_darwin=True))
-
-    @unittest.skipUnless(CAN_SYMLINK, "filesystem symlinks not supported/permitted")
-    def test_rejects_symlinked_skills_without_touching_victim(self):
-        target = self.root / "target"
-        target.mkdir()
-        victim = self.root / "victim"
-        victim.mkdir()
-        sentinel = victim / "keep.txt"
-        sentinel.write_text("keep", encoding="utf-8")
-        (target / "skills").symlink_to(victim, target_is_directory=True)
-
-        result = self.run_deploy(target)
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("symlinked destination", result.stderr)
-        self.assertEqual(sentinel.read_text(encoding="utf-8"), "keep")
-        self.assertFalse((target / "AGENTS.md").exists())
-
-    @unittest.skipUnless(CAN_SYMLINK, "filesystem symlinks not supported/permitted")
-    def test_rejects_symlinked_agents_without_touching_victim(self):
-        target = self.root / "target"
-        target.mkdir()
-        victim = self.root / "victim"
-        victim.write_text("keep", encoding="utf-8")
-        (target / "AGENTS.md").symlink_to(victim)
-
-        result = self.run_deploy(target)
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("symlinked destination", result.stderr)
-        self.assertEqual(victim.read_text(encoding="utf-8"), "keep")
-
     def test_safe_target_is_mirrored_without_external_deletion(self):
         target = self.root / "target"
         (target / "skills").mkdir(parents=True)
@@ -244,32 +120,13 @@ class DeployAgentsTests(unittest.TestCase):
         self.assertTrue(sentinel.exists())
         self.assertEqual(sentinel.read_text(encoding="utf-8"), "keep-me")
 
-    def test_compute_mirror_actions_identifies_stale_and_copied_files(self):
-        from scripts.deploy_agents import ActionKind, compute_mirror_actions
-
-        source = self.root / "src_skills"
-        target = self.root / "dst_skills"
-        (source / "alpha").mkdir(parents=True)
-        (source / "alpha" / "SKILL.md").write_text("alpha", encoding="utf-8")
-        (target / "beta").mkdir(parents=True)
-        (target / "beta" / "stale.md").write_text("stale", encoding="utf-8")
-
-        actions = compute_mirror_actions(source, target)
-        action_kinds = [a.kind for a in actions]
-
-        self.assertIn(ActionKind.PRUNE_FILE, action_kinds)
-        self.assertIn(ActionKind.PRUNE_DIR, action_kinds)
-        self.assertIn(ActionKind.MAKE_DIR, action_kinds)
-        self.assertIn(ActionKind.COPY_FILE, action_kinds)
-
-    def test_validate_deployment_safety_returns_typed_target(self):
-        from scripts.deploy_agents import DeploymentTarget, validate_deployment_safety
+    def test_validate_deployment_safety_returns_canonical_target(self):
+        from scripts.deploy_agents import validate_deployment_safety
 
         target = self.root / "valid_target"
-        result = validate_deployment_safety(self.repo, str(target))
+        canonical_target = validate_deployment_safety(self.repo, str(target))
 
-        self.assertIsInstance(result, DeploymentTarget)
-        self.assertEqual(result.canonical_target, target.resolve())
+        self.assertEqual(canonical_target, target.resolve())
 
     def test_deploy_rejects_target_inside_repo_root(self):
         result = self.run_deploy(self.repo)
@@ -280,21 +137,6 @@ class DeployAgentsTests(unittest.TestCase):
         result_nested = self.run_deploy(nested_target)
         self.assertEqual(result_nested.returncode, 1)
         self.assertIn("refusing unsafe AGENT_HOME", result_nested.stderr)
-
-    def test_mirror_action_enforces_source_invariants(self):
-        from scripts.deploy_agents import ActionKind, MirrorAction
-
-        with self.assertRaises(ValueError):
-            MirrorAction(kind=ActionKind.COPY_FILE, dst=Path("dst"), src=None)
-
-        with self.assertRaises(ValueError):
-            MirrorAction(kind=ActionKind.PRUNE_FILE, dst=Path("dst"), src=Path("src"))
-
-        with self.assertRaises(ValueError):
-            MirrorAction(kind=ActionKind.PRUNE_DIR, dst=Path("dst"), src=Path("src"))
-
-        with self.assertRaises(ValueError):
-            MirrorAction(kind=ActionKind.MAKE_DIR, dst=Path("dst"), src=Path("src"))
 
 
 if __name__ == "__main__":

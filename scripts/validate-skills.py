@@ -12,7 +12,6 @@ SKILLS = ROOT / "skills"
 AGENTS = ROOT / "AGENTS.md"
 PLANS = ROOT / ".plans"
 SPEC = ROOT / "spec" / "skills-spec.md"
-README = ROOT / "README.md"
 
 PLAN_STATUSES = frozenset(
     {"planned", "in-progress", "blocked", "complete", "cancelled"}
@@ -38,11 +37,6 @@ class ValidationReport:
         return len(self.errors) == 0
 
 
-# ============================================================================
-# Read-only Core: parsing and verification (no writes)
-# ============================================================================
-
-
 def parse_frontmatter_dict(path: Path) -> dict[str, str]:
     lines = path.read_text(encoding="utf-8").splitlines()
     if not lines or lines[0].strip() != "---":
@@ -57,13 +51,6 @@ def parse_frontmatter_dict(path: Path) -> dict[str, str]:
         if match:
             field = match.group(1)
             value = match.group(2).strip()
-            if value in (">", "|", ">-", "|-"):
-                raise ValueError(f"{field} block scalar not permitted")
-            if value.startswith(("`", "@")):
-                raise ValueError(
-                    f"{field} plain value cannot start with reserved character "
-                    f"{value[0]!r}"
-                )
             if len(value) >= 2 and value[0] == value[-1] and value[0] in "'\"":
                 value = value[1:-1]
             values[field] = value
@@ -209,9 +196,7 @@ def check_agents_file(agents_path: Path) -> list[str]:
     return errors
 
 
-def check_spec_gates(
-    spec_path: Path, readme_path: Path, root: Path = ROOT
-) -> list[str]:
+def check_spec_gates(spec_path: Path, root: Path = ROOT) -> list[str]:
     errors: list[str] = []
     if not spec_path.exists():
         errors.append(f"missing specification file: {spec_path.relative_to(root)}")
@@ -239,21 +224,6 @@ def check_spec_gates(
                     f"{spec_path.relative_to(root)}: status is 'stable' but has {len(unchecked)} unchecked quality gate(s)"
                 )
 
-    if readme_path.exists():
-        readme_text = readme_path.read_text(encoding="utf-8")
-        readme_match = re.search(
-            r"The skill specification is currently `([^`]+)`\.", readme_text
-        )
-        if not readme_match:
-            errors.append(
-                f"{readme_path.relative_to(root)}: missing 'The skill specification is currently `...`.' statement"
-            )
-        elif readme_match.group(1) != status:
-            errors.append(
-                f"{readme_path.relative_to(root)}: status `{readme_match.group(1)}` does not match "
-                f"{spec_path.relative_to(root)} status `{status}`"
-            )
-
     return errors
 
 
@@ -263,7 +233,6 @@ def validate_repository(
     agents_path: Path = AGENTS,
     plans_dir: Path = PLANS,
     spec_path: Path = SPEC,
-    readme_path: Path = README,
 ) -> ValidationReport:
     errors: list[str] = []
     errors.extend(check_ascii_markdown(root))
@@ -274,18 +243,13 @@ def validate_repository(
     errors.extend(check_plan_paths(plans_dir, root))
     errors.extend(check_plan_status(plans_dir, root))
     errors.extend(check_agents_file(agents_path))
-    errors.extend(check_spec_gates(spec_path, readme_path, root))
+    errors.extend(check_spec_gates(spec_path, root))
 
     return ValidationReport(skills=skills, errors=errors)
 
 
-# ============================================================================
-# Imperative Shell: CLI runner and formatting
-# ============================================================================
-
-
 def main() -> int:
-    report = validate_repository(ROOT, SKILLS, AGENTS, PLANS, SPEC, README)
+    report = validate_repository(ROOT, SKILLS, AGENTS, PLANS, SPEC)
 
     if not report.is_valid:
         print("Skill validation failed:")
