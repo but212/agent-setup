@@ -1,5 +1,7 @@
 # agent-setup
 
+[https://skills.sh/but212/agent-setup](https://skills.sh/but212/agent-setup)
+
 Operating rules and skill contracts for coding agents, in plain Markdown.
 
 > For small workflows like air.
