@@ -157,6 +157,7 @@ class DeployAgentsTests(unittest.TestCase):
 
     def test_deploy_failure_preserves_original_skills(self):
         from unittest.mock import patch
+
         from scripts.deploy_agents import sync_skills_atomic
 
         target = self.root / "target"
@@ -167,9 +168,11 @@ class DeployAgentsTests(unittest.TestCase):
 
         source_skills = self.repo / "skills"
 
-        with patch("shutil.copytree", side_effect=IOError("Simulated disk full")):
-            with self.assertRaises(IOError):
-                sync_skills_atomic(source_skills, target_skills)
+        with (
+            patch("shutil.copytree", side_effect=OSError("Simulated disk full")),
+            self.assertRaises(IOError),
+        ):
+            sync_skills_atomic(source_skills, target_skills)
 
         self.assertTrue(original_skill.exists())
         self.assertEqual(
