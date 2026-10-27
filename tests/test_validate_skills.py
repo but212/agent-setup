@@ -192,30 +192,11 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("Blocking: Yes", skill)
         self.assertIn("AGENTS.md", skill)
 
-    def test_permissive_safety_guard_clause_fails(self):
-        with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
-            repository = clone_repo_to_temp(directory)
-            agents = repository / "AGENTS.md"
-            text = agents.read_text(encoding="utf-8")
-            agents.write_text(
-                text.replace(
-                    "do not run destructive commands such as `git push`, `git reset --hard`, `git clean -f`, or `rm -rf`, without explicit user request.",
-                    "destructive commands such as `git push`, `git reset --hard`, `git clean -f`, or `rm -rf` are allowed unless the user objects.",
-                ),
-                encoding="utf-8",
-            )
-
-            result = subprocess.run(
-                [sys.executable, "scripts/validate-skills.py"],
-                cwd=repository,
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-
-        self.assertNotEqual(result.returncode, 0)
+    def test_agents_safety_guard_clause_present(self):
+        agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
         self.assertIn(
-            "AGENTS.md missing exact destructive-command guard sentence", result.stdout
+            "do not run destructive commands such as `git push`, `git reset --hard`, `git clean -f`, or `rm -rf`, without explicit user request.",
+            agents,
         )
 
     def test_spec_stable_with_unchecked_gate_fails(self):

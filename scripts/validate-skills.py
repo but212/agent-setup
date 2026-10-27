@@ -14,12 +14,6 @@ PLANS = ROOT / ".plans"
 SPEC = ROOT / "spec" / "skills-spec.md"
 README = ROOT / "README.md"
 
-REQUIRED_SAFETY_GUARD_SENTENCE = (
-    "Do not stage, commit, push, reset, discard, or clean changes, and do not run "
-    "destructive commands such as `git push`, `git reset --hard`, `git clean -f`, "
-    "or `rm -rf`, without explicit user request."
-)
-
 PLAN_STATUSES = frozenset(
     {"planned", "in-progress", "blocked", "complete", "cancelled"}
 )
@@ -208,17 +202,10 @@ def check_plan_status(plans_dir: Path, root: Path = ROOT) -> list[str]:
     return errors
 
 
-def check_safety_guards(agents_path: Path) -> list[str]:
+def check_agents_file(agents_path: Path) -> list[str]:
     errors: list[str] = []
     if not agents_path.is_file():
         errors.append(f"missing AGENTS.md file: {agents_path}")
-        return errors
-    agents_text = agents_path.read_text(encoding="utf-8")
-    if REQUIRED_SAFETY_GUARD_SENTENCE not in agents_text:
-        errors.append(
-            f"AGENTS.md missing exact destructive-command guard sentence: "
-            f"{REQUIRED_SAFETY_GUARD_SENTENCE}"
-        )
     return errors
 
 
@@ -286,7 +273,7 @@ def validate_repository(
 
     errors.extend(check_plan_paths(plans_dir, root))
     errors.extend(check_plan_status(plans_dir, root))
-    errors.extend(check_safety_guards(agents_path))
+    errors.extend(check_agents_file(agents_path))
     errors.extend(check_spec_gates(spec_path, readme_path, root))
 
     return ValidationReport(skills=skills, errors=errors)
@@ -307,7 +294,7 @@ def main() -> int:
 
     print(f"Validated {len(report.skills)} skills frontmatter metadata.")
     print(
-        "Validated ASCII-only Markdown, dated plan paths, plan status, destructive-command guards, and spec gates."
+        "Validated ASCII-only Markdown, dated plan paths, plan status, AGENTS.md existence, and spec gates."
     )
     return 0
 

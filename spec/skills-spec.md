@@ -10,7 +10,7 @@
 - Skill selection and routing for interactive challenge, prose compression, structural design, and adversarial review.
 - Core implementation, TDD verification, conflict resolution, and communication invariants governed by AGENTS.md.
 - Plan tracking via agent plan artifacts or dated plan files (`.plans/YYYY-MM-DD/[task-name].md`).
-- Dependency-free validation of frontmatter, plan paths, ASCII Markdown, and safety guards.
+- Dependency-free validation of frontmatter, plan paths, ASCII Markdown, and AGENTS.md existence.
 - Mirror deployment of `AGENTS.md` and `skills/` into the shared agent directory.
 
 ### Excluded
@@ -92,8 +92,6 @@ When tracking multi-step work, an agent plan artifact or a dated plan file (`.pl
 ## 4. Quality Gates
 
 - [x] Every skill frontmatter defines valid `name`, `role`, `activation`, and `modification-authority`.
-- [x] Claims and decisions are grounded in code, tests, or explicit requirements.
-- [x] Read-only skills make no file modifications.
 - [x] Markdown files are strictly ASCII-only.
 - [x] `python3 scripts/validate-skills.py` and `python3 -m unittest discover -s tests -v` pass.
 

@@ -1,6 +1,6 @@
 # agent-setup
 
-Deterministic, framework-agnostic operating baseline and safety contracts for coding agents.
+Operating rules and skill contracts for coding agents, in plain Markdown.
 
 > For small workflows like air.
 
@@ -14,12 +14,12 @@ Skills are independent on-demand modalities, not a mandatory sequence:
 - `/lean-review`: Diff audits and pre-merge verification -> report defects backed by concrete counterexamples.
 - `/crisp`: PRs, commit messages, or verbose documents -> compress text without semantic loss.
 
-## Core Properties
+## What the repo checks
 
-- **Contract-Driven**: Explicit inputs, outputs, and modification boundaries over roleplay or prose heuristics.
-- **Verification-First**: Hard separation of executed verification from deduction; unrun checks are never reported as passed.
-- **Minimal Blast Radius**: Rejection of destructive git actions (`git push`, `git reset --hard`, `git clean -f`, `rm -rf`) and unrequested file drift.
-- **Deterministic CI**: Multi-OS validation (Ubuntu, macOS, Windows) verifying schemas, plans, and safety invariants.
+- **Contract-Driven**: Each skill declares its role, activation, and write authority in frontmatter.
+- **Verification-First**: AGENTS.md tells agents to report unrun checks as Unverified. Tests check that this instruction exists.
+- **Minimal Blast Radius**: AGENTS.md forbids destructive git commands and unrequested file changes. Tests check the guard wording.
+- **CI**: CI runs the validator and tests on Ubuntu, macOS, and Windows.
 
 ## Layout and Contracts
 
@@ -27,7 +27,7 @@ Skills are independent on-demand modalities, not a mandatory sequence:
 - `skills/*/SKILL.md` - Four modal contracts: `challenge` (inquiry), `crisp` (compression), `lean-design` (types/invariants), `lean-review` (adversarial audit).
 - `spec/skills-spec.md` - Architecture specification and quality gates.
 - `.plans/YYYY-MM-DD/` - Tracked execution plans grouped by creation date.
-- `scripts/deploy_agents.py` - Idempotent mirror harness for `~/.agents` (compatible with Antigravity, Gemini, and Claude Code).
+- `scripts/deploy_agents.py` - Copies AGENTS.md and skills into ~/.agents. Which tools read that directory is up to each tool.
 - `scripts/validate-skills.py` - Dependency-free metadata, plan, and safety validator.
 - `.github/workflows/ci.yml` - Multi-OS GitHub Actions workflow.
 
@@ -53,11 +53,11 @@ python3 scripts/validate-skills.py
 python3 -m unittest discover -s tests -v
 ```
 
-The validator checks skill frontmatter, dated plan paths, plan status values, destructive-command guards, and ASCII-only Markdown content. The test suite covers deployment and repository contracts.
+The validator checks skill frontmatter, dated plan paths, plan status values, AGENTS.md existence, and ASCII-only Markdown content. The test suite covers deployment, repository contracts, and safety guard wording.
 
 ## Status
 
-The skill specification is currently `stable`. Promotion criteria defined in `spec/skills-spec.md` are verified and recorded.
+The skill specification is currently `stable`. The spec's structural gates pass. This does not measure agent behavior.
 
 ---
 
