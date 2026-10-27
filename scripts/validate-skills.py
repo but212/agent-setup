@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Validate skill metadata, repository contracts, and ASCII-only Markdown."""
 
+import json
 import re
 import sys
 from dataclasses import dataclass
@@ -37,49 +38,74 @@ class ValidationReport:
         return len(self.errors) == 0
 
 
-def parse_frontmatter_dict(path: Path) -> dict[str, str]:
-    lines = path.read_text(encoding="utf-8").splitlines()
+def parse_frontmatter_text(text: str) -> dict[str, str]:
+    """Parse YAML frontmatter text into a normalized flat key-value dict."""
+    lines = text.splitlines()
     if not lines or lines[0].strip() != "---":
         raise ValueError("missing frontmatter")
     try:
         end = lines.index("---", 1)
     except ValueError as exc:
         raise ValueError("unterminated frontmatter") from exc
+
     values: dict[str, str] = {}
     for line in lines[1:end]:
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+
+        if re.search(r":\s*[|>]\s*$", stripped):
+            raise ValueError(
+                "multiline block scalars (| or >) are unsupported; use single-line string"
+            )
+        if stripped.startswith("- "):
+            raise ValueError(
+                "nested list items (- item) are unsupported; use inline JSON array"
+            )
+
         match = re.match(r"^([A-Za-z][\w-]*):\s*(.*)$", line)
         if match:
             field = match.group(1)
-            value = match.group(2).strip()
-            if len(value) >= 2 and value[0] == value[-1] and value[0] in "'\"":
-                value = value[1:-1]
-            values[field] = value
+            raw_value = match.group(2).strip()
+            if " #" in raw_value and not (
+                raw_value.startswith(('"', "'")) and raw_value.endswith(('"', "'"))
+            ):
+                raw_value = raw_value.split(" #", 1)[0].strip()
+
+            if raw_value.startswith("[") and raw_value.endswith("]"):
+                try:
+                    items = json.loads(raw_value)
+                    if isinstance(items, list):
+                        raw_value = ", ".join(str(x) for x in items)
+                except json.JSONDecodeError:
+                    pass
+            elif (
+                len(raw_value) >= 2
+                and raw_value[0] == raw_value[-1]
+                and raw_value[0] in "'\""
+            ):
+                raw_value = raw_value[1:-1]
+
+            values[field] = raw_value
     return values
 
 
-def parse_skill_metadata(
-    path: Path, root: Path = ROOT
+def validate_skill_metadata_fields(
+    raw: dict[str, str], expected_name: str
 ) -> tuple[SkillMetadata | None, list[str]]:
+    """Validate parsed frontmatter dictionary against required skill contracts."""
     errors: list[str] = []
-    try:
-        raw = parse_frontmatter_dict(path)
-    except ValueError as exc:
-        return None, [f"{path.relative_to(root)}: {exc}"]
-
-    expected_name = path.parent.name
     name = raw.get("name")
     if name != expected_name:
-        errors.append(
-            f"{path.relative_to(root)}: name={name!r}, expected {expected_name!r}"
-        )
+        errors.append(f"name={name!r}, expected {expected_name!r}")
 
     description = raw.get("description", "")
     if not description:
-        errors.append(f"{path.relative_to(root)}: missing description")
+        errors.append("missing description")
 
     for field in ("role", "activation", "modification-authority"):
         if not raw.get(field):
-            errors.append(f"{path.relative_to(root)}: missing {field}")
+            errors.append(f"missing {field}")
 
     if errors or not name:
         return None, errors
@@ -94,30 +120,132 @@ def parse_skill_metadata(
     return metadata, []
 
 
-def check_ascii_markdown(root: Path = ROOT) -> list[str]:
+def scan_non_ascii_lines(text: str) -> list[tuple[int, str]]:
+    """Scan text and return (line_number, codepoints) for any line containing non-ASCII characters."""
+    findings: list[tuple[int, str]] = []
+    if text.isascii():
+        return findings
+    for line_number, line in enumerate(text.splitlines(keepends=True), 1):
+        non_ascii = sorted({char for char in line if not char.isascii()})
+        if non_ascii:
+            codepoints = ", ".join(f"U+{ord(char):04X}" for char in non_ascii)
+            findings.append((line_number, codepoints))
+    return findings
+
+
+def validate_plan_path_parts(rel_parts: tuple[str, ...], suffix: str) -> list[str]:
+    """Validate that plan path parts conform to YYYY-MM-DD/[task-name].md."""
     errors: list[str] = []
-    markdown_files = sorted(
-        path for path in root.rglob("*.md") if ".git" not in path.parts
-    )
+    date_pattern = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+    if (
+        len(rel_parts) != 2
+        or not date_pattern.fullmatch(rel_parts[0])
+        or suffix != ".md"
+    ):
+        errors.append("plan must be .plans/YYYY-MM-DD/[task-name].md")
+        return errors
+    try:
+        date.fromisoformat(rel_parts[0])
+    except ValueError:
+        errors.append("plan must use a valid ISO calendar date")
+    return errors
+
+
+def validate_plan_status_text(
+    text: str, allowed_statuses: frozenset[str] = PLAN_STATUSES
+) -> list[str]:
+    """Validate status field embedded in plan markdown text."""
+    errors: list[str] = []
+    status_match = re.search(r"^- Status:\s*`([^`]+)`", text, re.MULTILINE)
+    if not status_match:
+        errors.append("plan missing Status field")
+    elif status_match.group(1) not in allowed_statuses:
+        errors.append(f"plan has unknown status {status_match.group(1)!r}")
+    return errors
+
+
+def validate_spec_gates_text(text: str) -> list[str]:
+    """Validate spec gates section and checkbox states when status is stable."""
+    errors: list[str] = []
+    status_match = re.search(r"^- Status:\s*`([^`]+)`", text, re.MULTILINE)
+    if not status_match:
+        errors.append("missing or invalid Status field")
+        return errors
+
+    status = status_match.group(1).strip()
+    if status == "stable":
+        gates_match = re.search(
+            r"## 4\. Quality Gates\s*\n(.*?)(?=\n##|\Z)", text, re.DOTALL
+        )
+        if not gates_match:
+            errors.append("missing '## 4. Quality Gates' section")
+        else:
+            unchecked = re.findall(r"^\s*-\s*\[ \]", gates_match.group(1), re.MULTILINE)
+            if unchecked:
+                errors.append(
+                    f"status is 'stable' but has {len(unchecked)} unchecked quality gate(s)"
+                )
+    return errors
+
+
+def parse_frontmatter_dict(path: Path) -> dict[str, str]:
+    """Compatibility wrapper reading path and delegating to parse_frontmatter_text."""
+    return parse_frontmatter_text(path.read_text(encoding="utf-8"))
+
+
+def parse_skill_metadata(
+    path: Path, root: Path = ROOT
+) -> tuple[SkillMetadata | None, list[str]]:
+    """Parse and validate SKILL.md file."""
+    try:
+        raw = parse_frontmatter_dict(path)
+    except ValueError as exc:
+        return None, [f"{path.relative_to(root)}: {exc}"]
+    metadata, errors = validate_skill_metadata_fields(raw, path.parent.name)
+    return metadata, [f"{path.relative_to(root)}: {err}" for err in errors]
+
+
+def check_ascii_markdown(
+    agents_path: Path = AGENTS,
+    skills_dir: Path = SKILLS,
+    root: Path = ROOT,
+) -> list[str]:
+    """Verify that AGENTS.md and skills/ markdown files contain only ASCII characters."""
+    if agents_path.is_dir() and skills_dir == SKILLS:
+        actual_root = agents_path
+        actual_agents = actual_root / "AGENTS.md"
+        actual_skills = actual_root / "skills"
+    else:
+        actual_root = root
+        actual_agents = agents_path
+        actual_skills = skills_dir
+
+    errors: list[str] = []
+    markdown_files: list[Path] = []
+    if actual_agents.is_file():
+        markdown_files.append(actual_agents)
+    if actual_skills.is_dir():
+        markdown_files.extend(
+            path
+            for path in sorted(actual_skills.rglob("*.md"))
+            if ".git" not in path.parts
+        )
     for path in markdown_files:
         text = path.read_text(encoding="utf-8")
-        if text.isascii():
-            continue
-        for line_number, line in enumerate(text.splitlines(keepends=True), 1):
-            non_ascii = sorted({char for char in line if not char.isascii()})
-            if non_ascii:
-                codepoints = ", ".join(f"U+{ord(char):04X}" for char in non_ascii)
-                errors.append(
-                    f"{path.relative_to(root)}: non-ASCII Markdown content "
-                    f"at line {line_number} ({codepoints})"
-                )
-                break
+        findings = scan_non_ascii_lines(text)
+        if findings:
+            first_line, codepoints = findings[0]
+            errors.append(
+                f"{path.relative_to(actual_root)}: non-ASCII Markdown content "
+                f"at line {first_line} ({codepoints})"
+            )
     return errors
 
 
 def check_skill_frontmatters(
     skills_dir: Path = SKILLS, root: Path = ROOT
 ) -> tuple[dict[str, SkillMetadata], list[str]]:
+    """Check that all skills directories contain valid SKILL.md files."""
     errors: list[str] = []
     skills: dict[str, SkillMetadata] = {}
     if not skills_dir.is_dir():
@@ -145,51 +273,37 @@ def check_skill_frontmatters(
 
 
 def check_plan_paths(plans_dir: Path, root: Path = ROOT) -> list[str]:
+    """Validate all files under .plans/ follow date directory hierarchy."""
     errors: list[str] = []
     if not plans_dir.exists():
         return errors
 
-    date_pattern = re.compile(r"^\d{4}-\d{2}-\d{2}$")
     for path in plans_dir.rglob("*"):
         if not path.is_file() or path.name.startswith("."):
             continue
-        relative = path.relative_to(plans_dir)
-        if (
-            len(relative.parts) != 2
-            or not date_pattern.fullmatch(relative.parts[0])
-            or path.suffix != ".md"
-        ):
-            errors.append(
-                f"plan must be .plans/YYYY-MM-DD/[task-name].md: {path.relative_to(root)}"
-            )
-            continue
-        try:
-            date.fromisoformat(relative.parts[0])
-        except ValueError:
-            errors.append(
-                f"plan must use a valid ISO calendar date: {path.relative_to(root)}"
-            )
+        rel_parts = path.relative_to(plans_dir).parts
+        part_errors = validate_plan_path_parts(rel_parts, path.suffix)
+        for err in part_errors:
+            errors.append(f"{err}: {path.relative_to(root)}")
     return errors
 
 
 def check_plan_status(plans_dir: Path, root: Path = ROOT) -> list[str]:
+    """Check that all plan markdown files specify a recognized Status."""
     errors: list[str] = []
     if not plans_dir.exists():
         return errors
 
     for path in sorted(plans_dir.glob("*/*.md")):
         text = path.read_text(encoding="utf-8")
-        status_match = re.search(r"^- Status:\s*`([^`]+)`", text, re.MULTILINE)
-        if not status_match:
-            errors.append(f"plan missing Status field: {path.relative_to(root)}")
-        elif status_match.group(1) not in PLAN_STATUSES:
-            errors.append(
-                f"plan has unknown status {status_match.group(1)!r}: {path.relative_to(root)}"
-            )
+        status_errors = validate_plan_status_text(text)
+        for err in status_errors:
+            errors.append(f"{err}: {path.relative_to(root)}")
     return errors
 
 
 def check_agents_file(agents_path: Path) -> list[str]:
+    """Verify that AGENTS.md exists."""
     errors: list[str] = []
     if not agents_path.is_file():
         errors.append(f"missing AGENTS.md file: {agents_path}")
@@ -197,33 +311,16 @@ def check_agents_file(agents_path: Path) -> list[str]:
 
 
 def check_spec_gates(spec_path: Path, root: Path = ROOT) -> list[str]:
+    """Verify quality gates in specification file."""
     errors: list[str] = []
     if not spec_path.exists():
         errors.append(f"missing specification file: {spec_path.relative_to(root)}")
         return errors
 
-    spec_text = spec_path.read_text(encoding="utf-8")
-    status_match = re.search(r"^- Status:\s*`([^`]+)`", spec_text, re.MULTILINE)
-    if not status_match:
-        errors.append(f"{spec_path.relative_to(root)}: missing or invalid Status field")
-        return errors
-
-    status = status_match.group(1).strip()
-    if status == "stable":
-        gates_match = re.search(
-            r"## 4\. Quality Gates\s*\n(.*?)(?=\n##|\Z)", spec_text, re.DOTALL
-        )
-        if not gates_match:
-            errors.append(
-                f"{spec_path.relative_to(root)}: missing '## 4. Quality Gates' section"
-            )
-        else:
-            unchecked = re.findall(r"^\s*-\s*\[ \]", gates_match.group(1), re.MULTILINE)
-            if unchecked:
-                errors.append(
-                    f"{spec_path.relative_to(root)}: status is 'stable' but has {len(unchecked)} unchecked quality gate(s)"
-                )
-
+    text = spec_path.read_text(encoding="utf-8")
+    gate_errors = validate_spec_gates_text(text)
+    for err in gate_errors:
+        errors.append(f"{spec_path.relative_to(root)}: {err}")
     return errors
 
 
@@ -234,8 +331,9 @@ def validate_repository(
     plans_dir: Path = PLANS,
     spec_path: Path = SPEC,
 ) -> ValidationReport:
+    """Validate full repository constraints."""
     errors: list[str] = []
-    errors.extend(check_ascii_markdown(root))
+    errors.extend(check_ascii_markdown(agents_path, skills_dir, root))
 
     skills, skill_errors = check_skill_frontmatters(skills_dir, root)
     errors.extend(skill_errors)
@@ -258,7 +356,7 @@ def main() -> int:
 
     print(f"Validated {len(report.skills)} skills frontmatter metadata.")
     print(
-        "Validated ASCII-only Markdown, dated plan paths, plan status, AGENTS.md existence, and spec gates."
+        "Validated ASCII-only Markdown (AGENTS.md, skills/), dated plan paths, plan status, AGENTS.md existence, and spec gates."
     )
     return 0
 

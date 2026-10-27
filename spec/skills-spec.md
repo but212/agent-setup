@@ -10,7 +10,7 @@
 - Skill selection and routing for interactive challenge, prose compression, structural design, and adversarial review.
 - Core implementation, TDD verification, conflict resolution, and communication invariants governed by AGENTS.md.
 - Plan tracking via agent plan artifacts or dated plan files (`.plans/YYYY-MM-DD/[task-name].md`).
-- Dependency-free validation of frontmatter, plan paths, ASCII Markdown, and AGENTS.md existence.
+- Dependency-free validation of frontmatter, plan paths, agent prompt ASCII Markdown, and AGENTS.md existence.
 - Mirror deployment of `AGENTS.md` and `skills/` into the shared agent directory.
 
 ### Excluded
@@ -34,6 +34,8 @@ Each skill in `skills/*/SKILL.md` declares scalar frontmatter fields:
 - `activation`: Triggers and command aliases.
 - `modification-authority`: Permitted write scope (`None` for read-only skills, `Named files only` for `crisp`).
 - `description`: Single-line overview of skill purpose.
+
+Frontmatter syntax is strictly restricted to flat scalar mappings or inline JSON arrays (`["item1", "item2"]`). Multiline block scalars (`|`, `>`) and indented nested lists (`- item`) are unsupported and rejected during validation.
 
 Frontmatter is validated by `scripts/validate-skills.py`.
 
@@ -88,11 +90,12 @@ When tracking multi-step work, an agent plan artifact or a dated plan file (`.pl
 
 - Destination is a copy target; repository is the source of truth.
 - Destination path safety (preventing repository, home, or root overwrites) is validated before write.
+- Atomic deployment invariant: deployment uses a mutual-exclusion lock (`.deploy.lock`) and a staging-then-swap pattern (`.skills.tmp.<pid>`); failures preserve existing destination files without leaving intermediate or partial state.
 
 ## 4. Quality Gates
 
 - [x] Every skill frontmatter defines valid `name`, `role`, `activation`, and `modification-authority`.
-- [x] Markdown files are strictly ASCII-only.
+- [x] Agent prompt Markdown files (AGENTS.md, skills/) are strictly ASCII-only.
 - [x] `python3 scripts/validate-skills.py` and `python3 -m unittest discover -s tests -v` pass.
 
 ## 5. Stabilization Policy

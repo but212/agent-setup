@@ -1,3 +1,4 @@
+import re
 import shutil
 import subprocess
 import sys
@@ -76,9 +77,9 @@ class RepositoryContractTests(unittest.TestCase):
     def test_non_ascii_markdown_fails(self):
         with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
             repository = clone_repo_to_temp(directory)
-            readme = repository / "README.md"
-            readme.write_text(
-                readme.read_text(encoding="utf-8") + "\n\u2028\n", encoding="utf-8"
+            agents = repository / "AGENTS.md"
+            agents.write_text(
+                agents.read_text(encoding="utf-8") + "\n\u2028\n", encoding="utf-8"
             )
 
             result = subprocess.run(
@@ -89,8 +90,51 @@ class RepositoryContractTests(unittest.TestCase):
                 check=False,
             )
 
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("non-ASCII Markdown content", result.stdout)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("non-ASCII Markdown content", result.stdout)
+
+        with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
+            repository = clone_repo_to_temp(directory)
+            skill = repository / "skills" / "challenge" / "SKILL.md"
+            skill.write_text(
+                skill.read_text(encoding="utf-8") + "\n\u2028\n", encoding="utf-8"
+            )
+
+            result = subprocess.run(
+                [sys.executable, "scripts/validate-skills.py"],
+                cwd=repository,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("non-ASCII Markdown content", result.stdout)
+
+    def test_non_ascii_non_agent_markdown_passes(self):
+        with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
+            repository = clone_repo_to_temp(directory)
+            readme = repository / "README.md"
+            readme.write_text(
+                readme.read_text(encoding="utf-8")
+                + "\n한글 설명 및 유니코드 다이어그램\n",
+                encoding="utf-8",
+            )
+            spec = repository / "spec" / "skills-spec.md"
+            spec.write_text(
+                spec.read_text(encoding="utf-8") + "\n한글 주석\n",
+                encoding="utf-8",
+            )
+
+            result = subprocess.run(
+                [sys.executable, "scripts/validate-skills.py"],
+                cwd=repository,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_invalid_plan_calendar_date_fails(self):
         with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
@@ -261,6 +305,125 @@ class RepositoryContractTests(unittest.TestCase):
 
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("incomplete-skill", result.stdout)
+
+    def test_frontmatter_inline_json_array_passes(self):
+        with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
+            repository = clone_repo_to_temp(directory)
+            skill = repository / "skills" / "challenge" / "SKILL.md"
+            content = skill.read_text(encoding="utf-8")
+            content = re.sub(
+                r"^activation:.*$",
+                'activation: ["/challenge", "/grill-me"]',
+                content,
+                flags=re.MULTILINE,
+            )
+            skill.write_text(content, encoding="utf-8")
+
+            result = subprocess.run(
+                [sys.executable, "scripts/validate-skills.py"],
+                cwd=repository,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_parse_frontmatter_text_normalizes_inline_json_and_comments(self):
+        import importlib
+
+        sys.path.insert(0, str(ROOT / "scripts"))
+        validator = importlib.import_module("validate-skills")
+
+        raw_text = (
+            "---\n"
+            "name: test-skill\n"
+            'activation: ["/a", "/b"] # inline comment\n'
+            'role: "quoted role"\n'
+            "---\n"
+            "# Content\n"
+        )
+        parsed = validator.parse_frontmatter_text(raw_text)
+        self.assertEqual(parsed["name"], "test-skill")
+        self.assertEqual(parsed["activation"], "/a, /b")
+        self.assertEqual(parsed["role"], "quoted role")
+
+    def test_scan_non_ascii_lines_pure(self):
+        import importlib
+
+        sys.path.insert(0, str(ROOT / "scripts"))
+        validator = importlib.import_module("validate-skills")
+
+        findings = validator.scan_non_ascii_lines("hello\nworld\n")
+        self.assertEqual(findings, [])
+
+        findings = validator.scan_non_ascii_lines("hello\nworld \u2028\n")
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0][0], 2)
+        self.assertIn("U+2028", findings[0][1])
+
+    def test_validate_plan_path_parts_pure(self):
+        import importlib
+
+        sys.path.insert(0, str(ROOT / "scripts"))
+        validator = importlib.import_module("validate-skills")
+
+        self.assertEqual(
+            validator.validate_plan_path_parts(("2026-01-01", "task.md"), ".md"),
+            [],
+        )
+        errs = validator.validate_plan_path_parts(("2026-99-99", "task.md"), ".md")
+        self.assertTrue(any("valid ISO calendar date" in e for e in errs))
+        errs = validator.validate_plan_path_parts(("2026-01-01", "task.txt"), ".txt")
+        self.assertTrue(any("must be .plans" in e for e in errs))
+
+    def test_frontmatter_multiline_block_scalar_fails(self):
+        with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
+            repository = clone_repo_to_temp(directory)
+            skill = repository / "skills" / "challenge" / "SKILL.md"
+            content = skill.read_text(encoding="utf-8")
+            content = re.sub(
+                r"^description:.*$",
+                "description: >\n  A multiline description.",
+                content,
+                flags=re.MULTILINE,
+            )
+            skill.write_text(content, encoding="utf-8")
+
+            result = subprocess.run(
+                [sys.executable, "scripts/validate-skills.py"],
+                cwd=repository,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("multiline block scalars", result.stdout)
+
+    def test_frontmatter_nested_list_fails(self):
+        with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
+            repository = clone_repo_to_temp(directory)
+            skill = repository / "skills" / "challenge" / "SKILL.md"
+            content = skill.read_text(encoding="utf-8")
+            content = re.sub(
+                r"^activation:.*$",
+                "activation:\n  - /challenge\n  - /grill-me",
+                content,
+                flags=re.MULTILINE,
+            )
+            skill.write_text(content, encoding="utf-8")
+
+            result = subprocess.run(
+                [sys.executable, "scripts/validate-skills.py"],
+                cwd=repository,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("nested list items", result.stdout)
 
 
 if __name__ == "__main__":

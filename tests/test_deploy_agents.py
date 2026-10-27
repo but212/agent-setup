@@ -138,6 +138,73 @@ class DeployAgentsTests(unittest.TestCase):
         self.assertEqual(result_nested.returncode, 1)
         self.assertIn("refusing unsafe AGENT_HOME", result_nested.stderr)
 
+    def test_deploy_fails_when_lock_held(self):
+        target = self.root / "target"
+        target.mkdir(parents=True)
+        lock_file = target / ".deploy.lock"
+        lock_file.write_text("99999\n", encoding="utf-8")
+
+        result = self.run_deploy(target)
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("deployment lock already held", result.stderr)
+
+    def test_deploy_releases_lock_on_success(self):
+        target = self.root / "target"
+        result = self.run_deploy(target)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse((target / ".deploy.lock").exists())
+
+    def test_deploy_failure_preserves_original_skills(self):
+        from unittest.mock import patch
+        from scripts.deploy_agents import sync_skills_atomic
+
+        target = self.root / "target"
+        target_skills = target / "skills"
+        (target_skills / "example").mkdir(parents=True)
+        original_skill = target_skills / "example" / "SKILL.md"
+        original_skill.write_text("original content\n", encoding="utf-8")
+
+        source_skills = self.repo / "skills"
+
+        with patch("shutil.copytree", side_effect=IOError("Simulated disk full")):
+            with self.assertRaises(IOError):
+                sync_skills_atomic(source_skills, target_skills)
+
+        self.assertTrue(original_skill.exists())
+        self.assertEqual(
+            original_skill.read_text(encoding="utf-8"), "original content\n"
+        )
+        staging_dirs = list(target.glob(".skills.*"))
+        self.assertEqual(staging_dirs, [])
+
+    def test_create_deployment_plan_returns_valid_plan(self):
+        from scripts.deploy_agents import create_deployment_plan
+
+        target = self.root / "valid_plan_target"
+        plan = create_deployment_plan(self.repo, str(target))
+        self.assertEqual(plan.canonical_target, target.resolve())
+        self.assertEqual(plan.target_agents, target.resolve() / "AGENTS.md")
+        self.assertEqual(plan.target_skills, target.resolve() / "skills")
+        self.assertEqual(plan.lock_path, target.resolve() / ".deploy.lock")
+
+    def test_deployment_transaction_commit_and_rollback(self):
+        from scripts.deploy_agents import (
+            DeploymentTransaction,
+            create_deployment_plan,
+        )
+
+        target = self.root / "tx_target"
+        plan = create_deployment_plan(self.repo, str(target))
+
+        with DeploymentTransaction(plan) as tx:
+            target_agents, count = tx.commit()
+            self.assertEqual(count, 1)
+            self.assertTrue(target_agents.is_file())
+            self.assertTrue((plan.target_skills / "example" / "SKILL.md").is_file())
+
+        self.assertFalse(plan.lock_path.exists())
+
 
 if __name__ == "__main__":
     unittest.main()

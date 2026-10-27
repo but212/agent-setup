@@ -53,7 +53,7 @@ python3 scripts/validate-skills.py
 python3 -m unittest discover -s tests -v
 ```
 
-The validator checks skill frontmatter, dated plan paths, plan status values, AGENTS.md existence, and ASCII-only Markdown content. The test suite covers deployment, repository contracts, and safety guard wording.
+The validator checks skill frontmatter, dated plan paths, plan status values, AGENTS.md existence, and ASCII-only Markdown content in AGENTS.md and skills/. The test suite covers deployment, repository contracts, and safety guard wording.
 
 ## Status
 
