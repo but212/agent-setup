@@ -2,6 +2,8 @@
 
 [![skills.sh](https://img.shields.io/badge/skills.sh-agent--setup-black?logo=vercel&logoColor=white)](https://skills.sh/but212/agent-setup)
 
+**English** | [한국어](docs/README.ko.md) | [Philosophy](docs/PHILOSOPHY.md) | [Specification](docs/skills-spec.md)
+
 Operating rules and skill contracts for coding agents, in plain Markdown.
 
 > For small workflows like air.
@@ -25,13 +27,14 @@ Skills are independent on-demand modalities, not a mandatory sequence:
 
 ## Layout and Contracts
 
-- `AGENTS.md` - Core operating constitution defining precedence, safety guards, TDD, and handoff.
-- `skills/*/SKILL.md` - Four modal contracts: `challenge` (inquiry), `crisp` (compression), `lean-design` (types/invariants), `lean-review` (adversarial audit).
-- `spec/skills-spec.md` - Architecture specification and quality gates.
+- [AGENTS.md](AGENTS.md) - Core operating constitution defining precedence, safety guards, TDD, and handoff.
+- skills/*/SKILL.md - Four modal contracts: [`challenge`](skills/challenge/SKILL.md) (inquiry), [`crisp`](skills/crisp/SKILL.md) (compression), [`lean-design`](skills/lean-design/SKILL.md) (types/invariants), [`lean-review`](skills/lean-review/SKILL.md) (adversarial audit).
+- [docs/skills-spec.md](docs/skills-spec.md) - Architecture specification and quality gates.
+- [docs/PHILOSOPHY.md](docs/PHILOSOPHY.md) / [docs/PHILOSOPHY.ko.md](docs/PHILOSOPHY.ko.md) - Architectural and probabilistic philosophy.
 - `.plans/YYYY-MM-DD/` - Tracked execution plans grouped by creation date.
-- `scripts/deploy_agents.py` - Copies AGENTS.md and skills into ~/.agents. Which tools read that directory is up to each tool.
-- `scripts/validate-skills.py` - Dependency-free metadata, plan, and safety validator.
-- `.github/workflows/ci.yml` - Multi-OS GitHub Actions workflow.
+- [scripts/deploy_agents.py](scripts/deploy_agents.py) - Copies AGENTS.md and skills into ~/.agents. Which tools read that directory is up to each tool.
+- [scripts/validate-skills.py](scripts/validate-skills.py) - Dependency-free metadata, plan, and safety validator.
+- [.github/workflows/ci.yml](.github/workflows/ci.yml) - Multi-OS GitHub Actions workflow.
 
 ## Usage
 
@@ -63,4 +66,4 @@ The skill specification is currently `stable`. The spec's structural gates pass.
 
 ---
 
-Credits: `challenge` inspired by [grill-me](https://github.com/mattpocock/skills/tree/main/skills/productivity/grill-me), `lean-review` by [ponytail-review](https://github.com/DietrichGebert/ponytail/blob/main/skills/ponytail-review/SKILL.md), and `crisp` by [caveman](https://github.com/JuliusBrussee/caveman). See NOTICE.
+Credits: `challenge` inspired by [grill-me](https://github.com/mattpocock/skills/tree/main/skills/productivity/grill-me), `lean-review` by [ponytail-review](https://github.com/DietrichGebert/ponytail/blob/main/skills/ponytail-review/SKILL.md), and `crisp` by [caveman](https://github.com/JuliusBrussee/caveman). See [NOTICE](NOTICE) and [LICENSE](LICENSE).
