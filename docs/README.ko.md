@@ -58,7 +58,7 @@ python3 scripts/validate-skills.py
 python3 -m unittest discover -s tests -v
 ```
 
-검증기는 스킬 프론트매터, 일자별 계획 경로, 계획 상태 값, `AGENTS.md` 존재 여부, `AGENTS.md` 및 `skills/`의 ASCII 전용 Markdown 내용을 검사합니다. 테스트 스위트는 배포 로직, 저장소 계약, 안전 가드 문구를 검증합니다.
+검증기는 스킬 프론트매터, 일자별 계획 경로, 계획 상태 값, `AGENTS.md` 존재 여부, 문서 줄 수 한도(200줄 이내), `AGENTS.md` 및 `skills/`의 ASCII 전용 Markdown 내용을 검사합니다. 테스트 스위트는 배포 로직, 저장소 계약, 안전 가드 문구를 검증합니다.
 
 ## 상태
 

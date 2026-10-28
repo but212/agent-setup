@@ -30,7 +30,8 @@ Every state mutation must be the minimal closed subset resolving the approved ta
 Logical deduction cannot substitute for empirical execution.
 
 - Follow test-driven development for logic changes: write failing test -> minimal implementation -> verify pass.
-- Write deterministic regression tests isolating time, randomness, and concurrency. Test observable contracts, transitions, and boundary failures rather than private implementation details.
+- Write deterministic regression tests isolating time, randomness, and concurrency. Verify invariant laws, type contracts, state transitions, and boundary edge cases.
+- Forbid brittle assertion of detailed phrasing, exact prose wording, or cosmetic formatting that breaks under benign edits; assert observable functional outcomes, typed data contracts, and failure exit states.
 - Never assert or report verification for unrun commands, unexecuted branches, or unverified failure paths. When missing toolchains or network barriers prevent execution, explicitly report checks as Unverified with blocker details.
 - Execute repository-native test commands starting from the narrowest relevant vector.
 

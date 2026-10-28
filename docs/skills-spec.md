@@ -12,7 +12,7 @@
 - Skill selection and routing for interactive challenge, prose compression, structural design, and adversarial review.
 - Core implementation, TDD verification, conflict resolution, and communication invariants governed by AGENTS.md.
 - Plan tracking via agent plan artifacts or dated plan files (`.plans/YYYY-MM-DD/[task-name].md`).
-- Dependency-free validation of frontmatter, plan paths, agent prompt ASCII Markdown, and AGENTS.md existence.
+- Dependency-free validation of frontmatter, plan paths, agent prompt ASCII Markdown, document line budgets, and AGENTS.md existence.
 - Mirror deployment of `AGENTS.md` and `skills/` into the shared agent directory.
 
 ### Excluded

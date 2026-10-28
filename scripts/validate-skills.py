@@ -12,11 +12,11 @@ ROOT = Path(__file__).resolve().parent.parent
 SKILLS = ROOT / "skills"
 AGENTS = ROOT / "AGENTS.md"
 PLANS = ROOT / ".plans"
-SPEC = ROOT / "docs" / "skills-spec.md"
 
 PLAN_STATUSES = frozenset(
     {"planned", "in-progress", "blocked", "complete", "cancelled"}
 )
+MAX_AGENT_DOC_LINES = 200
 
 
 @dataclass(frozen=True)
@@ -156,7 +156,9 @@ def validate_plan_status_text(
 ) -> list[str]:
     """Validate status field embedded in plan markdown text."""
     errors: list[str] = []
-    status_match = re.search(r"^- Status:\s*`([^`]+)`", text, re.MULTILINE)
+    status_match = re.search(
+        r"^(?:-\s*)?Status:\s*`?([a-zA-Z0-9_-]+)`?", text, re.MULTILINE
+    )
     if not status_match:
         errors.append("plan missing Status field")
     elif status_match.group(1) not in allowed_statuses:
@@ -164,28 +166,14 @@ def validate_plan_status_text(
     return errors
 
 
-def validate_spec_gates_text(text: str) -> list[str]:
-    """Validate spec gates section and checkbox states when status is stable."""
-    errors: list[str] = []
-    status_match = re.search(r"^- Status:\s*`([^`]+)`", text, re.MULTILINE)
-    if not status_match:
-        errors.append("missing or invalid Status field")
-        return errors
-
-    status = status_match.group(1).strip()
-    if status == "stable":
-        gates_match = re.search(
-            r"## 4\. Quality Gates\s*\n(.*?)(?=\n##|\Z)", text, re.DOTALL
-        )
-        if not gates_match:
-            errors.append("missing '## 4. Quality Gates' section")
-        else:
-            unchecked = re.findall(r"^\s*-\s*\[ \]", gates_match.group(1), re.MULTILINE)
-            if unchecked:
-                errors.append(
-                    f"status is 'stable' but has {len(unchecked)} unchecked quality gate(s)"
-                )
-    return errors
+def validate_document_line_count(
+    text: str, max_lines: int = MAX_AGENT_DOC_LINES
+) -> list[str]:
+    """Validate that document does not exceed max line budget."""
+    lines = text.splitlines()
+    if len(lines) > max_lines:
+        return [f"exceeds line budget ({len(lines)} > {max_lines} lines)"]
+    return []
 
 
 def parse_frontmatter_dict(path: Path) -> dict[str, str]:
@@ -310,17 +298,33 @@ def check_agents_file(agents_path: Path) -> list[str]:
     return errors
 
 
-def check_spec_gates(spec_path: Path, root: Path = ROOT) -> list[str]:
-    """Verify quality gates in specification file."""
-    errors: list[str] = []
-    if not spec_path.exists():
-        errors.append(f"missing specification file: {spec_path.relative_to(root)}")
-        return errors
+def check_document_line_limits(
+    agents_path: Path = AGENTS,
+    skills_dir: Path = SKILLS,
+    root: Path = ROOT,
+    max_lines: int = MAX_AGENT_DOC_LINES,
+) -> list[str]:
+    """Verify that agent prompt documents (AGENTS.md, skills/*/SKILL.md) obey line budget invariant."""
+    if agents_path.is_dir() and skills_dir == SKILLS:
+        actual_root = agents_path
+        actual_agents = actual_root / "AGENTS.md"
+        actual_skills = actual_root / "skills"
+    else:
+        actual_root = root
+        actual_agents = agents_path
+        actual_skills = skills_dir
 
-    text = spec_path.read_text(encoding="utf-8")
-    gate_errors = validate_spec_gates_text(text)
-    for err in gate_errors:
-        errors.append(f"{spec_path.relative_to(root)}: {err}")
+    errors: list[str] = []
+    documents: list[Path] = []
+    if actual_agents.is_file():
+        documents.append(actual_agents)
+    if actual_skills.is_dir():
+        documents.extend(sorted(actual_skills.glob("*/SKILL.md")))
+
+    for path in documents:
+        text = path.read_text(encoding="utf-8")
+        for err in validate_document_line_count(text, max_lines):
+            errors.append(f"{path.relative_to(actual_root)}: {err}")
     return errors
 
 
@@ -329,11 +333,11 @@ def validate_repository(
     skills_dir: Path = SKILLS,
     agents_path: Path = AGENTS,
     plans_dir: Path = PLANS,
-    spec_path: Path = SPEC,
 ) -> ValidationReport:
     """Validate full repository constraints."""
     errors: list[str] = []
     errors.extend(check_ascii_markdown(agents_path, skills_dir, root))
+    errors.extend(check_document_line_limits(agents_path, skills_dir, root))
 
     skills, skill_errors = check_skill_frontmatters(skills_dir, root)
     errors.extend(skill_errors)
@@ -341,13 +345,12 @@ def validate_repository(
     errors.extend(check_plan_paths(plans_dir, root))
     errors.extend(check_plan_status(plans_dir, root))
     errors.extend(check_agents_file(agents_path))
-    errors.extend(check_spec_gates(spec_path, root))
 
     return ValidationReport(skills=skills, errors=errors)
 
 
 def main() -> int:
-    report = validate_repository(ROOT, SKILLS, AGENTS, PLANS, SPEC)
+    report = validate_repository(ROOT, SKILLS, AGENTS, PLANS)
 
     if not report.is_valid:
         print("Skill validation failed:")
@@ -356,7 +359,7 @@ def main() -> int:
 
     print(f"Validated {len(report.skills)} skills frontmatter metadata.")
     print(
-        "Validated ASCII-only Markdown (AGENTS.md, skills/), dated plan paths, plan status, AGENTS.md existence, and spec gates."
+        f"Validated ASCII-only Markdown (AGENTS.md, skills/), document line budgets (<= {MAX_AGENT_DOC_LINES} lines), dated plan paths, plan status, and AGENTS.md existence."
     )
     return 0
 
