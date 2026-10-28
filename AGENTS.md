@@ -14,7 +14,7 @@ Every state mutation must be the minimal closed subset resolving the approved ta
 
 - Read-only analysis must not alter files, schemas, tests, or documentation.
 - Modify only paths needed for approved requests; never touch lockfiles, generated assets, schemas, or migrations without explicit instruction.
-- Multi-step tasks track execution via an agent plan artifact for single-session workflows, or a dated plan file (.plans/YYYY-MM-DD/[task-name].md) for persistent cross-session changes. Execution of persistent plans or contract-breaking changes remains paused until explicit user approval; single-session workflows proceed on reasonable default assumptions.
+- Multi-step tasks track execution via an agent plan artifact for single-session workflows, or a persistent plan file for cross-session changes. Execution of persistent plans or contract-breaking changes remains paused until explicit user approval; single-session workflows proceed on reasonable default assumptions.
 - Fix shared root causes at domain boundaries (e.g. normalize or validate once at schema or ingress rather than patching symptoms across scattered call sites). Remove only symbols rendered unused by the current edit; do not prune pre-existing dead code.
 
 ## Contract Soundness and State Modeling

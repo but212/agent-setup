@@ -11,7 +11,7 @@
 
 - Skill selection and routing for interactive challenge, prose compression, structural design, and adversarial review.
 - Core implementation, TDD verification, conflict resolution, and communication invariants governed by AGENTS.md.
-- Plan tracking via agent plan artifacts or dated plan files (`.plans/YYYY-MM-DD/[task-name].md`).
+- Plan tracking via agent plan artifacts or persistent plan files.
 - Dependency-free validation of frontmatter, plan paths, agent prompt ASCII Markdown, document line budgets, and AGENTS.md existence.
 - Mirror deployment of `AGENTS.md` and `skills/` into the shared agent directory.
 
@@ -81,7 +81,7 @@ Skills do not require an intermediary router. Each skill completes its specializ
 
 ### 3.6 Plan Tracking Rules
 
-When tracking multi-step work, an agent plan artifact or a dated plan file (`.plans/YYYY-MM-DD/[task-name].md`) serves as the execution SSOT:
+When tracking multi-step work, an agent plan artifact or a persistent plan file serves as the execution SSOT:
 
 - Work remains in `planned` state until explicit execution approval is granted.
 - Check items only upon deterministic verification pass; record deviations under decisions and deviations.

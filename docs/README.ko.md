@@ -31,7 +31,6 @@
 - skills/*/SKILL.md - 4가지 모달 계약: [`challenge`](../skills/challenge/SKILL.md)(심층 질의), [`crisp`](../skills/crisp/SKILL.md)(텍스트 압축), [`lean-design`](../skills/lean-design/SKILL.md)(타입/불변식), [`lean-review`](../skills/lean-review/SKILL.md)(적대적 감사).
 - [docs/skills-spec.md](skills-spec.md) - 아키텍처 명세 및 품질 게이트.
 - [docs/PHILOSOPHY.ko.md](PHILOSOPHY.ko.md) / [docs/PHILOSOPHY.md](PHILOSOPHY.md) - Agent Setup의 설계 철학 및 배경.
-- `.plans/YYYY-MM-DD/` - 생성 일자별로 추적되는 실행 계획.
 - [scripts/deploy_agents.py](../scripts/deploy_agents.py) - `AGENTS.md`와 스킬을 `~/.agents`로 복사(디렉터리 참조 방식은 각 도구에 따름).
 - [scripts/validate-skills.py](../scripts/validate-skills.py) - 외부 의존성 없는 메타데이터, 계획, 안전 규칙 검증기.
 - [.github/workflows/ci.yml](../.github/workflows/ci.yml) - 멀티 OS GitHub Actions 워크플로우.
@@ -46,8 +45,6 @@
    ```
 
    대상 디렉터리를 변경하려면 `AGENT_HOME` 환경 변수를 지정하십시오.
-
-3. 다단계 작업은 에이전트 계획 아티팩트 또는 `.plans/YYYY-MM-DD/[task-name].md` 형식의 일자별 계획 파일로 추적합니다.
 
 ## 검증
 

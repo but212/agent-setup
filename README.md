@@ -31,7 +31,6 @@ Skills are independent on-demand modalities, not a mandatory sequence:
 - skills/*/SKILL.md - Four modal contracts: [`challenge`](skills/challenge/SKILL.md) (inquiry), [`crisp`](skills/crisp/SKILL.md) (compression), [`lean-design`](skills/lean-design/SKILL.md) (types/invariants), [`lean-review`](skills/lean-review/SKILL.md) (adversarial audit).
 - [docs/skills-spec.md](docs/skills-spec.md) - Architecture specification and quality gates.
 - [docs/PHILOSOPHY.md](docs/PHILOSOPHY.md) / [docs/PHILOSOPHY.ko.md](docs/PHILOSOPHY.ko.md) - Architectural and probabilistic philosophy.
-- `.plans/YYYY-MM-DD/` - Tracked execution plans grouped by creation date.
 - [scripts/deploy_agents.py](scripts/deploy_agents.py) - Copies AGENTS.md and skills into ~/.agents. Which tools read that directory is up to each tool.
 - [scripts/validate-skills.py](scripts/validate-skills.py) - Dependency-free metadata, plan, and safety validator.
 - [.github/workflows/ci.yml](.github/workflows/ci.yml) - Multi-OS GitHub Actions workflow.
@@ -46,8 +45,6 @@ Skills are independent on-demand modalities, not a mandatory sequence:
    ```
 
    Set `AGENT_HOME` to override the destination directory.
-
-3. Track multi-step tasks via an agent plan artifact or a dated plan file in `.plans/YYYY-MM-DD/[task-name].md`.
 
 ## Verification
 
