@@ -120,7 +120,7 @@ class RepositoryContractTests(unittest.TestCase):
                 + "\n한글 설명 및 유니코드 다이어그램\n",
                 encoding="utf-8",
             )
-            spec = repository / "spec" / "skills-spec.md"
+            spec = repository / "docs" / "skills-spec.md"
             spec.write_text(
                 spec.read_text(encoding="utf-8") + "\n한글 주석\n",
                 encoding="utf-8",
@@ -212,7 +212,7 @@ class RepositoryContractTests(unittest.TestCase):
     def test_spec_stable_with_unchecked_gate_fails(self):
         with tempfile.TemporaryDirectory(prefix="agent-setup-validator-") as directory:
             repository = clone_repo_to_temp(directory)
-            spec = repository / "spec" / "skills-spec.md"
+            spec = repository / "docs" / "skills-spec.md"
             spec_text = spec.read_text(encoding="utf-8").replace("- [x]", "- [ ]", 1)
             spec.write_text(spec_text, encoding="utf-8")
 

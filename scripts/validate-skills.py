@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parent.parent
 SKILLS = ROOT / "skills"
 AGENTS = ROOT / "AGENTS.md"
 PLANS = ROOT / ".plans"
-SPEC = ROOT / "spec" / "skills-spec.md"
+SPEC = ROOT / "docs" / "skills-spec.md"
 
 PLAN_STATUSES = frozenset(
     {"planned", "in-progress", "blocked", "complete", "cancelled"}
