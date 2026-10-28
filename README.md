@@ -27,7 +27,7 @@ Skills are independent on-demand modalities, not a mandatory sequence:
 
 - `AGENTS.md` - Core operating constitution defining precedence, safety guards, TDD, and handoff.
 - `skills/*/SKILL.md` - Four modal contracts: `challenge` (inquiry), `crisp` (compression), `lean-design` (types/invariants), `lean-review` (adversarial audit).
-- `spec/skills-spec.md` - Architecture specification and quality gates.
+- `docs/skills-spec.md` - Architecture specification and quality gates.
 - `.plans/YYYY-MM-DD/` - Tracked execution plans grouped by creation date.
 - `scripts/deploy_agents.py` - Copies AGENTS.md and skills into ~/.agents. Which tools read that directory is up to each tool.
 - `scripts/validate-skills.py` - Dependency-free metadata, plan, and safety validator.
