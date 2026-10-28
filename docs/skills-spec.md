@@ -1,5 +1,7 @@
 # Agent Skills Integration Specification
 
+[README](../README.md) | [Philosophy](PHILOSOPHY.md)
+
 - Status: `stable`
 - Purpose: Define repository agent skills architecture, operating boundaries, routing interactions, and validation contracts.
 
