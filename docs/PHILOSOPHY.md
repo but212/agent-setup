@@ -6,6 +6,8 @@ A minimalist AI workflow focused on probabilistic distributions and concrete res
 
 ## AI Coding Is a Casino Where the Developer Holds the House Edge
 
+> By this, we mean positive statistical expectation, not gambling.
+
 AI coding workflows are not deterministic programs; they are priors designed to shape a probability bell curve so the law of large numbers yields a house edge. `SKILL.md` and `AGENTS.md` exist to shift this distribution.
 
 - **Prefer many small runs over one large execution.**
