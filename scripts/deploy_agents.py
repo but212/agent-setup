@@ -41,18 +41,7 @@ def create_deployment_plan(repo_root: Path, target_arg: str | None) -> Deploymen
         if not target_path.is_absolute():
             target_path = Path.cwd() / target_path
 
-    # Canonicalize existing ancestor if target does not yet exist
-    curr = target_path
-    parts: list[str] = []
-    while not curr.exists():
-        parts.insert(0, curr.name)
-        parent = curr.parent
-        if parent == curr:
-            break
-        curr = parent
-    canonical_target = curr.resolve()
-    for part in parts:
-        canonical_target = canonical_target / part
+    canonical_target = target_path.resolve()
 
     is_root = canonical_target == canonical_target.parent or (
         bool(canonical_target.anchor)
@@ -102,14 +91,12 @@ class DeploymentLock:
 
     def __init__(self, lock_path: Path):
         self.lock_path = lock_path
-        self.fd: int | None = None
 
     def __enter__(self):
         try:
-            self.fd = os.open(self.lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-            with os.fdopen(self.fd, "w", encoding="utf-8") as f:
+            fd = os.open(self.lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
                 f.write(f"{os.getpid()}\n")
-            self.fd = None
         except (FileExistsError, OSError) as exc:
             raise DeploymentSafetyError(
                 f"deployment lock already held at {self.lock_path}\n"
@@ -117,12 +104,6 @@ class DeploymentLock:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if self.fd is not None:
-            try:
-                os.close(self.fd)
-            except OSError:
-                pass
-            self.fd = None
         try:
             self.lock_path.unlink(missing_ok=True)
         except OSError:
@@ -223,12 +204,8 @@ class DeploymentTransaction:
         if self._target_skills_existed:
             os.replace(self.plan.target_skills, self.backup_skills)
 
-        try:
-            os.replace(self.staging_agents, self.plan.target_agents)
-            os.replace(self.staging_skills, self.plan.target_skills)
-        except Exception:
-            self._rollback()
-            raise
+        os.replace(self.staging_agents, self.plan.target_agents)
+        os.replace(self.staging_skills, self.plan.target_skills)
 
         self._committed = True
         return self.plan.target_agents, skill_count

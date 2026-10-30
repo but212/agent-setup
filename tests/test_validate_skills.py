@@ -440,6 +440,81 @@ class RepositoryContractTests(unittest.TestCase):
             self.assertTrue(any("CUSTOM_AGENTS.md" in err for err in errors))
             self.assertTrue(any("SKILL.md" in err for err in errors))
 
+    def test_parse_skill_metadata_external_path_without_crash(self):
+        import importlib
+
+        sys.path.insert(0, str(ROOT / "scripts"))
+        validator = importlib.import_module("validate-skills")
+
+        with tempfile.TemporaryDirectory(prefix="agent-setup-external-") as tmp:
+            ext_dir = Path(tmp)
+            skill_sub = ext_dir / "my-skill"
+            skill_sub.mkdir()
+            skill_file = skill_sub / "SKILL.md"
+            skill_file.write_text("invalid frontmatter\n", encoding="utf-8")
+
+            metadata, errors = validator.parse_skill_metadata(skill_file, root=ROOT)
+            self.assertIsNone(metadata)
+            self.assertEqual(len(errors), 1)
+            self.assertIn("missing frontmatter", errors[0])
+
+    def test_check_skill_frontmatters_external_paths_without_crash(self):
+        import importlib
+
+        sys.path.insert(0, str(ROOT / "scripts"))
+        validator = importlib.import_module("validate-skills")
+
+        with tempfile.TemporaryDirectory(prefix="agent-setup-external-") as tmp:
+            ext_dir = Path(tmp)
+            ext_skills = ext_dir / "custom_skills"
+            ext_skills.mkdir()
+            skill_sub = ext_skills / "my-skill"
+            skill_sub.mkdir()
+            (skill_sub / "SKILL.md").write_text(
+                "---\nname: wrong-name\nrole: r\nactivation: a\nmodification-authority: m\ndescription: d\n---\n",
+                encoding="utf-8",
+            )
+
+            skills, errors = validator.check_skill_frontmatters(ext_skills, root=ROOT)
+            self.assertEqual(len(skills), 0)
+            self.assertEqual(len(errors), 1)
+            self.assertTrue(any("wrong-name" in err for err in errors))
+
+    def test_check_plan_paths_external_paths_without_crash(self):
+        import importlib
+
+        sys.path.insert(0, str(ROOT / "scripts"))
+        validator = importlib.import_module("validate-skills")
+
+        with tempfile.TemporaryDirectory(prefix="agent-setup-external-") as tmp:
+            ext_dir = Path(tmp)
+            ext_plans = ext_dir / "plans"
+            bad_plan = ext_plans / "not-a-date" / "task.txt"
+            bad_plan.parent.mkdir(parents=True)
+            bad_plan.write_text("test", encoding="utf-8")
+
+            errors = validator.check_plan_paths(ext_plans, root=ROOT)
+            self.assertEqual(len(errors), 1)
+            self.assertIn(str(bad_plan), errors[0])
+
+    def test_check_plan_status_external_paths_without_crash(self):
+        import importlib
+
+        sys.path.insert(0, str(ROOT / "scripts"))
+        validator = importlib.import_module("validate-skills")
+
+        with tempfile.TemporaryDirectory(prefix="agent-setup-external-") as tmp:
+            ext_dir = Path(tmp)
+            ext_plans = ext_dir / "plans"
+            plan_file = ext_plans / "2026-01-01" / "task.md"
+            plan_file.parent.mkdir(parents=True)
+            plan_file.write_text("Status: invalid\n", encoding="utf-8")
+
+            errors = validator.check_plan_status(ext_plans, root=ROOT)
+            self.assertEqual(len(errors), 1)
+            self.assertIn("unknown status", errors[0])
+            self.assertIn(str(plan_file), errors[0])
+
 
 if __name__ == "__main__":
     unittest.main()

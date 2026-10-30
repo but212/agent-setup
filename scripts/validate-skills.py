@@ -176,6 +176,11 @@ def validate_document_line_count(
     return []
 
 
+def _display_path(path: Path, root: Path = ROOT) -> str:
+    """Return relative path string if contained within root, else absolute path string."""
+    return str(path.relative_to(root)) if path.is_relative_to(root) else str(path)
+
+
 def parse_skill_metadata(
     path: Path, root: Path = ROOT
 ) -> tuple[SkillMetadata | None, list[str]]:
@@ -183,9 +188,9 @@ def parse_skill_metadata(
     try:
         raw = parse_frontmatter_text(path.read_text(encoding="utf-8"))
     except ValueError as exc:
-        return None, [f"{path.relative_to(root)}: {exc}"]
+        return None, [f"{_display_path(path, root)}: {exc}"]
     metadata, errors = validate_skill_metadata_fields(raw, path.parent.name)
-    return metadata, [f"{path.relative_to(root)}: {err}" for err in errors]
+    return metadata, [f"{_display_path(path, root)}: {err}" for err in errors]
 
 
 def check_ascii_markdown(
@@ -209,11 +214,8 @@ def check_ascii_markdown(
         findings = scan_non_ascii_lines(text)
         if findings:
             first_line, codepoints = findings[0]
-            display_path = (
-                path.relative_to(root) if path.is_relative_to(root) else path.name
-            )
             errors.append(
-                f"{display_path}: non-ASCII Markdown content "
+                f"{_display_path(path, root)}: non-ASCII Markdown content "
                 f"at line {first_line} ({codepoints})"
             )
     return errors
@@ -226,18 +228,18 @@ def check_skill_frontmatters(
     errors: list[str] = []
     skills: dict[str, SkillMetadata] = {}
     if not skills_dir.is_dir():
-        errors.append(f"skills directory not found: {skills_dir.relative_to(root)}")
+        errors.append(f"skills directory not found: {_display_path(skills_dir, root)}")
         return skills, errors
 
     subdirs = sorted(p for p in skills_dir.iterdir() if p.is_dir())
     for subdir in subdirs:
         skill_file = subdir / "SKILL.md"
         if not skill_file.is_file():
-            errors.append(f"missing SKILL.md in {subdir.relative_to(root)}")
+            errors.append(f"missing SKILL.md in {_display_path(subdir, root)}")
 
     skill_files = sorted(skills_dir.glob("*/SKILL.md"))
     if not skill_files:
-        errors.append(f"no skills found in {skills_dir.relative_to(root)}")
+        errors.append(f"no skills found in {_display_path(skills_dir, root)}")
         return skills, errors
 
     for path in skill_files:
@@ -261,7 +263,7 @@ def check_plan_paths(plans_dir: Path, root: Path = ROOT) -> list[str]:
         rel_parts = path.relative_to(plans_dir).parts
         part_errors = validate_plan_path_parts(rel_parts, path.suffix)
         for err in part_errors:
-            errors.append(f"{err}: {path.relative_to(root)}")
+            errors.append(f"{err}: {_display_path(path, root)}")
     return errors
 
 
@@ -275,7 +277,7 @@ def check_plan_status(plans_dir: Path, root: Path = ROOT) -> list[str]:
         text = path.read_text(encoding="utf-8")
         status_errors = validate_plan_status_text(text)
         for err in status_errors:
-            errors.append(f"{err}: {path.relative_to(root)}")
+            errors.append(f"{err}: {_display_path(path, root)}")
     return errors
 
 
@@ -304,10 +306,7 @@ def check_document_line_limits(
     for path in documents:
         text = path.read_text(encoding="utf-8")
         for err in validate_document_line_count(text, max_lines):
-            display_path = (
-                path.relative_to(root) if path.is_relative_to(root) else path.name
-            )
-            errors.append(f"{display_path}: {err}")
+            errors.append(f"{_display_path(path, root)}: {err}")
     return errors
 
 

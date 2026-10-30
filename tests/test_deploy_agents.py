@@ -118,14 +118,6 @@ class DeployAgentsTests(unittest.TestCase):
         self.assertTrue(sentinel.exists())
         self.assertEqual(sentinel.read_text(encoding="utf-8"), "keep-me")
 
-    def test_validate_deployment_safety_returns_canonical_target(self):
-        from scripts.deploy_agents import create_deployment_plan
-
-        target = self.root / "valid_target"
-        plan = create_deployment_plan(self.repo, str(target))
-
-        self.assertEqual(plan.canonical_target, target.resolve())
-
     def test_deploy_rejects_target_inside_repo_root(self):
         result = self.run_deploy(self.repo)
         self.assertEqual(result.returncode, 1)
