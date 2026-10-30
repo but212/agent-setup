@@ -1,3 +1,4 @@
+import importlib
 import re
 import shutil
 import subprocess
@@ -7,6 +8,8 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "scripts"))
+validator = importlib.import_module("validate-skills")
 
 
 def clone_repo_to_temp(directory: str) -> Path:
@@ -17,6 +20,26 @@ def clone_repo_to_temp(directory: str) -> Path:
         ignore=shutil.ignore_patterns(".git", "__pycache__", ".ruff_cache"),
     )
     return repository
+
+
+def find_tracked_crlf_files(root: Path) -> list[str]:
+    suffixes = {".md", ".py", ".sh", ".yml", ".yaml"}
+    named_files = {"LICENSE", "NOTICE", ".gitattributes", ".gitignore"}
+    crlf_files: list[str] = []
+    for path in root.rglob("*"):
+        if not path.is_file():
+            continue
+        rel_parts = path.relative_to(root).parts
+        if any(
+            (part.startswith(".") and part != ".github") or part == "__pycache__"
+            for part in rel_parts[:-1]
+        ):
+            continue
+        if (
+            path.suffix in suffixes or path.name in named_files
+        ) and b"\r\n" in path.read_bytes():
+            crlf_files.append(str(path.relative_to(root)))
+    return crlf_files
 
 
 class RepositoryContractTests(unittest.TestCase):
@@ -175,27 +198,33 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("* text=auto eol=lf", content)
 
     def test_tracked_text_files_use_lf_line_endings(self):
-        suffixes = {".md", ".py", ".sh", ".yml", ".yaml"}
-        named_files = {"LICENSE", "NOTICE", ".gitattributes", ".gitignore"}
-        crlf_files: list[str] = []
-        for path in ROOT.rglob("*"):
-            if not path.is_file():
-                continue
-            rel_parts = path.relative_to(ROOT).parts
-            if any(part.startswith((".", "__pycache__")) for part in rel_parts):
-                continue
-            if (
-                path.suffix in suffixes or path.name in named_files
-            ) and b"\r\n" in path.read_bytes():
-                crlf_files.append(str(path.relative_to(ROOT)))
-            self.assertEqual(crlf_files, [], f"Found CRLF in files: {crlf_files}")
+        crlf_files = find_tracked_crlf_files(ROOT)
+        self.assertEqual(crlf_files, [], f"Found CRLF in files: {crlf_files}")
+
+    def test_find_tracked_crlf_files_detects_crlf_in_dotfiles_and_github_workflows(self):
+        with tempfile.TemporaryDirectory(prefix="agent-setup-crlf-") as tmp:
+            tmp_root = Path(tmp)
+            gitattr = tmp_root / ".gitattributes"
+            gitattr.write_bytes(b"* text=auto\r\n")
+            workflow = tmp_root / ".github" / "workflows" / "ci.yml"
+            workflow.parent.mkdir(parents=True)
+            workflow.write_bytes(b"name: CI\r\n")
+
+            crlf_files = find_tracked_crlf_files(tmp_root)
+            normalized = [p.replace("\\", "/") for p in crlf_files]
+            self.assertIn(".gitattributes", normalized)
+            self.assertIn(".github/workflows/ci.yml", normalized)
+
+    def test_check_agents_file_supports_root_and_relative_path(self):
+        with tempfile.TemporaryDirectory(prefix="agent-setup-agents-") as tmp:
+            tmp_root = Path(tmp)
+            missing = tmp_root / "nested" / "AGENTS.md"
+            errors = validator.check_agents_file(missing, root=tmp_root)
+            self.assertEqual(len(errors), 1)
+            self.assertIn(str(Path("nested") / "AGENTS.md"), errors[0])
+            self.assertNotIn(str(tmp_root), errors[0])
 
     def test_missing_agents_file_reports_error_without_crash(self):
-        import importlib
-
-        sys.path.insert(0, str(ROOT / "scripts"))
-        validator = importlib.import_module("validate-skills")
-
         report = validator.validate_repository(
             agents_path=ROOT / "NONEXISTENT_AGENTS.md"
         )
@@ -203,11 +232,6 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertTrue(any("missing AGENTS.md" in err for err in report.errors))
 
     def test_missing_skills_dir_reports_error(self):
-        import importlib
-
-        sys.path.insert(0, str(ROOT / "scripts"))
-        validator = importlib.import_module("validate-skills")
-
         report = validator.validate_repository(skills_dir=ROOT / "NONEXISTENT_SKILLS")
         self.assertFalse(report.is_valid)
         self.assertTrue(
@@ -254,11 +278,6 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_parse_frontmatter_text_normalizes_inline_json_and_comments(self):
-        import importlib
-
-        sys.path.insert(0, str(ROOT / "scripts"))
-        validator = importlib.import_module("validate-skills")
-
         raw_text = (
             "---\n"
             "name: test-skill\n"
@@ -272,12 +291,58 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertEqual(parsed["activation"], "/a, /b")
         self.assertEqual(parsed["role"], "quoted role")
 
+    def test_parse_frontmatter_text_preserves_hash_inside_quotes_and_json_array(self):
+        raw_text = (
+            "---\n"
+            "name: test-skill\n"
+            'description: "Fix issue #42 and optimize" # inline comment\n'
+            'role: "Security #1 Lead" # comment with hash # inside\n'
+            'activation: ["tag #1", "tag #2"] # list comment\n'
+            "modification-authority: 'Maintainer #5' # single quoted\n"
+            "---\n"
+            "# Content\n"
+        )
+        parsed = validator.parse_frontmatter_text(raw_text)
+        self.assertEqual(parsed["name"], "test-skill")
+        self.assertEqual(parsed["description"], "Fix issue #42 and optimize")
+        self.assertEqual(parsed["role"], "Security #1 Lead")
+        self.assertEqual(parsed["activation"], "tag #1, tag #2")
+        self.assertEqual(parsed["modification-authority"], "Maintainer #5")
+
+    def test_parse_frontmatter_text_strict_json_array_with_comment_brackets(self):
+        raw_text = (
+            "---\n"
+            "name: test-skill\n"
+            'activation: ["item1", "item2"] # see [docs] for details]\n'
+            "---\n"
+            "# Content\n"
+        )
+        parsed = validator.parse_frontmatter_text(raw_text)
+        self.assertEqual(parsed["activation"], "item1, item2")
+
+    def test_parse_frontmatter_text_rejects_malformed_json_array(self):
+        raw_text = (
+            "---\n"
+            "name: test-skill\n"
+            "activation: [unquoted, invalid]\n"
+            "---\n"
+            "# Content\n"
+        )
+        with self.assertRaises(ValueError):
+            validator.parse_frontmatter_text(raw_text)
+
+    def test_parse_frontmatter_text_rejects_trailing_junk_after_json_array(self):
+        raw_text = (
+            "---\n"
+            "name: test-skill\n"
+            'activation: ["item1"] unexpected_trailing_content\n'
+            "---\n"
+            "# Content\n"
+        )
+        with self.assertRaises(ValueError):
+            validator.parse_frontmatter_text(raw_text)
+
     def test_scan_non_ascii_lines_pure(self):
-        import importlib
-
-        sys.path.insert(0, str(ROOT / "scripts"))
-        validator = importlib.import_module("validate-skills")
-
         findings = validator.scan_non_ascii_lines("hello\nworld\n")
         self.assertEqual(findings, [])
 
@@ -287,11 +352,6 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("U+2028", findings[0][1])
 
     def test_validate_plan_path_parts_pure(self):
-        import importlib
-
-        sys.path.insert(0, str(ROOT / "scripts"))
-        validator = importlib.import_module("validate-skills")
-
         self.assertEqual(
             validator.validate_plan_path_parts(("2026-01-01", "task.md"), ".md"),
             [],
@@ -348,11 +408,6 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
 
     def test_validate_document_line_count_pure(self):
-        import importlib
-
-        sys.path.insert(0, str(ROOT / "scripts"))
-        validator = importlib.import_module("validate-skills")
-
         normal_text = "\n".join(f"line {i}" for i in range(50))
         self.assertEqual(validator.validate_document_line_count(normal_text, 200), [])
 
@@ -378,11 +433,6 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
 
     def test_validate_plan_status_flexible_syntax(self):
-        import importlib
-
-        sys.path.insert(0, str(ROOT / "scripts"))
-        validator = importlib.import_module("validate-skills")
-
         self.assertEqual(
             validator.validate_plan_status_text("Status: planned\n"), []
         )
@@ -391,6 +441,282 @@ class RepositoryContractTests(unittest.TestCase):
         )
         errors = validator.validate_plan_status_text("Status: `invalid`\n")
         self.assertEqual(len(errors), 1)
+
+    def test_check_ascii_markdown_external_paths_without_crash(self):
+        with tempfile.TemporaryDirectory(prefix="agent-setup-external-") as tmp:
+            ext_dir = Path(tmp)
+            ext_agents = ext_dir / "CUSTOM_AGENTS.md"
+            ext_agents.write_text("# Non-ASCII: \u2014\n", encoding="utf-8")
+            ext_skills = ext_dir / "custom_skills"
+            ext_skills.mkdir()
+            (ext_skills / "test.md").write_text("# Non-ASCII: \u2022\n", encoding="utf-8")
+
+            errors = validator.check_ascii_markdown(
+                agents_path=ext_agents,
+                skills_dir=ext_skills,
+                root=ROOT,
+            )
+            self.assertEqual(len(errors), 2)
+            self.assertTrue(any("CUSTOM_AGENTS.md" in err for err in errors))
+            self.assertTrue(any("test.md" in err for err in errors))
+
+    def test_check_document_line_limits_external_paths_without_crash(self):
+        with tempfile.TemporaryDirectory(prefix="agent-setup-external-") as tmp:
+            ext_dir = Path(tmp)
+            ext_agents = ext_dir / "CUSTOM_AGENTS.md"
+            ext_agents.write_text("\n".join(f"line {i}" for i in range(10)) + "\n", encoding="utf-8")
+            ext_skills = ext_dir / "custom_skills"
+            skill_sub = ext_skills / "s1"
+            skill_sub.mkdir(parents=True)
+            (skill_sub / "SKILL.md").write_text("\n".join(f"line {i}" for i in range(10)) + "\n", encoding="utf-8")
+
+            errors = validator.check_document_line_limits(
+                agents_path=ext_agents,
+                skills_dir=ext_skills,
+                root=ROOT,
+                max_lines=5,
+            )
+            self.assertEqual(len(errors), 2)
+            self.assertTrue(any("CUSTOM_AGENTS.md" in err for err in errors))
+            self.assertTrue(any("SKILL.md" in err for err in errors))
+
+    def test_parse_skill_metadata_external_path_without_crash(self):
+        with tempfile.TemporaryDirectory(prefix="agent-setup-external-") as tmp:
+            ext_dir = Path(tmp)
+            skill_sub = ext_dir / "my-skill"
+            skill_sub.mkdir()
+            skill_file = skill_sub / "SKILL.md"
+            skill_file.write_text("invalid frontmatter\n", encoding="utf-8")
+
+            metadata, errors = validator.parse_skill_metadata(skill_file, root=ROOT)
+            self.assertIsNone(metadata)
+            self.assertEqual(len(errors), 1)
+            self.assertIn("missing frontmatter", errors[0])
+
+    def test_check_skill_frontmatters_external_paths_without_crash(self):
+        with tempfile.TemporaryDirectory(prefix="agent-setup-external-") as tmp:
+            ext_dir = Path(tmp)
+            ext_skills = ext_dir / "custom_skills"
+            ext_skills.mkdir()
+            skill_sub = ext_skills / "my-skill"
+            skill_sub.mkdir()
+            (skill_sub / "SKILL.md").write_text(
+                "---\nname: wrong-name\nrole: r\nactivation: a\nmodification-authority: m\ndescription: d\n---\n",
+                encoding="utf-8",
+            )
+
+            skills, errors = validator.check_skill_frontmatters(ext_skills, root=ROOT)
+            self.assertEqual(len(skills), 0)
+            self.assertEqual(len(errors), 1)
+            self.assertTrue(any("wrong-name" in err for err in errors))
+
+    def test_check_plan_paths_external_paths_without_crash(self):
+        with tempfile.TemporaryDirectory(prefix="agent-setup-external-") as tmp:
+            ext_dir = Path(tmp)
+            ext_plans = ext_dir / "plans"
+            bad_plan = ext_plans / "not-a-date" / "task.txt"
+            bad_plan.parent.mkdir(parents=True)
+            bad_plan.write_text("test", encoding="utf-8")
+
+            errors = validator.check_plan_paths(ext_plans, root=ROOT)
+            self.assertEqual(len(errors), 1)
+            self.assertIn(str(bad_plan), errors[0])
+
+    def test_check_plan_status_external_paths_without_crash(self):
+        with tempfile.TemporaryDirectory(prefix="agent-setup-external-") as tmp:
+            ext_dir = Path(tmp)
+            ext_plans = ext_dir / "plans"
+            plan_file = ext_plans / "2026-01-01" / "task.md"
+            plan_file.parent.mkdir(parents=True)
+            plan_file.write_text("Status: invalid\n", encoding="utf-8")
+
+            errors = validator.check_plan_status(ext_plans, root=ROOT)
+            self.assertEqual(len(errors), 1)
+            self.assertIn("unknown status", errors[0])
+            self.assertIn(str(plan_file), errors[0])
+
+    def test_frontmatter_block_scalar_with_chomping_indicator_fails(self):
+        raw_text = (
+            "---\n"
+            "name: test-skill\n"
+            "role: test\n"
+            "activation: test\n"
+            "modification-authority: None\n"
+            "description: |-\n"
+            "  A multiline description.\n"
+            "---\n"
+            "# Content\n"
+        )
+        with self.assertRaises(ValueError) as ctx:
+            validator.parse_frontmatter_text(raw_text)
+        self.assertIn("multiline block scalars", str(ctx.exception))
+
+    def test_frontmatter_unrecognized_non_key_value_line_fails(self):
+        raw_text = (
+            "---\n"
+            "name: test-skill\n"
+            "role: test\n"
+            "activation: test\n"
+            "modification-authority: None\n"
+            "description: A valid description\n"
+            "malformed syntax without colon\n"
+            "---\n"
+            "# Content\n"
+        )
+        with self.assertRaises(ValueError) as ctx:
+            validator.parse_frontmatter_text(raw_text)
+        self.assertIn("unsupported frontmatter line", str(ctx.exception))
+
+    def test_frontmatter_duplicate_keys_fail(self):
+        raw_text = (
+            "---\n"
+            "name: test-skill\n"
+            "role: test\n"
+            "activation: test\n"
+            "modification-authority: None\n"
+            "description: first\n"
+            "description: second\n"
+            "---\n"
+            "# Content\n"
+        )
+        with self.assertRaises(ValueError) as ctx:
+            validator.parse_frontmatter_text(raw_text)
+        self.assertIn("duplicate frontmatter key", str(ctx.exception))
+
+    def test_frontmatter_unclosed_or_trailing_quoted_strings_fail(self):
+        unclosed = (
+            "---\n"
+            "name: \"unclosed\n"
+            "role: test\n"
+            "activation: test\n"
+            "modification-authority: None\n"
+            "description: valid\n"
+            "---\n"
+        )
+        with self.assertRaises(ValueError) as ctx:
+            validator.parse_frontmatter_text(unclosed)
+        self.assertIn("malformed quoted string", str(ctx.exception))
+
+        trailing = (
+            "---\n"
+            "name: \"closed\" unexpected\n"
+            "role: test\n"
+            "activation: test\n"
+            "modification-authority: None\n"
+            "description: valid\n"
+            "---\n"
+        )
+        with self.assertRaises(ValueError) as ctx:
+            validator.parse_frontmatter_text(trailing)
+        self.assertIn("malformed quoted string", str(ctx.exception))
+
+    def test_frontmatter_block_scalar_with_comment_fails(self):
+        raw_text = (
+            "---\n"
+            "name: test-skill\n"
+            "role: test\n"
+            "activation: test\n"
+            "modification-authority: None\n"
+            "description: | # inline comment\n"
+            "  multiline\n"
+            "---\n"
+        )
+        with self.assertRaises(ValueError) as ctx:
+            validator.parse_frontmatter_text(raw_text)
+        self.assertIn("multiline block scalars", str(ctx.exception))
+
+    def test_frontmatter_inline_json_array_validation(self):
+        # Empty array
+        empty_array = (
+            "---\n"
+            "name: test-skill\n"
+            "role: test\n"
+            "activation: []\n"
+            "modification-authority: None\n"
+            "description: valid\n"
+            "---\n"
+        )
+        with self.assertRaises(ValueError) as ctx:
+            validator.parse_frontmatter_text(empty_array)
+        self.assertIn("non-empty", str(ctx.exception))
+
+        # Non-string item
+        non_string = (
+            "---\n"
+            "name: test-skill\n"
+            "role: test\n"
+            "activation: [123]\n"
+            "modification-authority: None\n"
+            "description: valid\n"
+            "---\n"
+        )
+        with self.assertRaises(ValueError) as ctx:
+            validator.parse_frontmatter_text(non_string)
+        self.assertIn("non-empty string", str(ctx.exception))
+
+        # Blank string item
+        blank_string = (
+            "---\n"
+            "name: test-skill\n"
+            "role: test\n"
+            "activation: [\" \"]\n"
+            "modification-authority: None\n"
+            "description: valid\n"
+            "---\n"
+        )
+        with self.assertRaises(ValueError) as ctx:
+            validator.parse_frontmatter_text(blank_string)
+        self.assertIn("non-empty string", str(ctx.exception))
+
+    def test_validate_skill_metadata_fields_rejects_unknown_keys(self):
+        raw = {
+            "name": "challenge",
+            "role": "adversary",
+            "activation": "always",
+            "modification-authority": "human",
+            "description": "stress-test",
+            "extra_key": "unauthorized",
+        }
+        metadata, errors = validator.validate_skill_metadata_fields(raw, "challenge")
+        self.assertIsNone(metadata)
+        self.assertTrue(any("unknown frontmatter field" in err for err in errors))
+
+    def test_validate_plan_status_text_strict_matching(self):
+        # Trailing garbage
+        errors = validator.validate_plan_status_text("- Status: planned trailing garbage\n")
+        self.assertTrue(len(errors) > 0)
+
+        # Unbalanced backtick (opening backtick only)
+        errors = validator.validate_plan_status_text("- Status: `planned\n")
+        self.assertTrue(len(errors) > 0)
+
+        # Unbalanced backtick (closing backtick only)
+        errors = validator.validate_plan_status_text("- Status: planned`\n")
+        self.assertTrue(len(errors) > 0)
+
+        # Valid backtick wrapped
+        self.assertEqual(validator.validate_plan_status_text("- Status: `planned`\n"), [])
+
+        # Valid unquoted
+        self.assertEqual(validator.validate_plan_status_text("- Status: planned\n"), [])
+
+    def test_check_plan_status_ignores_dotfiles_and_directories(self):
+        with tempfile.TemporaryDirectory(prefix="agent-setup-plans-") as tmp:
+            plans_dir = Path(tmp)
+            date_dir = plans_dir / "2026-01-01"
+            date_dir.mkdir(parents=True)
+
+            # Valid plan
+            (date_dir / "task.md").write_text("Status: planned\n", encoding="utf-8")
+
+            # Dotfile (draft) with invalid status should be ignored
+            (date_dir / ".draft.md").write_text("Status: invalid\n", encoding="utf-8")
+
+            # Subdirectory named something.md should be ignored
+            (date_dir / "sub.md").mkdir()
+
+            errors = validator.check_plan_status(plans_dir, root=ROOT)
+            self.assertEqual(errors, [])
 
 
 if __name__ == "__main__":

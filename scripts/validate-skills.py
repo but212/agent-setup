@@ -16,6 +16,9 @@ PLANS = ROOT / ".plans"
 PLAN_STATUSES = frozenset(
     {"planned", "in-progress", "blocked", "complete", "cancelled"}
 )
+REQUIRED_SKILL_FIELDS = frozenset(
+    {"name", "role", "activation", "modification-authority", "description"}
+)
 MAX_AGENT_DOC_LINES = 200
 
 
@@ -54,7 +57,7 @@ def parse_frontmatter_text(text: str) -> dict[str, str]:
         if not stripped or stripped.startswith("#"):
             continue
 
-        if re.search(r":\s*[|>]\s*$", stripped):
+        if re.search(r":\s*[|>][+-0-9]*(?:\s+#.*)?\s*$", stripped):
             raise ValueError(
                 "multiline block scalars (| or >) are unsupported; use single-line string"
             )
@@ -64,29 +67,51 @@ def parse_frontmatter_text(text: str) -> dict[str, str]:
             )
 
         match = re.match(r"^([A-Za-z][\w-]*):\s*(.*)$", line)
-        if match:
-            field = match.group(1)
-            raw_value = match.group(2).strip()
-            if " #" in raw_value and not (
-                raw_value.startswith(('"', "'")) and raw_value.endswith(('"', "'"))
-            ):
+        if not match:
+            raise ValueError(f"unsupported frontmatter line: {stripped!r}")
+
+        field = match.group(1)
+        if field in values:
+            raise ValueError(f"duplicate frontmatter key: {field!r}")
+
+        raw_value = match.group(2).strip()
+        quoted_match = re.match(
+            r'^("(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\')(?:\s*#.*)?$', raw_value
+        )
+
+        if quoted_match:
+            raw_value = quoted_match.group(1)[1:-1]
+        elif raw_value.startswith(('"', "'")):
+            raise ValueError(
+                f"malformed quoted string for field {field!r}: {raw_value!r}"
+            )
+        elif raw_value.startswith("["):
+            try:
+                items, end_idx = json.JSONDecoder().raw_decode(raw_value)
+            except json.JSONDecodeError as err:
+                raise ValueError(
+                    f"malformed inline JSON array for field {field!r}: {err}"
+                ) from err
+            tail = raw_value[end_idx:].strip()
+            if tail and not tail.startswith("#"):
+                raise ValueError(
+                    f"unexpected trailing content after JSON array for field {field!r}: {tail!r}"
+                )
+            if not items:
+                raise ValueError(
+                    f"expected non-empty JSON array for field {field!r}"
+                )
+            for item in items:
+                if not isinstance(item, str) or not item.strip():
+                    raise ValueError(
+                        f"expected non-empty string array elements for field {field!r}, got {item!r}"
+                    )
+            raw_value = ", ".join(items)
+        else:
+            if " #" in raw_value:
                 raw_value = raw_value.split(" #", 1)[0].strip()
 
-            if raw_value.startswith("[") and raw_value.endswith("]"):
-                try:
-                    items = json.loads(raw_value)
-                    if isinstance(items, list):
-                        raw_value = ", ".join(str(x) for x in items)
-                except json.JSONDecodeError:
-                    pass
-            elif (
-                len(raw_value) >= 2
-                and raw_value[0] == raw_value[-1]
-                and raw_value[0] in "'\""
-            ):
-                raw_value = raw_value[1:-1]
-
-            values[field] = raw_value
+        values[field] = raw_value
     return values
 
 
@@ -95,6 +120,10 @@ def validate_skill_metadata_fields(
 ) -> tuple[SkillMetadata | None, list[str]]:
     """Validate parsed frontmatter dictionary against required skill contracts."""
     errors: list[str] = []
+    unknown_fields = sorted(set(raw.keys()) - REQUIRED_SKILL_FIELDS)
+    for unknown in unknown_fields:
+        errors.append(f"unknown frontmatter field: {unknown!r}")
+
     name = raw.get("name")
     if name != expected_name:
         errors.append(f"name={name!r}, expected {expected_name!r}")
@@ -156,13 +185,23 @@ def validate_plan_status_text(
 ) -> list[str]:
     """Validate status field embedded in plan markdown text."""
     errors: list[str] = []
-    status_match = re.search(
-        r"^(?:-\s*)?Status:\s*`?([a-zA-Z0-9_-]+)`?", text, re.MULTILINE
-    )
+    status_match = re.search(r"^(?:-\s*)?Status:\s*(.*)$", text, re.MULTILINE)
     if not status_match:
         errors.append("plan missing Status field")
-    elif status_match.group(1) not in allowed_statuses:
-        errors.append(f"plan has unknown status {status_match.group(1)!r}")
+        return errors
+
+    raw_status = status_match.group(1).strip()
+    if not raw_status:
+        errors.append("plan missing Status field")
+        return errors
+
+    if raw_status.startswith("`") and raw_status.endswith("`") and len(raw_status) >= 2:
+        status = raw_status[1:-1].strip()
+    else:
+        status = raw_status
+
+    if status not in allowed_statuses:
+        errors.append(f"plan has unknown status {status!r}")
     return errors
 
 
@@ -176,9 +215,9 @@ def validate_document_line_count(
     return []
 
 
-def parse_frontmatter_dict(path: Path) -> dict[str, str]:
-    """Compatibility wrapper reading path and delegating to parse_frontmatter_text."""
-    return parse_frontmatter_text(path.read_text(encoding="utf-8"))
+def _display_path(path: Path, root: Path = ROOT) -> str:
+    """Return relative path string if contained within root, else absolute path string."""
+    return str(path.relative_to(root)) if path.is_relative_to(root) else str(path)
 
 
 def parse_skill_metadata(
@@ -186,11 +225,11 @@ def parse_skill_metadata(
 ) -> tuple[SkillMetadata | None, list[str]]:
     """Parse and validate SKILL.md file."""
     try:
-        raw = parse_frontmatter_dict(path)
+        raw = parse_frontmatter_text(path.read_text(encoding="utf-8"))
     except ValueError as exc:
-        return None, [f"{path.relative_to(root)}: {exc}"]
+        return None, [f"{_display_path(path, root)}: {exc}"]
     metadata, errors = validate_skill_metadata_fields(raw, path.parent.name)
-    return metadata, [f"{path.relative_to(root)}: {err}" for err in errors]
+    return metadata, [f"{_display_path(path, root)}: {err}" for err in errors]
 
 
 def check_ascii_markdown(
@@ -199,23 +238,14 @@ def check_ascii_markdown(
     root: Path = ROOT,
 ) -> list[str]:
     """Verify that AGENTS.md and skills/ markdown files contain only ASCII characters."""
-    if agents_path.is_dir() and skills_dir == SKILLS:
-        actual_root = agents_path
-        actual_agents = actual_root / "AGENTS.md"
-        actual_skills = actual_root / "skills"
-    else:
-        actual_root = root
-        actual_agents = agents_path
-        actual_skills = skills_dir
-
     errors: list[str] = []
     markdown_files: list[Path] = []
-    if actual_agents.is_file():
-        markdown_files.append(actual_agents)
-    if actual_skills.is_dir():
+    if agents_path.is_file():
+        markdown_files.append(agents_path)
+    if skills_dir.is_dir():
         markdown_files.extend(
             path
-            for path in sorted(actual_skills.rglob("*.md"))
+            for path in sorted(skills_dir.rglob("*.md"))
             if ".git" not in path.parts
         )
     for path in markdown_files:
@@ -224,7 +254,7 @@ def check_ascii_markdown(
         if findings:
             first_line, codepoints = findings[0]
             errors.append(
-                f"{path.relative_to(actual_root)}: non-ASCII Markdown content "
+                f"{_display_path(path, root)}: non-ASCII Markdown content "
                 f"at line {first_line} ({codepoints})"
             )
     return errors
@@ -237,18 +267,18 @@ def check_skill_frontmatters(
     errors: list[str] = []
     skills: dict[str, SkillMetadata] = {}
     if not skills_dir.is_dir():
-        errors.append(f"skills directory not found: {skills_dir.relative_to(root)}")
+        errors.append(f"skills directory not found: {_display_path(skills_dir, root)}")
         return skills, errors
 
     subdirs = sorted(p for p in skills_dir.iterdir() if p.is_dir())
     for subdir in subdirs:
         skill_file = subdir / "SKILL.md"
         if not skill_file.is_file():
-            errors.append(f"missing SKILL.md in {subdir.relative_to(root)}")
+            errors.append(f"missing SKILL.md in {_display_path(subdir, root)}")
 
     skill_files = sorted(skills_dir.glob("*/SKILL.md"))
     if not skill_files:
-        errors.append(f"no skills found in {skills_dir.relative_to(root)}")
+        errors.append(f"no skills found in {_display_path(skills_dir, root)}")
         return skills, errors
 
     for path in skill_files:
@@ -272,7 +302,7 @@ def check_plan_paths(plans_dir: Path, root: Path = ROOT) -> list[str]:
         rel_parts = path.relative_to(plans_dir).parts
         part_errors = validate_plan_path_parts(rel_parts, path.suffix)
         for err in part_errors:
-            errors.append(f"{err}: {path.relative_to(root)}")
+            errors.append(f"{err}: {_display_path(path, root)}")
     return errors
 
 
@@ -283,18 +313,20 @@ def check_plan_status(plans_dir: Path, root: Path = ROOT) -> list[str]:
         return errors
 
     for path in sorted(plans_dir.glob("*/*.md")):
+        if not path.is_file() or path.name.startswith("."):
+            continue
         text = path.read_text(encoding="utf-8")
         status_errors = validate_plan_status_text(text)
         for err in status_errors:
-            errors.append(f"{err}: {path.relative_to(root)}")
+            errors.append(f"{err}: {_display_path(path, root)}")
     return errors
 
 
-def check_agents_file(agents_path: Path) -> list[str]:
+def check_agents_file(agents_path: Path, root: Path = ROOT) -> list[str]:
     """Verify that AGENTS.md exists."""
     errors: list[str] = []
     if not agents_path.is_file():
-        errors.append(f"missing AGENTS.md file: {agents_path}")
+        errors.append(f"missing AGENTS.md file: {_display_path(agents_path, root)}")
     return errors
 
 
@@ -305,26 +337,17 @@ def check_document_line_limits(
     max_lines: int = MAX_AGENT_DOC_LINES,
 ) -> list[str]:
     """Verify that agent prompt documents (AGENTS.md, skills/*/SKILL.md) obey line budget invariant."""
-    if agents_path.is_dir() and skills_dir == SKILLS:
-        actual_root = agents_path
-        actual_agents = actual_root / "AGENTS.md"
-        actual_skills = actual_root / "skills"
-    else:
-        actual_root = root
-        actual_agents = agents_path
-        actual_skills = skills_dir
-
     errors: list[str] = []
     documents: list[Path] = []
-    if actual_agents.is_file():
-        documents.append(actual_agents)
-    if actual_skills.is_dir():
-        documents.extend(sorted(actual_skills.glob("*/SKILL.md")))
+    if agents_path.is_file():
+        documents.append(agents_path)
+    if skills_dir.is_dir():
+        documents.extend(sorted(skills_dir.glob("*/SKILL.md")))
 
     for path in documents:
         text = path.read_text(encoding="utf-8")
         for err in validate_document_line_count(text, max_lines):
-            errors.append(f"{path.relative_to(actual_root)}: {err}")
+            errors.append(f"{_display_path(path, root)}: {err}")
     return errors
 
 
@@ -344,7 +367,7 @@ def validate_repository(
 
     errors.extend(check_plan_paths(plans_dir, root))
     errors.extend(check_plan_status(plans_dir, root))
-    errors.extend(check_agents_file(agents_path))
+    errors.extend(check_agents_file(agents_path, root))
 
     return ValidationReport(skills=skills, errors=errors)
 

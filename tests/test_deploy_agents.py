@@ -118,14 +118,6 @@ class DeployAgentsTests(unittest.TestCase):
         self.assertTrue(sentinel.exists())
         self.assertEqual(sentinel.read_text(encoding="utf-8"), "keep-me")
 
-    def test_validate_deployment_safety_returns_canonical_target(self):
-        from scripts.deploy_agents import validate_deployment_safety
-
-        target = self.root / "valid_target"
-        canonical_target = validate_deployment_safety(self.repo, str(target))
-
-        self.assertEqual(canonical_target, target.resolve())
-
     def test_deploy_rejects_target_inside_repo_root(self):
         result = self.run_deploy(self.repo)
         self.assertEqual(result.returncode, 1)
@@ -150,31 +142,72 @@ class DeployAgentsTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertFalse((target / ".deploy.lock").exists())
 
-    def test_deploy_failure_preserves_original_skills(self):
+    def test_deploy_failure_preserves_original_targets(self):
         from unittest.mock import patch
 
-        from scripts.deploy_agents import sync_skills_atomic
+        from scripts.deploy_agents import (
+            DeploymentTransaction,
+            create_deployment_plan,
+        )
 
         target = self.root / "target"
+        target.mkdir(parents=True)
+        original_agents = target / "AGENTS.md"
+        original_agents.write_text("original agents\n", encoding="utf-8")
         target_skills = target / "skills"
         (target_skills / "example").mkdir(parents=True)
         original_skill = target_skills / "example" / "SKILL.md"
         original_skill.write_text("original content\n", encoding="utf-8")
 
-        source_skills = self.repo / "skills"
+        plan = create_deployment_plan(self.repo, str(target))
 
         with (
             patch("shutil.copytree", side_effect=OSError("Simulated disk full")),
-            self.assertRaises(IOError),
+            self.assertRaises(OSError),
+            DeploymentTransaction(plan) as tx,
         ):
-            sync_skills_atomic(source_skills, target_skills)
+            tx.commit()
 
+        self.assertTrue(original_agents.exists())
+        self.assertEqual(
+            original_agents.read_text(encoding="utf-8"), "original agents\n"
+        )
         self.assertTrue(original_skill.exists())
         self.assertEqual(
             original_skill.read_text(encoding="utf-8"), "original content\n"
         )
-        staging_dirs = list(target.glob(".skills.*"))
-        self.assertEqual(staging_dirs, [])
+        staging_files = [p.name for p in target.glob(".*")]
+        self.assertEqual(staging_files, [])
+
+    def test_deployment_transaction_rollback_cleans_new_target_on_failure(self):
+        from unittest.mock import patch
+
+        from scripts.deploy_agents import (
+            DeploymentTransaction,
+            create_deployment_plan,
+        )
+
+        target = self.root / "new_target"
+        plan = create_deployment_plan(self.repo, str(target))
+
+        orig_replace = os.replace
+
+        def fail_on_skills_swap(src, dst):
+            if "skills" in str(dst) and not str(src).endswith(f".bak.{os.getpid()}"):
+                raise OSError("Simulated swap failure")
+            return orig_replace(src, dst)
+
+        with (
+            patch("os.replace", side_effect=fail_on_skills_swap),
+            self.assertRaises(OSError),
+            DeploymentTransaction(plan) as tx,
+        ):
+            tx.commit()
+
+        self.assertFalse(plan.target_agents.exists())
+        self.assertFalse(plan.target_skills.exists())
+        staging_files = [p.name for p in target.glob(".*")]
+        self.assertEqual(staging_files, [])
 
     def test_create_deployment_plan_returns_valid_plan(self):
         from scripts.deploy_agents import create_deployment_plan
@@ -202,6 +235,244 @@ class DeployAgentsTests(unittest.TestCase):
             self.assertTrue((plan.target_skills / "example" / "SKILL.md").is_file())
 
         self.assertFalse(plan.lock_path.exists())
+
+    def test_deploy_failure_during_backup_does_not_corrupt_target_agents(self):
+        from unittest.mock import patch
+
+        from scripts.deploy_agents import (
+            DeploymentTransaction,
+            create_deployment_plan,
+        )
+
+        target = self.root / "target"
+        target.mkdir(parents=True)
+        original_agents = target / "AGENTS.md"
+        original_agents.write_text("original agents\n", encoding="utf-8")
+
+        plan = create_deployment_plan(self.repo, str(target))
+
+        orig_copy2 = shutil.copy2
+
+        def corrupt_copy2(src, dst):
+            if str(dst).endswith(f".bak.{os.getpid()}"):
+                Path(dst).write_text("", encoding="utf-8")
+                raise OSError("Simulated disk full during backup")
+            return orig_copy2(src, dst)
+
+        with (
+            patch("shutil.copy2", side_effect=corrupt_copy2),
+            self.assertRaises(OSError),
+            DeploymentTransaction(plan) as tx,
+        ):
+            tx.commit()
+
+        self.assertTrue(original_agents.exists())
+        self.assertEqual(
+            original_agents.read_text(encoding="utf-8"), "original agents\n"
+        )
+
+    def test_create_deployment_plan_rejects_target_that_is_regular_file(self):
+        from scripts.deploy_agents import (
+            DeploymentSafetyError,
+            create_deployment_plan,
+        )
+
+        target = self.root / "target_file.txt"
+        target.write_text("not a directory\n", encoding="utf-8")
+
+        with self.assertRaises(DeploymentSafetyError) as ctx:
+            create_deployment_plan(self.repo, str(target))
+        self.assertIn("destination is not a directory", str(ctx.exception))
+
+    def test_deploy_rejects_target_that_is_regular_file(self):
+        target = self.root / "target_file.txt"
+        target.write_text("not a directory\n", encoding="utf-8")
+
+        result = self.run_deploy(target)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("destination is not a directory", result.stderr)
+
+    def test_deployment_lock_distinguishes_generic_oserror(self):
+        from unittest.mock import patch
+
+        from scripts.deploy_agents import (
+            DeploymentLock,
+            DeploymentSafetyError,
+        )
+
+        lock_path = self.root / "lock" / ".deploy.lock"
+        lock = DeploymentLock(lock_path)
+
+        with (
+            patch("os.open", side_effect=PermissionError("Access denied")),
+            self.assertRaises(DeploymentSafetyError) as ctx,
+            lock,
+        ):
+            pass
+
+        self.assertIn("failed to acquire deployment lock", str(ctx.exception))
+        self.assertNotIn("deployment lock already held", str(ctx.exception))
+
+    def test_deployment_lock_cleans_orphaned_lockfile_on_write_failure(self):
+        from unittest.mock import patch
+
+        from scripts.deploy_agents import (
+            DeploymentLock,
+            DeploymentSafetyError,
+        )
+
+        lock_path = self.root / "lock" / ".deploy.lock"
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        lock = DeploymentLock(lock_path)
+
+        with (
+            patch("os.fdopen", side_effect=OSError("Disk write failed")),
+            self.assertRaises(DeploymentSafetyError),
+            lock,
+        ):
+            pass
+
+        self.assertFalse(lock_path.exists())
+
+    def test_deployment_transaction_releases_lock_if_enter_cleanup_fails(self):
+        from unittest.mock import patch
+
+        from scripts.deploy_agents import (
+            DeploymentTransaction,
+            create_deployment_plan,
+        )
+
+        target = self.root / "tx_enter_fail_target"
+        plan = create_deployment_plan(self.repo, str(target))
+
+        with (
+            patch.object(
+                DeploymentTransaction,
+                "_cleanup_scratch",
+                side_effect=OSError("Scratch cleanup access denied"),
+            ),
+            self.assertRaises(OSError),
+            DeploymentTransaction(plan),
+        ):
+            pass
+
+        self.assertFalse(plan.lock_path.exists())
+
+    def test_deployment_transaction_releases_lock_if_exit_cleanup_fails(self):
+        from unittest.mock import patch
+
+        from scripts.deploy_agents import (
+            DeploymentTransaction,
+            create_deployment_plan,
+        )
+
+        target = self.root / "tx_exit_fail_target"
+        plan = create_deployment_plan(self.repo, str(target))
+
+        cleanup_calls = 0
+
+        def failing_exit_cleanup(tx_self):
+            nonlocal cleanup_calls
+            cleanup_calls += 1
+            if cleanup_calls > 1:
+                raise OSError("Exit cleanup access denied")
+
+        with (
+            patch.object(DeploymentTransaction, "_cleanup_scratch", failing_exit_cleanup),
+            self.assertRaises(OSError),
+            DeploymentTransaction(plan),
+        ):
+            pass
+
+        self.assertFalse(plan.lock_path.exists())
+
+    def test_cleanup_scratch_suppresses_oserror_on_unlink(self):
+        from unittest.mock import patch
+
+        from scripts.deploy_agents import (
+            DeploymentTransaction,
+            create_deployment_plan,
+        )
+
+        target = self.root / "tx_cleanup_oserror_target"
+        plan = create_deployment_plan(self.repo, str(target))
+        tx = DeploymentTransaction(plan)
+        tx.staging_agents.parent.mkdir(parents=True, exist_ok=True)
+        tx.staging_agents.write_text("scratch", encoding="utf-8")
+
+        with patch.object(Path, "unlink", side_effect=OSError("Unlink denied")):
+            try:
+                tx._cleanup_scratch()
+            except OSError:
+                self.fail("_cleanup_scratch() raised OSError on unlink")
+
+    def test_deploy_rejects_tilde_home_expansion(self):
+        result = self.run_deploy("~")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("refusing unsafe AGENT_HOME", result.stderr)
+        self.assertFalse((self.home / "AGENTS.md").exists())
+
+    def test_deploy_expands_tilde_subpath(self):
+        result = self.run_deploy("~/custom_agents")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        custom_target = self.home / "custom_agents"
+        self.assertTrue((custom_target / "AGENTS.md").exists())
+        self.assertTrue((custom_target / "skills" / "example" / "SKILL.md").exists())
+
+    def test_deploy_rejects_target_as_ancestor_of_repo_root(self):
+        from scripts.deploy_agents import DeploymentSafetyError, create_deployment_plan
+
+        target = self.root / "parent_target"
+        nested_repo = target / "nested" / "repo"
+        nested_repo.mkdir(parents=True)
+        (nested_repo / "AGENTS.md").write_text("agents", encoding="utf-8")
+        (nested_repo / "skills").mkdir()
+
+        with self.assertRaises(DeploymentSafetyError):
+            create_deployment_plan(nested_repo, str(target))
+
+    def test_deploy_rejects_target_as_ancestor_of_home(self):
+        from scripts.deploy_agents import DeploymentSafetyError, create_deployment_plan
+
+        with self.assertRaises(DeploymentSafetyError):
+            create_deployment_plan(self.repo, str(self.home.parent))
+
+    def test_deploy_rejects_symlink_or_junction_targets(self):
+        from scripts.deploy_agents import DeploymentSafetyError, create_deployment_plan
+
+        target = self.root / "symlink_target"
+        real_dir = self.root / "real_dir"
+        real_dir.mkdir()
+
+        def make_dir_link(src: Path, dst: Path):
+            try:
+                os.symlink(str(src), str(dst), target_is_directory=True)
+            except (OSError, NotImplementedError):
+                import _winapi
+
+                _winapi.CreateJunction(str(src), str(dst))
+
+        # 1. Target directory itself is a link
+        make_dir_link(real_dir, target)
+        with self.assertRaises(DeploymentSafetyError):
+            create_deployment_plan(self.repo, str(target))
+
+        # 2. target_skills is a link
+        target_dir = self.root / "normal_target"
+        target_dir.mkdir()
+        make_dir_link(real_dir, target_dir / "skills")
+        with self.assertRaises(DeploymentSafetyError):
+            create_deployment_plan(self.repo, str(target_dir))
+
+        # 3. Dangling link/junction at target_skills
+        dangling_target = self.root / "dangling_target"
+        dangling_target.mkdir()
+        will_delete = self.root / "will_delete"
+        will_delete.mkdir()
+        make_dir_link(will_delete, dangling_target / "skills")
+        will_delete.rmdir()
+        with self.assertRaises(DeploymentSafetyError):
+            create_deployment_plan(self.repo, str(dangling_target))
 
 
 if __name__ == "__main__":

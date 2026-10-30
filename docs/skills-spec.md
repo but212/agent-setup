@@ -105,5 +105,5 @@ When tracking multi-step work, an agent plan artifact or a persistent plan file 
 The specification remains `candidate` during active development. Promote to `stable` when:
 
 1. Every `skills/*/SKILL.md` contains verified frontmatter and self-contained contracts.
-2. Approval boundaries, plan lifecycle, and destructive-command guards are validated.
+2. Operational boundaries, plan lifecycle, and atomic deployment guards are validated.
 3. Repository-native validation and unit tests pass cleanly without errors or skips.
