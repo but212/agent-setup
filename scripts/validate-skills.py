@@ -281,11 +281,11 @@ def check_plan_status(plans_dir: Path, root: Path = ROOT) -> list[str]:
     return errors
 
 
-def check_agents_file(agents_path: Path) -> list[str]:
+def check_agents_file(agents_path: Path, root: Path = ROOT) -> list[str]:
     """Verify that AGENTS.md exists."""
     errors: list[str] = []
     if not agents_path.is_file():
-        errors.append(f"missing AGENTS.md file: {agents_path}")
+        errors.append(f"missing AGENTS.md file: {_display_path(agents_path, root)}")
     return errors
 
 
@@ -326,7 +326,7 @@ def validate_repository(
 
     errors.extend(check_plan_paths(plans_dir, root))
     errors.extend(check_plan_status(plans_dir, root))
-    errors.extend(check_agents_file(agents_path))
+    errors.extend(check_agents_file(agents_path, root))
 
     return ValidationReport(skills=skills, errors=errors)
 

@@ -236,6 +236,83 @@ class DeployAgentsTests(unittest.TestCase):
 
         self.assertFalse(plan.lock_path.exists())
 
+    def test_deploy_failure_during_backup_does_not_corrupt_target_agents(self):
+        from unittest.mock import patch
+
+        from scripts.deploy_agents import (
+            DeploymentTransaction,
+            create_deployment_plan,
+        )
+
+        target = self.root / "target"
+        target.mkdir(parents=True)
+        original_agents = target / "AGENTS.md"
+        original_agents.write_text("original agents\n", encoding="utf-8")
+
+        plan = create_deployment_plan(self.repo, str(target))
+
+        orig_copy2 = shutil.copy2
+
+        def corrupt_copy2(src, dst):
+            if str(dst).endswith(f".bak.{os.getpid()}"):
+                Path(dst).write_text("", encoding="utf-8")
+                raise OSError("Simulated disk full during backup")
+            return orig_copy2(src, dst)
+
+        with (
+            patch("shutil.copy2", side_effect=corrupt_copy2),
+            self.assertRaises(OSError),
+            DeploymentTransaction(plan) as tx,
+        ):
+            tx.commit()
+
+        self.assertTrue(original_agents.exists())
+        self.assertEqual(
+            original_agents.read_text(encoding="utf-8"), "original agents\n"
+        )
+
+    def test_create_deployment_plan_rejects_target_that_is_regular_file(self):
+        from scripts.deploy_agents import (
+            DeploymentSafetyError,
+            create_deployment_plan,
+        )
+
+        target = self.root / "target_file.txt"
+        target.write_text("not a directory\n", encoding="utf-8")
+
+        with self.assertRaises(DeploymentSafetyError) as ctx:
+            create_deployment_plan(self.repo, str(target))
+        self.assertIn("destination is not a directory", str(ctx.exception))
+
+    def test_deploy_rejects_target_that_is_regular_file(self):
+        target = self.root / "target_file.txt"
+        target.write_text("not a directory\n", encoding="utf-8")
+
+        result = self.run_deploy(target)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("destination is not a directory", result.stderr)
+
+    def test_deployment_lock_distinguishes_generic_oserror(self):
+        from unittest.mock import patch
+
+        from scripts.deploy_agents import (
+            DeploymentLock,
+            DeploymentSafetyError,
+        )
+
+        lock_path = self.root / "lock" / ".deploy.lock"
+        lock = DeploymentLock(lock_path)
+
+        with (
+            patch("os.open", side_effect=PermissionError("Access denied")),
+            self.assertRaises(DeploymentSafetyError) as ctx,
+            lock,
+        ):
+            pass
+
+        self.assertIn("failed to acquire deployment lock", str(ctx.exception))
+        self.assertNotIn("deployment lock already held", str(ctx.exception))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -21,8 +21,8 @@
 ## 저장소 검증 기준
 
 - **계약 중심(Contract-Driven)**: 각 스킬은 프론트매터(Frontmatter)에 역할, 활성화 조건, 파일 수정 권한을 선언합니다.
-- **검증 우선(Verification-First)**: `AGENTS.md`는 에이전트가 실행되지 않은 검사를 'Unverified(미검증)'로 보고하도록 지시하며, 테스트가 이 지침의 존재를 검증합니다.
-- **영향 범위 최소화(Minimal Blast Radius)**: `AGENTS.md`는 파괴적인 git 명령과 요청되지 않은 파일 수정을 금지하며, 테스트가 해당 보호 문구를 확인합니다.
+- **검증 우선(Verification-First)**: `AGENTS.md`는 에이전트가 실행되지 않은 검사를 'Unverified(미검증)'로 보고하고 논리적 추론과 실행 검증을 엄격히 구분하도록 지시합니다.
+- **영향 범위 최소화(Minimal Blast Radius)**: `AGENTS.md`는 파괴적인 git 명령과 요청되지 않은 파일 수정을 금지합니다.
 - **CI**: Ubuntu, macOS, Windows 환경에서 검증 스크립트와 단위 테스트를 수행합니다.
 
 ## 디렉터리 구조 및 계약
@@ -55,7 +55,7 @@ python3 scripts/validate-skills.py
 python3 -m unittest discover -s tests -v
 ```
 
-검증기는 스킬 프론트매터, 일자별 계획 경로, 계획 상태 값, `AGENTS.md` 존재 여부, 문서 줄 수 한도(200줄 이내), `AGENTS.md` 및 `skills/`의 ASCII 전용 Markdown 내용을 검사합니다. 테스트 스위트는 배포 로직, 저장소 계약, 안전 가드 문구를 검증합니다.
+검증기는 스킬 프론트매터, 일자별 계획 경로, 계획 상태 값, `AGENTS.md` 존재 여부, 문서 줄 수 한도(200줄 이내), `AGENTS.md` 및 `skills/`의 ASCII 전용 Markdown 내용을 검사합니다. 테스트 스위트는 원자적 배포 안전성, 저장소 계약, 구조적 불변식을 검증합니다.
 
 ## 상태
 

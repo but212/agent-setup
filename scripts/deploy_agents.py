@@ -54,6 +54,11 @@ def create_deployment_plan(repo_root: Path, target_arg: str | None) -> Deploymen
     if is_root or canonical_target == home_dir or is_in_repo:
         raise DeploymentSafetyError(f"refusing unsafe AGENT_HOME: {target_input}\n")
 
+    if canonical_target.exists() and not canonical_target.is_dir():
+        raise DeploymentSafetyError(
+            f"destination is not a directory: {canonical_target}\n"
+        )
+
     agents_source = repo_root / "AGENTS.md"
     skills_source = repo_root / "skills"
     if not agents_source.is_file():
@@ -97,9 +102,13 @@ class DeploymentLock:
             fd = os.open(self.lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
             with os.fdopen(fd, "w", encoding="utf-8") as f:
                 f.write(f"{os.getpid()}\n")
-        except (FileExistsError, OSError) as exc:
+        except FileExistsError as exc:
             raise DeploymentSafetyError(
                 f"deployment lock already held at {self.lock_path}\n"
+            ) from exc
+        except OSError as exc:
+            raise DeploymentSafetyError(
+                f"failed to acquire deployment lock at {self.lock_path}: {exc}\n"
             ) from exc
         return self
 
@@ -128,6 +137,8 @@ class DeploymentTransaction:
         self._phase2_started = False
         self._target_agents_existed = False
         self._target_skills_existed = False
+        self._target_agents_swapped = False
+        self._target_skills_moved = False
         self._committed = False
 
     def __enter__(self):
@@ -159,7 +170,7 @@ class DeploymentTransaction:
             return
 
         # 1. Restore or clean AGENTS.md
-        if self._target_agents_existed and self.backup_agents.exists():
+        if self._target_agents_swapped:
             try:
                 os.replace(self.backup_agents, self.plan.target_agents)
             except OSError:
@@ -171,7 +182,7 @@ class DeploymentTransaction:
                 pass
 
         # 2. Restore or clean skills/
-        if self._target_skills_existed and self.backup_skills.exists():
+        if self._target_skills_moved:
             try:
                 if self.plan.target_skills.exists():
                     shutil.rmtree(self.plan.target_skills, ignore_errors=True)
@@ -203,8 +214,12 @@ class DeploymentTransaction:
 
         if self._target_skills_existed:
             os.replace(self.plan.target_skills, self.backup_skills)
+            self._target_skills_moved = True
 
         os.replace(self.staging_agents, self.plan.target_agents)
+        if self._target_agents_existed:
+            self._target_agents_swapped = True
+
         os.replace(self.staging_skills, self.plan.target_skills)
 
         self._committed = True

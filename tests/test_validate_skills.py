@@ -19,6 +19,26 @@ def clone_repo_to_temp(directory: str) -> Path:
     return repository
 
 
+def find_tracked_crlf_files(root: Path) -> list[str]:
+    suffixes = {".md", ".py", ".sh", ".yml", ".yaml"}
+    named_files = {"LICENSE", "NOTICE", ".gitattributes", ".gitignore"}
+    crlf_files: list[str] = []
+    for path in root.rglob("*"):
+        if not path.is_file():
+            continue
+        rel_parts = path.relative_to(root).parts
+        if any(
+            (part.startswith(".") and part != ".github") or part == "__pycache__"
+            for part in rel_parts[:-1]
+        ):
+            continue
+        if (
+            path.suffix in suffixes or path.name in named_files
+        ) and b"\r\n" in path.read_bytes():
+            crlf_files.append(str(path.relative_to(root)))
+    return crlf_files
+
+
 class RepositoryContractTests(unittest.TestCase):
     def test_catalog_validates(self):
         result = subprocess.run(
@@ -175,20 +195,36 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("* text=auto eol=lf", content)
 
     def test_tracked_text_files_use_lf_line_endings(self):
-        suffixes = {".md", ".py", ".sh", ".yml", ".yaml"}
-        named_files = {"LICENSE", "NOTICE", ".gitattributes", ".gitignore"}
-        crlf_files: list[str] = []
-        for path in ROOT.rglob("*"):
-            if not path.is_file():
-                continue
-            rel_parts = path.relative_to(ROOT).parts
-            if any(part.startswith((".", "__pycache__")) for part in rel_parts):
-                continue
-            if (
-                path.suffix in suffixes or path.name in named_files
-            ) and b"\r\n" in path.read_bytes():
-                crlf_files.append(str(path.relative_to(ROOT)))
+        crlf_files = find_tracked_crlf_files(ROOT)
         self.assertEqual(crlf_files, [], f"Found CRLF in files: {crlf_files}")
+
+    def test_find_tracked_crlf_files_detects_crlf_in_dotfiles_and_github_workflows(self):
+        with tempfile.TemporaryDirectory(prefix="agent-setup-crlf-") as tmp:
+            tmp_root = Path(tmp)
+            gitattr = tmp_root / ".gitattributes"
+            gitattr.write_bytes(b"* text=auto\r\n")
+            workflow = tmp_root / ".github" / "workflows" / "ci.yml"
+            workflow.parent.mkdir(parents=True)
+            workflow.write_bytes(b"name: CI\r\n")
+
+            crlf_files = find_tracked_crlf_files(tmp_root)
+            normalized = [p.replace("\\", "/") for p in crlf_files]
+            self.assertIn(".gitattributes", normalized)
+            self.assertIn(".github/workflows/ci.yml", normalized)
+
+    def test_check_agents_file_supports_root_and_relative_path(self):
+        import importlib
+
+        sys.path.insert(0, str(ROOT / "scripts"))
+        validator = importlib.import_module("validate-skills")
+
+        with tempfile.TemporaryDirectory(prefix="agent-setup-agents-") as tmp:
+            tmp_root = Path(tmp)
+            missing = tmp_root / "nested" / "AGENTS.md"
+            errors = validator.check_agents_file(missing, root=tmp_root)
+            self.assertEqual(len(errors), 1)
+            self.assertIn(str(Path("nested") / "AGENTS.md"), errors[0])
+            self.assertNotIn(str(tmp_root), errors[0])
 
     def test_missing_agents_file_reports_error_without_crash(self):
         import importlib

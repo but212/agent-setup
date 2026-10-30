@@ -21,8 +21,8 @@ Skills are independent on-demand modalities, not a mandatory sequence:
 ## What the repo checks
 
 - **Contract-Driven**: Each skill declares its role, activation, and write authority in frontmatter.
-- **Verification-First**: AGENTS.md tells agents to report unrun checks as Unverified. Tests check that this instruction exists.
-- **Minimal Blast Radius**: AGENTS.md forbids destructive git commands and unrequested file changes. Tests check the guard wording.
+- **Verification-First**: AGENTS.md instructs agents to report unrun checks as Unverified and separate deduction from empirical execution.
+- **Minimal Blast Radius**: AGENTS.md forbids destructive git commands and unrequested file changes.
 - **CI**: CI runs the validator and tests on Ubuntu, macOS, and Windows.
 
 ## Layout and Contracts
@@ -55,7 +55,7 @@ python3 scripts/validate-skills.py
 python3 -m unittest discover -s tests -v
 ```
 
-The validator checks skill frontmatter, dated plan paths, plan status values, AGENTS.md existence, document line budgets (<= 200 lines), and ASCII-only Markdown content in AGENTS.md and skills/. The test suite covers deployment, repository contracts, and safety guard wording.
+The validator checks skill frontmatter, dated plan paths, plan status values, AGENTS.md existence, document line budgets (<= 200 lines), and ASCII-only Markdown content in AGENTS.md and skills/. The test suite covers atomic deployment safety, repository contracts, and structural invariants.
 
 ## Status
 
