@@ -37,7 +37,12 @@ def create_deployment_plan(repo_root: Path, target_arg: str | None) -> Deploymen
     if not target_input:
         target_path = home_dir / ".agents"
     else:
-        target_path = Path(target_input)
+        if target_input == "~":
+            target_path = home_dir
+        elif target_input.startswith((f"~{os.sep}", "~/")):
+            target_path = home_dir / target_input[2:]
+        else:
+            target_path = Path(target_input)
         if not target_path.is_absolute():
             target_path = Path.cwd() / target_path
 

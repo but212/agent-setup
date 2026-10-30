@@ -54,7 +54,7 @@ def parse_frontmatter_text(text: str) -> dict[str, str]:
         if not stripped or stripped.startswith("#"):
             continue
 
-        if re.search(r":\s*[|>]\s*$", stripped):
+        if re.search(r":\s*[|>][+-0-9]*\s*$", stripped):
             raise ValueError(
                 "multiline block scalars (| or >) are unsupported; use single-line string"
             )
@@ -64,29 +64,31 @@ def parse_frontmatter_text(text: str) -> dict[str, str]:
             )
 
         match = re.match(r"^([A-Za-z][\w-]*):\s*(.*)$", line)
-        if match:
-            field = match.group(1)
-            raw_value = match.group(2).strip()
-            if " #" in raw_value and not (
-                raw_value.startswith(('"', "'")) and raw_value.endswith(('"', "'"))
-            ):
-                raw_value = raw_value.split(" #", 1)[0].strip()
+        if not match:
+            raise ValueError(f"unsupported frontmatter line: {stripped!r}")
 
-            if raw_value.startswith("[") and raw_value.endswith("]"):
-                try:
-                    items = json.loads(raw_value)
-                    if isinstance(items, list):
-                        raw_value = ", ".join(str(x) for x in items)
-                except json.JSONDecodeError:
-                    pass
-            elif (
-                len(raw_value) >= 2
-                and raw_value[0] == raw_value[-1]
-                and raw_value[0] in "'\""
-            ):
-                raw_value = raw_value[1:-1]
+        field = match.group(1)
+        raw_value = match.group(2).strip()
+        if " #" in raw_value and not (
+            raw_value.startswith(('"', "'")) and raw_value.endswith(('"', "'"))
+        ):
+            raw_value = raw_value.split(" #", 1)[0].strip()
 
-            values[field] = raw_value
+        if raw_value.startswith("[") and raw_value.endswith("]"):
+            try:
+                items = json.loads(raw_value)
+                if isinstance(items, list):
+                    raw_value = ", ".join(str(x) for x in items)
+            except json.JSONDecodeError:
+                pass
+        elif (
+            len(raw_value) >= 2
+            and raw_value[0] == raw_value[-1]
+            and raw_value[0] in "'\""
+        ):
+            raw_value = raw_value[1:-1]
+
+        values[field] = raw_value
     return values
 
 

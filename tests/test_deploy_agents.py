@@ -313,6 +313,19 @@ class DeployAgentsTests(unittest.TestCase):
         self.assertIn("failed to acquire deployment lock", str(ctx.exception))
         self.assertNotIn("deployment lock already held", str(ctx.exception))
 
+    def test_deploy_rejects_tilde_home_expansion(self):
+        result = self.run_deploy("~")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("refusing unsafe AGENT_HOME", result.stderr)
+        self.assertFalse((self.home / "AGENTS.md").exists())
+
+    def test_deploy_expands_tilde_subpath(self):
+        result = self.run_deploy("~/custom_agents")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        custom_target = self.home / "custom_agents"
+        self.assertTrue((custom_target / "AGENTS.md").exists())
+        self.assertTrue((custom_target / "skills" / "example" / "SKILL.md").exists())
+
 
 if __name__ == "__main__":
     unittest.main()
