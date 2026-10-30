@@ -291,6 +291,24 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertEqual(parsed["activation"], "/a, /b")
         self.assertEqual(parsed["role"], "quoted role")
 
+    def test_parse_frontmatter_text_preserves_hash_inside_quotes_and_json_array(self):
+        raw_text = (
+            "---\n"
+            "name: test-skill\n"
+            'description: "Fix issue #42 and optimize" # inline comment\n'
+            'role: "Security #1 Lead" # comment with hash # inside\n'
+            'activation: ["tag #1", "tag #2"] # list comment\n'
+            "modification-authority: 'Maintainer #5' # single quoted\n"
+            "---\n"
+            "# Content\n"
+        )
+        parsed = validator.parse_frontmatter_text(raw_text)
+        self.assertEqual(parsed["name"], "test-skill")
+        self.assertEqual(parsed["description"], "Fix issue #42 and optimize")
+        self.assertEqual(parsed["role"], "Security #1 Lead")
+        self.assertEqual(parsed["activation"], "tag #1, tag #2")
+        self.assertEqual(parsed["modification-authority"], "Maintainer #5")
+
     def test_scan_non_ascii_lines_pure(self):
         findings = validator.scan_non_ascii_lines("hello\nworld\n")
         self.assertEqual(findings, [])

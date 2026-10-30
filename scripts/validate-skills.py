@@ -69,24 +69,26 @@ def parse_frontmatter_text(text: str) -> dict[str, str]:
 
         field = match.group(1)
         raw_value = match.group(2).strip()
-        if " #" in raw_value and not (
-            raw_value.startswith(('"', "'")) and raw_value.endswith(('"', "'"))
-        ):
-            raw_value = raw_value.split(" #", 1)[0].strip()
+        quoted_match = re.match(
+            r'^("(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\')(?:\s*#.*)?$', raw_value
+        )
+        array_match = re.match(r"^(\[.*\])(?:\s*#.*)?$", raw_value)
 
-        if raw_value.startswith("[") and raw_value.endswith("]"):
+        if quoted_match:
+            raw_value = quoted_match.group(1)[1:-1]
+        elif array_match:
+            array_str = array_match.group(1)
             try:
-                items = json.loads(raw_value)
+                items = json.loads(array_str)
                 if isinstance(items, list):
                     raw_value = ", ".join(str(x) for x in items)
+                else:
+                    raw_value = array_str
             except json.JSONDecodeError:
-                pass
-        elif (
-            len(raw_value) >= 2
-            and raw_value[0] == raw_value[-1]
-            and raw_value[0] in "'\""
-        ):
-            raw_value = raw_value[1:-1]
+                raw_value = array_str
+        else:
+            if " #" in raw_value:
+                raw_value = raw_value.split(" #", 1)[0].strip()
 
         values[field] = raw_value
     return values

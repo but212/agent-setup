@@ -105,8 +105,6 @@ class DeploymentLock:
     def __enter__(self):
         try:
             fd = os.open(self.lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-            with os.fdopen(fd, "w", encoding="utf-8") as f:
-                f.write(f"{os.getpid()}\n")
         except FileExistsError as exc:
             raise DeploymentSafetyError(
                 f"deployment lock already held at {self.lock_path}\n"
@@ -115,6 +113,24 @@ class DeploymentLock:
             raise DeploymentSafetyError(
                 f"failed to acquire deployment lock at {self.lock_path}: {exc}\n"
             ) from exc
+
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                f.write(f"{os.getpid()}\n")
+        except BaseException as exc:
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+            try:
+                self.lock_path.unlink(missing_ok=True)
+            except OSError:
+                pass
+            if isinstance(exc, OSError):
+                raise DeploymentSafetyError(
+                    f"failed to acquire deployment lock at {self.lock_path}: {exc}\n"
+                ) from exc
+            raise
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -149,7 +165,11 @@ class DeploymentTransaction:
     def __enter__(self):
         self.target.mkdir(parents=True, exist_ok=True)
         self.lock.__enter__()
-        self._cleanup_scratch()
+        try:
+            self._cleanup_scratch()
+        except BaseException:
+            self.lock.__exit__(None, None, None)
+            raise
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):

@@ -313,6 +313,51 @@ class DeployAgentsTests(unittest.TestCase):
         self.assertIn("failed to acquire deployment lock", str(ctx.exception))
         self.assertNotIn("deployment lock already held", str(ctx.exception))
 
+    def test_deployment_lock_cleans_orphaned_lockfile_on_write_failure(self):
+        from unittest.mock import patch
+
+        from scripts.deploy_agents import (
+            DeploymentLock,
+            DeploymentSafetyError,
+        )
+
+        lock_path = self.root / "lock" / ".deploy.lock"
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        lock = DeploymentLock(lock_path)
+
+        with (
+            patch("os.fdopen", side_effect=OSError("Disk write failed")),
+            self.assertRaises(DeploymentSafetyError),
+            lock,
+        ):
+            pass
+
+        self.assertFalse(lock_path.exists())
+
+    def test_deployment_transaction_releases_lock_if_enter_cleanup_fails(self):
+        from unittest.mock import patch
+
+        from scripts.deploy_agents import (
+            DeploymentTransaction,
+            create_deployment_plan,
+        )
+
+        target = self.root / "tx_enter_fail_target"
+        plan = create_deployment_plan(self.repo, str(target))
+
+        with (
+            patch.object(
+                DeploymentTransaction,
+                "_cleanup_scratch",
+                side_effect=OSError("Scratch cleanup access denied"),
+            ),
+            self.assertRaises(OSError),
+            DeploymentTransaction(plan),
+        ):
+            pass
+
+        self.assertFalse(plan.lock_path.exists())
+
     def test_deploy_rejects_tilde_home_expansion(self):
         result = self.run_deploy("~")
         self.assertEqual(result.returncode, 1)
