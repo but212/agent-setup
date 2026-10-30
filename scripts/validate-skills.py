@@ -176,17 +176,12 @@ def validate_document_line_count(
     return []
 
 
-def parse_frontmatter_dict(path: Path) -> dict[str, str]:
-    """Compatibility wrapper reading path and delegating to parse_frontmatter_text."""
-    return parse_frontmatter_text(path.read_text(encoding="utf-8"))
-
-
 def parse_skill_metadata(
     path: Path, root: Path = ROOT
 ) -> tuple[SkillMetadata | None, list[str]]:
     """Parse and validate SKILL.md file."""
     try:
-        raw = parse_frontmatter_dict(path)
+        raw = parse_frontmatter_text(path.read_text(encoding="utf-8"))
     except ValueError as exc:
         return None, [f"{path.relative_to(root)}: {exc}"]
     metadata, errors = validate_skill_metadata_fields(raw, path.parent.name)
@@ -199,23 +194,14 @@ def check_ascii_markdown(
     root: Path = ROOT,
 ) -> list[str]:
     """Verify that AGENTS.md and skills/ markdown files contain only ASCII characters."""
-    if agents_path.is_dir() and skills_dir == SKILLS:
-        actual_root = agents_path
-        actual_agents = actual_root / "AGENTS.md"
-        actual_skills = actual_root / "skills"
-    else:
-        actual_root = root
-        actual_agents = agents_path
-        actual_skills = skills_dir
-
     errors: list[str] = []
     markdown_files: list[Path] = []
-    if actual_agents.is_file():
-        markdown_files.append(actual_agents)
-    if actual_skills.is_dir():
+    if agents_path.is_file():
+        markdown_files.append(agents_path)
+    if skills_dir.is_dir():
         markdown_files.extend(
             path
-            for path in sorted(actual_skills.rglob("*.md"))
+            for path in sorted(skills_dir.rglob("*.md"))
             if ".git" not in path.parts
         )
     for path in markdown_files:
@@ -223,8 +209,11 @@ def check_ascii_markdown(
         findings = scan_non_ascii_lines(text)
         if findings:
             first_line, codepoints = findings[0]
+            display_path = (
+                path.relative_to(root) if path.is_relative_to(root) else path.name
+            )
             errors.append(
-                f"{path.relative_to(actual_root)}: non-ASCII Markdown content "
+                f"{display_path}: non-ASCII Markdown content "
                 f"at line {first_line} ({codepoints})"
             )
     return errors
@@ -305,26 +294,20 @@ def check_document_line_limits(
     max_lines: int = MAX_AGENT_DOC_LINES,
 ) -> list[str]:
     """Verify that agent prompt documents (AGENTS.md, skills/*/SKILL.md) obey line budget invariant."""
-    if agents_path.is_dir() and skills_dir == SKILLS:
-        actual_root = agents_path
-        actual_agents = actual_root / "AGENTS.md"
-        actual_skills = actual_root / "skills"
-    else:
-        actual_root = root
-        actual_agents = agents_path
-        actual_skills = skills_dir
-
     errors: list[str] = []
     documents: list[Path] = []
-    if actual_agents.is_file():
-        documents.append(actual_agents)
-    if actual_skills.is_dir():
-        documents.extend(sorted(actual_skills.glob("*/SKILL.md")))
+    if agents_path.is_file():
+        documents.append(agents_path)
+    if skills_dir.is_dir():
+        documents.extend(sorted(skills_dir.glob("*/SKILL.md")))
 
     for path in documents:
         text = path.read_text(encoding="utf-8")
         for err in validate_document_line_count(text, max_lines):
-            errors.append(f"{path.relative_to(actual_root)}: {err}")
+            display_path = (
+                path.relative_to(root) if path.is_relative_to(root) else path.name
+            )
+            errors.append(f"{display_path}: {err}")
     return errors
 
 

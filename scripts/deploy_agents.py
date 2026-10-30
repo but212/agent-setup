@@ -97,12 +97,6 @@ def create_deployment_plan(repo_root: Path, target_arg: str | None) -> Deploymen
     )
 
 
-def validate_deployment_safety(repo_root: Path, target_arg: str | None) -> Path:
-    """Backward compatibility adaptor returning canonical_target Path."""
-    plan = create_deployment_plan(repo_root, target_arg)
-    return plan.canonical_target
-
-
 class DeploymentLock:
     """Mutual exclusion lock guard for deployment."""
 
@@ -150,6 +144,9 @@ class DeploymentTransaction:
         self.staging_skills = self.target / f".skills.tmp.{self.pid}"
         self.backup_skills = self.target / f".skills.bak.{self.pid}"
 
+        self._phase2_started = False
+        self._target_agents_existed = False
+        self._target_skills_existed = False
         self._committed = False
 
     def __enter__(self):
@@ -177,93 +174,64 @@ class DeploymentTransaction:
             shutil.rmtree(self.backup_skills, ignore_errors=True)
 
     def _rollback(self):
-        if self.backup_agents.exists() and not self.plan.target_agents.exists():
+        if not self._phase2_started:
+            return
+
+        # 1. Restore or clean AGENTS.md
+        if self._target_agents_existed and self.backup_agents.exists():
             try:
                 os.replace(self.backup_agents, self.plan.target_agents)
             except OSError:
                 pass
-        if self.backup_skills.exists() and not self.plan.target_skills.exists():
+        elif not self._target_agents_existed and self.plan.target_agents.exists():
             try:
+                self.plan.target_agents.unlink(missing_ok=True)
+            except OSError:
+                pass
+
+        # 2. Restore or clean skills/
+        if self._target_skills_existed and self.backup_skills.exists():
+            try:
+                if self.plan.target_skills.exists():
+                    shutil.rmtree(self.plan.target_skills, ignore_errors=True)
                 os.replace(self.backup_skills, self.plan.target_skills)
+            except OSError:
+                pass
+        elif not self._target_skills_existed and self.plan.target_skills.exists():
+            try:
+                shutil.rmtree(self.plan.target_skills, ignore_errors=True)
             except OSError:
                 pass
 
     def commit(self) -> tuple[Path, int]:
-        """Commit AGENTS.md and skills/ atomically."""
-        # 1. Stage and swap AGENTS.md
+        """Commit AGENTS.md and skills/ atomically in two phases."""
+        # Phase 1: Pure staging (targets untouched)
         shutil.copy2(self.plan.agents_source, self.staging_agents)
-        if self.plan.target_agents.exists():
-            shutil.copy2(self.plan.target_agents, self.backup_agents)
-        os.replace(self.staging_agents, self.plan.target_agents)
-
-        # 2. Stage skills/
         shutil.copytree(self.plan.skills_source, self.staging_skills)
         skill_count = sum(
             1 for p in self.staging_skills.rglob("SKILL.md") if p.is_file()
         )
 
-        # 3. Swap skills/ (with Windows backup-swap fallback)
+        # Phase 2: Swapping with rollback guards
+        self._phase2_started = True
+        self._target_agents_existed = self.plan.target_agents.exists()
+        self._target_skills_existed = self.plan.target_skills.exists()
+
+        if self._target_agents_existed:
+            shutil.copy2(self.plan.target_agents, self.backup_agents)
+
+        if self._target_skills_existed:
+            os.replace(self.plan.target_skills, self.backup_skills)
+
         try:
+            os.replace(self.staging_agents, self.plan.target_agents)
             os.replace(self.staging_skills, self.plan.target_skills)
-        except OSError:
-            if self.plan.target_skills.exists():
-                os.replace(self.plan.target_skills, self.backup_skills)
-            try:
-                os.replace(self.staging_skills, self.plan.target_skills)
-            except Exception:
-                if self.backup_skills.exists() and not self.plan.target_skills.exists():
-                    os.replace(self.backup_skills, self.plan.target_skills)
-                raise
-            finally:
-                if self.backup_skills.exists():
-                    shutil.rmtree(self.backup_skills, ignore_errors=True)
+        except Exception:
+            self._rollback()
+            raise
 
         self._committed = True
         return self.plan.target_agents, skill_count
-
-
-def sync_skills_atomic(skills_source: Path, target_skills: Path) -> int:
-    """Atomic skills directory sync wrapper."""
-    parent_dir = target_skills.parent
-    parent_dir.mkdir(parents=True, exist_ok=True)
-
-    pid = os.getpid()
-    staging_skills = parent_dir / f".skills.tmp.{pid}"
-    backup_skills = parent_dir / f".skills.bak.{pid}"
-
-    if staging_skills.exists():
-        shutil.rmtree(staging_skills, ignore_errors=True)
-    if backup_skills.exists():
-        shutil.rmtree(backup_skills, ignore_errors=True)
-
-    try:
-        shutil.copytree(skills_source, staging_skills)
-        skill_count = sum(1 for p in staging_skills.rglob("SKILL.md") if p.is_file())
-
-        try:
-            os.replace(staging_skills, target_skills)
-        except OSError:
-            if target_skills.exists():
-                os.replace(target_skills, backup_skills)
-            try:
-                os.replace(staging_skills, target_skills)
-            except Exception:
-                if backup_skills.exists() and not target_skills.exists():
-                    os.replace(backup_skills, target_skills)
-                raise
-            finally:
-                if backup_skills.exists():
-                    shutil.rmtree(backup_skills, ignore_errors=True)
-
-        return skill_count
-    finally:
-        if staging_skills.exists():
-            shutil.rmtree(staging_skills, ignore_errors=True)
-        if backup_skills.exists():
-            shutil.rmtree(backup_skills, ignore_errors=True)
-
-
-sync_skills = sync_skills_atomic
 
 
 def deploy(repo_root: Path, target_arg: str | None) -> int:

@@ -119,12 +119,12 @@ class DeployAgentsTests(unittest.TestCase):
         self.assertEqual(sentinel.read_text(encoding="utf-8"), "keep-me")
 
     def test_validate_deployment_safety_returns_canonical_target(self):
-        from scripts.deploy_agents import validate_deployment_safety
+        from scripts.deploy_agents import create_deployment_plan
 
         target = self.root / "valid_target"
-        canonical_target = validate_deployment_safety(self.repo, str(target))
+        plan = create_deployment_plan(self.repo, str(target))
 
-        self.assertEqual(canonical_target, target.resolve())
+        self.assertEqual(plan.canonical_target, target.resolve())
 
     def test_deploy_rejects_target_inside_repo_root(self):
         result = self.run_deploy(self.repo)
@@ -150,31 +150,72 @@ class DeployAgentsTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertFalse((target / ".deploy.lock").exists())
 
-    def test_deploy_failure_preserves_original_skills(self):
+    def test_deploy_failure_preserves_original_targets(self):
         from unittest.mock import patch
 
-        from scripts.deploy_agents import sync_skills_atomic
+        from scripts.deploy_agents import (
+            DeploymentTransaction,
+            create_deployment_plan,
+        )
 
         target = self.root / "target"
+        target.mkdir(parents=True)
+        original_agents = target / "AGENTS.md"
+        original_agents.write_text("original agents\n", encoding="utf-8")
         target_skills = target / "skills"
         (target_skills / "example").mkdir(parents=True)
         original_skill = target_skills / "example" / "SKILL.md"
         original_skill.write_text("original content\n", encoding="utf-8")
 
-        source_skills = self.repo / "skills"
+        plan = create_deployment_plan(self.repo, str(target))
 
         with (
             patch("shutil.copytree", side_effect=OSError("Simulated disk full")),
-            self.assertRaises(IOError),
+            self.assertRaises(OSError),
+            DeploymentTransaction(plan) as tx,
         ):
-            sync_skills_atomic(source_skills, target_skills)
+            tx.commit()
 
+        self.assertTrue(original_agents.exists())
+        self.assertEqual(
+            original_agents.read_text(encoding="utf-8"), "original agents\n"
+        )
         self.assertTrue(original_skill.exists())
         self.assertEqual(
             original_skill.read_text(encoding="utf-8"), "original content\n"
         )
-        staging_dirs = list(target.glob(".skills.*"))
-        self.assertEqual(staging_dirs, [])
+        staging_files = [p.name for p in target.glob(".*")]
+        self.assertEqual(staging_files, [])
+
+    def test_deployment_transaction_rollback_cleans_new_target_on_failure(self):
+        from unittest.mock import patch
+
+        from scripts.deploy_agents import (
+            DeploymentTransaction,
+            create_deployment_plan,
+        )
+
+        target = self.root / "new_target"
+        plan = create_deployment_plan(self.repo, str(target))
+
+        orig_replace = os.replace
+
+        def fail_on_skills_swap(src, dst):
+            if "skills" in str(dst) and not str(src).endswith(f".bak.{os.getpid()}"):
+                raise OSError("Simulated swap failure")
+            return orig_replace(src, dst)
+
+        with (
+            patch("os.replace", side_effect=fail_on_skills_swap),
+            self.assertRaises(OSError),
+            DeploymentTransaction(plan) as tx,
+        ):
+            tx.commit()
+
+        self.assertFalse(plan.target_agents.exists())
+        self.assertFalse(plan.target_skills.exists())
+        staging_files = [p.name for p in target.glob(".*")]
+        self.assertEqual(staging_files, [])
 
     def test_create_deployment_plan_returns_valid_plan(self):
         from scripts.deploy_agents import create_deployment_plan

@@ -188,7 +188,7 @@ class RepositoryContractTests(unittest.TestCase):
                 path.suffix in suffixes or path.name in named_files
             ) and b"\r\n" in path.read_bytes():
                 crlf_files.append(str(path.relative_to(ROOT)))
-            self.assertEqual(crlf_files, [], f"Found CRLF in files: {crlf_files}")
+        self.assertEqual(crlf_files, [], f"Found CRLF in files: {crlf_files}")
 
     def test_missing_agents_file_reports_error_without_crash(self):
         import importlib
@@ -391,6 +391,54 @@ class RepositoryContractTests(unittest.TestCase):
         )
         errors = validator.validate_plan_status_text("Status: `invalid`\n")
         self.assertEqual(len(errors), 1)
+
+    def test_check_ascii_markdown_external_paths_without_crash(self):
+        import importlib
+
+        sys.path.insert(0, str(ROOT / "scripts"))
+        validator = importlib.import_module("validate-skills")
+
+        with tempfile.TemporaryDirectory(prefix="agent-setup-external-") as tmp:
+            ext_dir = Path(tmp)
+            ext_agents = ext_dir / "CUSTOM_AGENTS.md"
+            ext_agents.write_text("# Non-ASCII: \u2014\n", encoding="utf-8")
+            ext_skills = ext_dir / "custom_skills"
+            ext_skills.mkdir()
+            (ext_skills / "test.md").write_text("# Non-ASCII: \u2022\n", encoding="utf-8")
+
+            errors = validator.check_ascii_markdown(
+                agents_path=ext_agents,
+                skills_dir=ext_skills,
+                root=ROOT,
+            )
+            self.assertEqual(len(errors), 2)
+            self.assertTrue(any("CUSTOM_AGENTS.md" in err for err in errors))
+            self.assertTrue(any("test.md" in err for err in errors))
+
+    def test_check_document_line_limits_external_paths_without_crash(self):
+        import importlib
+
+        sys.path.insert(0, str(ROOT / "scripts"))
+        validator = importlib.import_module("validate-skills")
+
+        with tempfile.TemporaryDirectory(prefix="agent-setup-external-") as tmp:
+            ext_dir = Path(tmp)
+            ext_agents = ext_dir / "CUSTOM_AGENTS.md"
+            ext_agents.write_text("\n".join(f"line {i}" for i in range(10)) + "\n", encoding="utf-8")
+            ext_skills = ext_dir / "custom_skills"
+            skill_sub = ext_skills / "s1"
+            skill_sub.mkdir(parents=True)
+            (skill_sub / "SKILL.md").write_text("\n".join(f"line {i}" for i in range(10)) + "\n", encoding="utf-8")
+
+            errors = validator.check_document_line_limits(
+                agents_path=ext_agents,
+                skills_dir=ext_skills,
+                root=ROOT,
+                max_lines=5,
+            )
+            self.assertEqual(len(errors), 2)
+            self.assertTrue(any("CUSTOM_AGENTS.md" in err for err in errors))
+            self.assertTrue(any("SKILL.md" in err for err in errors))
 
 
 if __name__ == "__main__":
