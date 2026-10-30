@@ -309,6 +309,39 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertEqual(parsed["activation"], "tag #1, tag #2")
         self.assertEqual(parsed["modification-authority"], "Maintainer #5")
 
+    def test_parse_frontmatter_text_strict_json_array_with_comment_brackets(self):
+        raw_text = (
+            "---\n"
+            "name: test-skill\n"
+            'activation: ["item1", "item2"] # see [docs] for details]\n'
+            "---\n"
+            "# Content\n"
+        )
+        parsed = validator.parse_frontmatter_text(raw_text)
+        self.assertEqual(parsed["activation"], "item1, item2")
+
+    def test_parse_frontmatter_text_rejects_malformed_json_array(self):
+        raw_text = (
+            "---\n"
+            "name: test-skill\n"
+            "activation: [unquoted, invalid]\n"
+            "---\n"
+            "# Content\n"
+        )
+        with self.assertRaises(ValueError):
+            validator.parse_frontmatter_text(raw_text)
+
+    def test_parse_frontmatter_text_rejects_trailing_junk_after_json_array(self):
+        raw_text = (
+            "---\n"
+            "name: test-skill\n"
+            'activation: ["item1"] unexpected_trailing_content\n'
+            "---\n"
+            "# Content\n"
+        )
+        with self.assertRaises(ValueError):
+            validator.parse_frontmatter_text(raw_text)
+
     def test_scan_non_ascii_lines_pure(self):
         findings = validator.scan_non_ascii_lines("hello\nworld\n")
         self.assertEqual(findings, [])

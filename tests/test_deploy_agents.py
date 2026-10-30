@@ -358,6 +358,54 @@ class DeployAgentsTests(unittest.TestCase):
 
         self.assertFalse(plan.lock_path.exists())
 
+    def test_deployment_transaction_releases_lock_if_exit_cleanup_fails(self):
+        from unittest.mock import patch
+
+        from scripts.deploy_agents import (
+            DeploymentTransaction,
+            create_deployment_plan,
+        )
+
+        target = self.root / "tx_exit_fail_target"
+        plan = create_deployment_plan(self.repo, str(target))
+
+        cleanup_calls = 0
+
+        def failing_exit_cleanup(tx_self):
+            nonlocal cleanup_calls
+            cleanup_calls += 1
+            if cleanup_calls > 1:
+                raise OSError("Exit cleanup access denied")
+
+        with (
+            patch.object(DeploymentTransaction, "_cleanup_scratch", failing_exit_cleanup),
+            self.assertRaises(OSError),
+            DeploymentTransaction(plan),
+        ):
+            pass
+
+        self.assertFalse(plan.lock_path.exists())
+
+    def test_cleanup_scratch_suppresses_oserror_on_unlink(self):
+        from unittest.mock import patch
+
+        from scripts.deploy_agents import (
+            DeploymentTransaction,
+            create_deployment_plan,
+        )
+
+        target = self.root / "tx_cleanup_oserror_target"
+        plan = create_deployment_plan(self.repo, str(target))
+        tx = DeploymentTransaction(plan)
+        tx.staging_agents.parent.mkdir(parents=True, exist_ok=True)
+        tx.staging_agents.write_text("scratch", encoding="utf-8")
+
+        with patch.object(Path, "unlink", side_effect=OSError("Unlink denied")):
+            try:
+                tx._cleanup_scratch()
+            except OSError:
+                self.fail("_cleanup_scratch() raised OSError on unlink")
+
     def test_deploy_rejects_tilde_home_expansion(self):
         result = self.run_deploy("~")
         self.assertEqual(result.returncode, 1)

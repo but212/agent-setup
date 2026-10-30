@@ -177,18 +177,22 @@ class DeploymentTransaction:
             if exc_type is not None and not self._committed:
                 self._rollback()
         finally:
-            self._cleanup_scratch()
-            self.lock.__exit__(exc_type, exc_val, exc_tb)
+            try:
+                self._cleanup_scratch()
+            finally:
+                self.lock.__exit__(exc_type, exc_val, exc_tb)
 
     def _cleanup_scratch(self):
-        if self.staging_agents.exists():
+        try:
             self.staging_agents.unlink(missing_ok=True)
-        if self.backup_agents.exists():
+        except OSError:
+            pass
+        try:
             self.backup_agents.unlink(missing_ok=True)
-        if self.staging_skills.exists():
-            shutil.rmtree(self.staging_skills, ignore_errors=True)
-        if self.backup_skills.exists():
-            shutil.rmtree(self.backup_skills, ignore_errors=True)
+        except OSError:
+            pass
+        shutil.rmtree(self.staging_skills, ignore_errors=True)
+        shutil.rmtree(self.backup_skills, ignore_errors=True)
 
     def _rollback(self):
         if not self._phase2_started:

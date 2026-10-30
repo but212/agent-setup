@@ -72,20 +72,26 @@ def parse_frontmatter_text(text: str) -> dict[str, str]:
         quoted_match = re.match(
             r'^("(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\')(?:\s*#.*)?$', raw_value
         )
-        array_match = re.match(r"^(\[.*\])(?:\s*#.*)?$", raw_value)
 
         if quoted_match:
             raw_value = quoted_match.group(1)[1:-1]
-        elif array_match:
-            array_str = array_match.group(1)
+        elif raw_value.startswith("["):
             try:
-                items = json.loads(array_str)
-                if isinstance(items, list):
-                    raw_value = ", ".join(str(x) for x in items)
-                else:
-                    raw_value = array_str
-            except json.JSONDecodeError:
-                raw_value = array_str
+                items, end_idx = json.JSONDecoder().raw_decode(raw_value)
+            except json.JSONDecodeError as err:
+                raise ValueError(
+                    f"malformed inline JSON array for field {field!r}: {err}"
+                ) from err
+            if not isinstance(items, list):
+                raise ValueError(
+                    f"expected JSON array for field {field!r}, got {type(items).__name__}"
+                )
+            tail = raw_value[end_idx:].strip()
+            if tail and not tail.startswith("#"):
+                raise ValueError(
+                    f"unexpected trailing content after JSON array for field {field!r}: {tail!r}"
+                )
+            raw_value = ", ".join(str(x) for x in items)
         else:
             if " #" in raw_value:
                 raw_value = raw_value.split(" #", 1)[0].strip()
