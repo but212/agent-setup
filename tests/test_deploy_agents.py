@@ -419,6 +419,61 @@ class DeployAgentsTests(unittest.TestCase):
         self.assertTrue((custom_target / "AGENTS.md").exists())
         self.assertTrue((custom_target / "skills" / "example" / "SKILL.md").exists())
 
+    def test_deploy_rejects_target_as_ancestor_of_repo_root(self):
+        from scripts.deploy_agents import DeploymentSafetyError, create_deployment_plan
+
+        target = self.root / "parent_target"
+        nested_repo = target / "nested" / "repo"
+        nested_repo.mkdir(parents=True)
+        (nested_repo / "AGENTS.md").write_text("agents", encoding="utf-8")
+        (nested_repo / "skills").mkdir()
+
+        with self.assertRaises(DeploymentSafetyError):
+            create_deployment_plan(nested_repo, str(target))
+
+    def test_deploy_rejects_target_as_ancestor_of_home(self):
+        from scripts.deploy_agents import DeploymentSafetyError, create_deployment_plan
+
+        with self.assertRaises(DeploymentSafetyError):
+            create_deployment_plan(self.repo, str(self.home.parent))
+
+    def test_deploy_rejects_symlink_or_junction_targets(self):
+        from scripts.deploy_agents import DeploymentSafetyError, create_deployment_plan
+
+        target = self.root / "symlink_target"
+        real_dir = self.root / "real_dir"
+        real_dir.mkdir()
+
+        def make_dir_link(src: Path, dst: Path):
+            try:
+                os.symlink(str(src), str(dst), target_is_directory=True)
+            except (OSError, NotImplementedError):
+                import _winapi
+
+                _winapi.CreateJunction(str(src), str(dst))
+
+        # 1. Target directory itself is a link
+        make_dir_link(real_dir, target)
+        with self.assertRaises(DeploymentSafetyError):
+            create_deployment_plan(self.repo, str(target))
+
+        # 2. target_skills is a link
+        target_dir = self.root / "normal_target"
+        target_dir.mkdir()
+        make_dir_link(real_dir, target_dir / "skills")
+        with self.assertRaises(DeploymentSafetyError):
+            create_deployment_plan(self.repo, str(target_dir))
+
+        # 3. Dangling link/junction at target_skills
+        dangling_target = self.root / "dangling_target"
+        dangling_target.mkdir()
+        will_delete = self.root / "will_delete"
+        will_delete.mkdir()
+        make_dir_link(will_delete, dangling_target / "skills")
+        will_delete.rmdir()
+        with self.assertRaises(DeploymentSafetyError):
+            create_deployment_plan(self.repo, str(dangling_target))
+
 
 if __name__ == "__main__":
     unittest.main()

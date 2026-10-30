@@ -4,6 +4,7 @@
 import argparse
 import os
 import shutil
+import stat
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -13,6 +14,19 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 
 class DeploymentSafetyError(Exception):
     """Raised when a pre-flight deployment safety invariant is violated."""
+
+
+def _is_link_or_reparse(path: Path) -> bool:
+    """Check if path is a symlink or Windows reparse point (junction)."""
+    if path.is_symlink():
+        return True
+    try:
+        st = os.lstat(path)
+        attrs = getattr(st, "st_file_attributes", 0)
+        reparse_flag = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+        return bool(attrs & reparse_flag)
+    except OSError:
+        return False
 
 
 @dataclass(frozen=True)
@@ -48,15 +62,23 @@ def create_deployment_plan(repo_root: Path, target_arg: str | None) -> Deploymen
 
     canonical_target = target_path.resolve()
 
+    if _is_link_or_reparse(target_path) or _is_link_or_reparse(canonical_target):
+        raise DeploymentSafetyError(
+            f"destination must not be a symlink or junction: {target_input}\n"
+        )
+
     is_root = canonical_target == canonical_target.parent or (
         bool(canonical_target.anchor)
         and canonical_target == Path(canonical_target.anchor)
     )
     canonical_repo = repo_root.resolve()
     is_in_repo = (
-        canonical_target == canonical_repo or canonical_repo in canonical_target.parents
+        canonical_target == canonical_repo
+        or canonical_repo in canonical_target.parents
+        or canonical_target in canonical_repo.parents
     )
-    if is_root or canonical_target == home_dir or is_in_repo:
+    is_home_ancestor = canonical_target in home_dir.parents
+    if is_root or canonical_target == home_dir or is_in_repo or is_home_ancestor:
         raise DeploymentSafetyError(f"refusing unsafe AGENT_HOME: {target_input}\n")
 
     if canonical_target.exists() and not canonical_target.is_dir():
@@ -72,12 +94,20 @@ def create_deployment_plan(repo_root: Path, target_arg: str | None) -> Deploymen
         raise DeploymentSafetyError(f"skills/ not found in {repo_root}\n")
 
     target_agents = canonical_target / "AGENTS.md"
+    if _is_link_or_reparse(target_agents):
+        raise DeploymentSafetyError(
+            f"destination must not be a symlink or junction: {target_agents}\n"
+        )
     if target_agents.exists() and not target_agents.is_file():
         raise DeploymentSafetyError(
             f"destination is not a regular file: {target_agents}\n"
         )
 
     target_skills = canonical_target / "skills"
+    if _is_link_or_reparse(target_skills):
+        raise DeploymentSafetyError(
+            f"destination must not be a symlink or junction: {target_skills}\n"
+        )
     if target_skills.exists() and not target_skills.is_dir():
         raise DeploymentSafetyError(
             f"destination is not a directory: {target_skills}\n"
@@ -157,7 +187,6 @@ class DeploymentTransaction:
 
         self._phase2_started = False
         self._target_agents_existed = False
-        self._target_skills_existed = False
         self._target_agents_swapped = False
         self._target_skills_moved = False
         self._committed = False
@@ -210,17 +239,10 @@ class DeploymentTransaction:
             except OSError:
                 pass
 
-        # 2. Restore or clean skills/
+        # 2. Restore skills/
         if self._target_skills_moved:
             try:
-                if self.plan.target_skills.exists():
-                    shutil.rmtree(self.plan.target_skills, ignore_errors=True)
                 os.replace(self.backup_skills, self.plan.target_skills)
-            except OSError:
-                pass
-        elif not self._target_skills_existed and self.plan.target_skills.exists():
-            try:
-                shutil.rmtree(self.plan.target_skills, ignore_errors=True)
             except OSError:
                 pass
 
@@ -236,12 +258,11 @@ class DeploymentTransaction:
         # Phase 2: Swapping with rollback guards
         self._phase2_started = True
         self._target_agents_existed = self.plan.target_agents.exists()
-        self._target_skills_existed = self.plan.target_skills.exists()
 
         if self._target_agents_existed:
             shutil.copy2(self.plan.target_agents, self.backup_agents)
 
-        if self._target_skills_existed:
+        if self.plan.target_skills.exists():
             os.replace(self.plan.target_skills, self.backup_skills)
             self._target_skills_moved = True
 

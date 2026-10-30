@@ -567,6 +567,157 @@ class RepositoryContractTests(unittest.TestCase):
             validator.parse_frontmatter_text(raw_text)
         self.assertIn("unsupported frontmatter line", str(ctx.exception))
 
+    def test_frontmatter_duplicate_keys_fail(self):
+        raw_text = (
+            "---\n"
+            "name: test-skill\n"
+            "role: test\n"
+            "activation: test\n"
+            "modification-authority: None\n"
+            "description: first\n"
+            "description: second\n"
+            "---\n"
+            "# Content\n"
+        )
+        with self.assertRaises(ValueError) as ctx:
+            validator.parse_frontmatter_text(raw_text)
+        self.assertIn("duplicate frontmatter key", str(ctx.exception))
+
+    def test_frontmatter_unclosed_or_trailing_quoted_strings_fail(self):
+        unclosed = (
+            "---\n"
+            "name: \"unclosed\n"
+            "role: test\n"
+            "activation: test\n"
+            "modification-authority: None\n"
+            "description: valid\n"
+            "---\n"
+        )
+        with self.assertRaises(ValueError) as ctx:
+            validator.parse_frontmatter_text(unclosed)
+        self.assertIn("malformed quoted string", str(ctx.exception))
+
+        trailing = (
+            "---\n"
+            "name: \"closed\" unexpected\n"
+            "role: test\n"
+            "activation: test\n"
+            "modification-authority: None\n"
+            "description: valid\n"
+            "---\n"
+        )
+        with self.assertRaises(ValueError) as ctx:
+            validator.parse_frontmatter_text(trailing)
+        self.assertIn("malformed quoted string", str(ctx.exception))
+
+    def test_frontmatter_block_scalar_with_comment_fails(self):
+        raw_text = (
+            "---\n"
+            "name: test-skill\n"
+            "role: test\n"
+            "activation: test\n"
+            "modification-authority: None\n"
+            "description: | # inline comment\n"
+            "  multiline\n"
+            "---\n"
+        )
+        with self.assertRaises(ValueError) as ctx:
+            validator.parse_frontmatter_text(raw_text)
+        self.assertIn("multiline block scalars", str(ctx.exception))
+
+    def test_frontmatter_inline_json_array_validation(self):
+        # Empty array
+        empty_array = (
+            "---\n"
+            "name: test-skill\n"
+            "role: test\n"
+            "activation: []\n"
+            "modification-authority: None\n"
+            "description: valid\n"
+            "---\n"
+        )
+        with self.assertRaises(ValueError) as ctx:
+            validator.parse_frontmatter_text(empty_array)
+        self.assertIn("non-empty", str(ctx.exception))
+
+        # Non-string item
+        non_string = (
+            "---\n"
+            "name: test-skill\n"
+            "role: test\n"
+            "activation: [123]\n"
+            "modification-authority: None\n"
+            "description: valid\n"
+            "---\n"
+        )
+        with self.assertRaises(ValueError) as ctx:
+            validator.parse_frontmatter_text(non_string)
+        self.assertIn("non-empty string", str(ctx.exception))
+
+        # Blank string item
+        blank_string = (
+            "---\n"
+            "name: test-skill\n"
+            "role: test\n"
+            "activation: [\" \"]\n"
+            "modification-authority: None\n"
+            "description: valid\n"
+            "---\n"
+        )
+        with self.assertRaises(ValueError) as ctx:
+            validator.parse_frontmatter_text(blank_string)
+        self.assertIn("non-empty string", str(ctx.exception))
+
+    def test_validate_skill_metadata_fields_rejects_unknown_keys(self):
+        raw = {
+            "name": "challenge",
+            "role": "adversary",
+            "activation": "always",
+            "modification-authority": "human",
+            "description": "stress-test",
+            "extra_key": "unauthorized",
+        }
+        metadata, errors = validator.validate_skill_metadata_fields(raw, "challenge")
+        self.assertIsNone(metadata)
+        self.assertTrue(any("unknown frontmatter field" in err for err in errors))
+
+    def test_validate_plan_status_text_strict_matching(self):
+        # Trailing garbage
+        errors = validator.validate_plan_status_text("- Status: planned trailing garbage\n")
+        self.assertTrue(len(errors) > 0)
+
+        # Unbalanced backtick (opening backtick only)
+        errors = validator.validate_plan_status_text("- Status: `planned\n")
+        self.assertTrue(len(errors) > 0)
+
+        # Unbalanced backtick (closing backtick only)
+        errors = validator.validate_plan_status_text("- Status: planned`\n")
+        self.assertTrue(len(errors) > 0)
+
+        # Valid backtick wrapped
+        self.assertEqual(validator.validate_plan_status_text("- Status: `planned`\n"), [])
+
+        # Valid unquoted
+        self.assertEqual(validator.validate_plan_status_text("- Status: planned\n"), [])
+
+    def test_check_plan_status_ignores_dotfiles_and_directories(self):
+        with tempfile.TemporaryDirectory(prefix="agent-setup-plans-") as tmp:
+            plans_dir = Path(tmp)
+            date_dir = plans_dir / "2026-01-01"
+            date_dir.mkdir(parents=True)
+
+            # Valid plan
+            (date_dir / "task.md").write_text("Status: planned\n", encoding="utf-8")
+
+            # Dotfile (draft) with invalid status should be ignored
+            (date_dir / ".draft.md").write_text("Status: invalid\n", encoding="utf-8")
+
+            # Subdirectory named something.md should be ignored
+            (date_dir / "sub.md").mkdir()
+
+            errors = validator.check_plan_status(plans_dir, root=ROOT)
+            self.assertEqual(errors, [])
+
 
 if __name__ == "__main__":
     unittest.main()

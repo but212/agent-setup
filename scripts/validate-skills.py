@@ -16,6 +16,9 @@ PLANS = ROOT / ".plans"
 PLAN_STATUSES = frozenset(
     {"planned", "in-progress", "blocked", "complete", "cancelled"}
 )
+REQUIRED_SKILL_FIELDS = frozenset(
+    {"name", "role", "activation", "modification-authority", "description"}
+)
 MAX_AGENT_DOC_LINES = 200
 
 
@@ -54,7 +57,7 @@ def parse_frontmatter_text(text: str) -> dict[str, str]:
         if not stripped or stripped.startswith("#"):
             continue
 
-        if re.search(r":\s*[|>][+-0-9]*\s*$", stripped):
+        if re.search(r":\s*[|>][+-0-9]*(?:\s+#.*)?\s*$", stripped):
             raise ValueError(
                 "multiline block scalars (| or >) are unsupported; use single-line string"
             )
@@ -68,6 +71,9 @@ def parse_frontmatter_text(text: str) -> dict[str, str]:
             raise ValueError(f"unsupported frontmatter line: {stripped!r}")
 
         field = match.group(1)
+        if field in values:
+            raise ValueError(f"duplicate frontmatter key: {field!r}")
+
         raw_value = match.group(2).strip()
         quoted_match = re.match(
             r'^("(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\')(?:\s*#.*)?$', raw_value
@@ -75,6 +81,10 @@ def parse_frontmatter_text(text: str) -> dict[str, str]:
 
         if quoted_match:
             raw_value = quoted_match.group(1)[1:-1]
+        elif raw_value.startswith(('"', "'")):
+            raise ValueError(
+                f"malformed quoted string for field {field!r}: {raw_value!r}"
+            )
         elif raw_value.startswith("["):
             try:
                 items, end_idx = json.JSONDecoder().raw_decode(raw_value)
@@ -82,16 +92,21 @@ def parse_frontmatter_text(text: str) -> dict[str, str]:
                 raise ValueError(
                     f"malformed inline JSON array for field {field!r}: {err}"
                 ) from err
-            if not isinstance(items, list):
-                raise ValueError(
-                    f"expected JSON array for field {field!r}, got {type(items).__name__}"
-                )
             tail = raw_value[end_idx:].strip()
             if tail and not tail.startswith("#"):
                 raise ValueError(
                     f"unexpected trailing content after JSON array for field {field!r}: {tail!r}"
                 )
-            raw_value = ", ".join(str(x) for x in items)
+            if not items:
+                raise ValueError(
+                    f"expected non-empty JSON array for field {field!r}"
+                )
+            for item in items:
+                if not isinstance(item, str) or not item.strip():
+                    raise ValueError(
+                        f"expected non-empty string array elements for field {field!r}, got {item!r}"
+                    )
+            raw_value = ", ".join(items)
         else:
             if " #" in raw_value:
                 raw_value = raw_value.split(" #", 1)[0].strip()
@@ -105,6 +120,10 @@ def validate_skill_metadata_fields(
 ) -> tuple[SkillMetadata | None, list[str]]:
     """Validate parsed frontmatter dictionary against required skill contracts."""
     errors: list[str] = []
+    unknown_fields = sorted(set(raw.keys()) - REQUIRED_SKILL_FIELDS)
+    for unknown in unknown_fields:
+        errors.append(f"unknown frontmatter field: {unknown!r}")
+
     name = raw.get("name")
     if name != expected_name:
         errors.append(f"name={name!r}, expected {expected_name!r}")
@@ -166,13 +185,23 @@ def validate_plan_status_text(
 ) -> list[str]:
     """Validate status field embedded in plan markdown text."""
     errors: list[str] = []
-    status_match = re.search(
-        r"^(?:-\s*)?Status:\s*`?([a-zA-Z0-9_-]+)`?", text, re.MULTILINE
-    )
+    status_match = re.search(r"^(?:-\s*)?Status:\s*(.*)$", text, re.MULTILINE)
     if not status_match:
         errors.append("plan missing Status field")
-    elif status_match.group(1) not in allowed_statuses:
-        errors.append(f"plan has unknown status {status_match.group(1)!r}")
+        return errors
+
+    raw_status = status_match.group(1).strip()
+    if not raw_status:
+        errors.append("plan missing Status field")
+        return errors
+
+    if raw_status.startswith("`") and raw_status.endswith("`") and len(raw_status) >= 2:
+        status = raw_status[1:-1].strip()
+    else:
+        status = raw_status
+
+    if status not in allowed_statuses:
+        errors.append(f"plan has unknown status {status!r}")
     return errors
 
 
@@ -284,6 +313,8 @@ def check_plan_status(plans_dir: Path, root: Path = ROOT) -> list[str]:
         return errors
 
     for path in sorted(plans_dir.glob("*/*.md")):
+        if not path.is_file() or path.name.startswith("."):
+            continue
         text = path.read_text(encoding="utf-8")
         status_errors = validate_plan_status_text(text)
         for err in status_errors:
