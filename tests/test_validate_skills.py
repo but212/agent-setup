@@ -551,6 +551,14 @@ class RepositoryContractTests(unittest.TestCase):
             validator.parse_frontmatter_text(raw_text)
         self.assertIn("multiline block scalars", str(ctx.exception))
 
+    def test_frontmatter_block_scalar_with_indent_indicator_fails(self):
+        for indicator in ("|1", "|2", ">2", ">8", "|+3", ">-4"):
+            with self.subTest(indicator=indicator):
+                raw_text = f"---\nname: test-skill\ndescription: {indicator}\n---\n"
+                with self.assertRaises(ValueError) as ctx:
+                    validator.parse_frontmatter_text(raw_text)
+                self.assertIn("multiline block scalars", str(ctx.exception))
+
     def test_frontmatter_unrecognized_non_key_value_line_fails(self):
         raw_text = (
             "---\n"

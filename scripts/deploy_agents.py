@@ -62,15 +62,12 @@ def create_deployment_plan(repo_root: Path, target_arg: str | None) -> Deploymen
 
     canonical_target = target_path.resolve()
 
-    if _is_link_or_reparse(target_path) or _is_link_or_reparse(canonical_target):
+    if _is_link_or_reparse(target_path):
         raise DeploymentSafetyError(
             f"destination must not be a symlink or junction: {target_input}\n"
         )
 
-    is_root = canonical_target == canonical_target.parent or (
-        bool(canonical_target.anchor)
-        and canonical_target == Path(canonical_target.anchor)
-    )
+    is_root = canonical_target == canonical_target.parent
     canonical_repo = repo_root.resolve()
     is_in_repo = (
         canonical_target == canonical_repo
@@ -136,8 +133,15 @@ class DeploymentLock:
         try:
             fd = os.open(self.lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
         except FileExistsError as exc:
+            try:
+                holder = self.lock_path.read_text(encoding="utf-8").strip()
+            except (OSError, UnicodeDecodeError):
+                holder = ""
+            if not holder.isdigit():
+                holder = "unknown"
             raise DeploymentSafetyError(
-                f"deployment lock already held at {self.lock_path}\n"
+                f"deployment lock already held at {self.lock_path} (pid {holder}); "
+                "remove it if no deployment is running\n"
             ) from exc
         except OSError as exc:
             raise DeploymentSafetyError(
@@ -175,15 +179,14 @@ class DeploymentTransaction:
 
     def __init__(self, plan: DeploymentPlan):
         self.plan = plan
-        self.pid = os.getpid()
         self.target = plan.canonical_target
         self.lock = DeploymentLock(plan.lock_path)
 
-        self.staging_agents = self.target / f".AGENTS.md.tmp.{self.pid}"
-        self.backup_agents = self.target / f".AGENTS.md.bak.{self.pid}"
+        self.staging_agents = self.target / ".AGENTS.md.tmp"
+        self.backup_agents = self.target / ".AGENTS.md.bak"
 
-        self.staging_skills = self.target / f".skills.tmp.{self.pid}"
-        self.backup_skills = self.target / f".skills.bak.{self.pid}"
+        self.staging_skills = self.target / ".skills.tmp"
+        self.backup_skills = self.target / ".skills.bak"
 
         self._phase2_started = False
         self._target_agents_existed = False

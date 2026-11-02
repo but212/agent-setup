@@ -152,6 +152,39 @@ class DeployAgentsTests(unittest.TestCase):
         result = self.run_deploy(target)
 
         self.assertNotEqual(result.returncode, 0)
+        self.assertIn("99999", result.stderr)
+        self.assertIn(str(lock_file), result.stderr)
+
+    def test_deploy_lock_held_with_unreadable_pid_reports_unknown(self):
+        target = self.root / "target"
+        target.mkdir(parents=True)
+        (target / ".deploy.lock").write_bytes(b"\xff\xfe not a pid")
+
+        result = self.run_deploy(target)
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("unknown", result.stderr)
+
+    def test_deploy_removes_stale_scratch_from_prior_run(self):
+        target = self.root / "target"
+        (target / ".skills.tmp" / "junk").mkdir(parents=True)
+        (target / ".skills.bak").mkdir()
+        (target / ".AGENTS.md.tmp").write_text("stale", encoding="utf-8")
+        (target / ".AGENTS.md.bak").write_text("stale", encoding="utf-8")
+
+        result = self.run_deploy(target)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual([p.name for p in target.glob(".*")], [])
+        self.assertTrue((target / "skills" / "example" / "SKILL.md").exists())
+
+    def test_deploy_rejects_filesystem_root(self):
+        # Rejected by the combined guard; is_root is not isolated here because
+        # the home-ancestor check also covers the root when HOME is under it.
+        from scripts.deploy_agents import DeploymentSafetyError, create_deployment_plan
+
+        with self.assertRaises(DeploymentSafetyError):
+            create_deployment_plan(self.repo, Path(self.root.anchor).as_posix())
 
     def test_deploy_releases_lock_on_success(self):
         target = self.root / "target"
@@ -210,7 +243,7 @@ class DeployAgentsTests(unittest.TestCase):
         orig_replace = os.replace
 
         def fail_on_skills_swap(src, dst):
-            if "skills" in str(dst) and not str(src).endswith(f".bak.{os.getpid()}"):
+            if "skills" in str(dst) and not str(src).endswith(".bak"):
                 raise OSError("Simulated swap failure")
             return orig_replace(src, dst)
 
@@ -271,7 +304,7 @@ class DeployAgentsTests(unittest.TestCase):
         orig_copy2 = shutil.copy2
 
         def corrupt_copy2(src, dst):
-            if str(dst).endswith(f".bak.{os.getpid()}"):
+            if str(dst).endswith(".bak"):
                 Path(dst).write_text("", encoding="utf-8")
                 raise OSError("Simulated disk full during backup")
             return orig_copy2(src, dst)

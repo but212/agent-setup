@@ -57,7 +57,7 @@ def parse_frontmatter_text(text: str) -> dict[str, str]:
         if not stripped or stripped.startswith("#"):
             continue
 
-        if re.search(r":\s*[|>][+-0-9]*(?:\s+#.*)?\s*$", stripped):
+        if re.search(r":\s*[|>][+\-0-9]*(?:\s+#.*)?\s*$", stripped):
             raise ValueError(
                 "multiline block scalars (| or >) are unsupported; use single-line string"
             )

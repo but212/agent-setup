@@ -77,7 +77,7 @@ When tracking multi-step work, an agent plan artifact or a persistent plan file 
 - Destination is a copy target; repository is the source of truth.
 - Repository-owned skill entries are replaced in full. Top-level entries of the destination `skills/` whose names are not in the repository are preserved. Skills removed or renamed in the repository are not cleaned up automatically.
 - Destination path safety (preventing repository, home, or root overwrites) is validated before write.
-- Atomic deployment invariant: deployment uses a mutual-exclusion lock (`.deploy.lock`) and a staging-then-swap pattern (`.skills.tmp.<pid>`); failures preserve existing destination files without leaving intermediate or partial state.
+- Atomic deployment invariant: deployment uses a mutual-exclusion lock (`.deploy.lock`) and a staging-then-swap pattern (`.skills.tmp`); failures preserve existing destination files without leaving intermediate or partial state. Scratch paths are fixed names removed on the next run. A hard crash can leave `.deploy.lock`; the error names the holder PID, and the file must be removed manually if no deployment is running.
 
 ## 4. Quality Gates
 
