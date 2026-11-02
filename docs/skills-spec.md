@@ -72,8 +72,15 @@ When tracking multi-step work, an agent plan artifact or a persistent plan file 
 
 ### 3.7 Deployment Rules
 
-`scripts/deploy_agents.py` copies repository content into `~/.agents` (overridable via `AGENT_HOME`):
+`scripts/deploy_agents.py --tool <agents|claude|antigravity>` (default `agents`) copies repository content into one destination per run:
 
+| Tool | Root | Deployed |
+| --- | --- | --- |
+| `agents` | `~/.agents` (overridable via positional target or `AGENT_HOME`) | `AGENTS.md`, `skills/` |
+| `claude` | `~/.claude` | `skills/` only |
+| `antigravity` | `~/.gemini/config` | `skills/` only |
+
+- Skills-only tools never write `CLAUDE.md` or `GEMINI.md`; `AGENT_HOME` is ignored for them and a positional target is a usage error (exit 2).
 - Destination is a copy target; repository is the source of truth.
 - Repository-owned skill entries are replaced in full. Top-level entries of the destination `skills/` whose names are not in the repository are preserved. Skills removed or renamed in the repository are not cleaned up automatically.
 - Destination path safety (preventing repository, home, or root overwrites) is validated before write.
@@ -83,7 +90,7 @@ When tracking multi-step work, an agent plan artifact or a persistent plan file 
 
 - [x] Every skill frontmatter defines valid `name`, `role`, `activation`, `modification-authority`, and `description`.
 - [x] Agent prompt Markdown files (AGENTS.md, skills/) are strictly ASCII-only.
-- [x] `python3 scripts/validate-skills.py` and `python3 -m unittest discover -s tests -v` pass.
+- [x] `python3 scripts/validate-skills.py` and `python3 -m unittest discover -s tests -v` pass (`python` on Windows).
 
 ## 5. Stabilization Policy
 

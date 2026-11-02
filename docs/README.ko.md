@@ -31,7 +31,7 @@
 - skills/*/SKILL.md - 4가지 모달 계약: [`challenge`](../skills/challenge/SKILL.md)(심층 질의), [`crisp`](../skills/crisp/SKILL.md)(텍스트 압축), [`lean-design`](../skills/lean-design/SKILL.md)(타입/불변식), [`lean-review`](../skills/lean-review/SKILL.md)(적대적 감사).
 - [docs/skills-spec.md](skills-spec.md) - 아키텍처 명세 및 품질 게이트.
 - [docs/PHILOSOPHY.ko.md](PHILOSOPHY.ko.md) / [docs/PHILOSOPHY.md](PHILOSOPHY.md) - Agent Setup의 설계 철학 및 배경.
-- [scripts/deploy_agents.py](../scripts/deploy_agents.py) - `AGENTS.md`와 스킬을 `~/.agents`로 복사(디렉터리 참조 방식은 각 도구에 따름).
+- [scripts/deploy_agents.py](../scripts/deploy_agents.py) - `AGENTS.md`와 스킬을 `~/.agents`로 복사(기본). `--tool`로 Claude·Antigravity에는 스킬만 복사.
 - [scripts/validate-skills.py](../scripts/validate-skills.py) - 외부 의존성 없는 메타데이터, 계획, 안전 규칙 검증기.
 - [.github/workflows/ci.yml](../.github/workflows/ci.yml) - 멀티 OS GitHub Actions 워크플로우.
 
@@ -44,7 +44,16 @@
    python3 scripts/deploy_agents.py
    ```
 
-   `AGENT_HOME` 환경 변수로 대상 디렉터리를 변경할 수 있습니다.
+   `AGENT_HOME` 환경 변수로 대상 디렉터리를 변경할 수 있습니다. Windows에서는 `python3` 대신 `python`을 사용합니다.
+
+3. `--tool`로 특정 도구에 스킬만 배포합니다(기본값 `agents`):
+
+   ```sh
+   python3 scripts/deploy_agents.py --tool claude        # ~/.claude/skills
+   python3 scripts/deploy_agents.py --tool antigravity   # ~/.gemini/config/skills
+   ```
+
+   `CLAUDE.md`와 `GEMINI.md`는 수정하지 않습니다. `AGENT_HOME`과 위치 인자는 `--tool agents`에서만 적용되며, 다른 도구와 함께 위치 인자를 주면 사용법 오류입니다.
 
 ## 검증
 

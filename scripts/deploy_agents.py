@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Mirror AGENTS.md and skills/ into shared agent directory (~/.agents)."""
+"""Mirror AGENTS.md and skills/ into ~/.agents, or skills/ into Claude or Antigravity."""
 
 import argparse
 import os
@@ -7,9 +7,28 @@ import shutil
 import stat
 import sys
 from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+
+
+class Tool(Enum):
+    AGENTS = "agents"
+    CLAUDE = "claude"
+    ANTIGRAVITY = "antigravity"
+
+    def __str__(self) -> str:
+        return self.value
+
+
+# Destination root relative to home. Only AGENTS deploys AGENTS.md; CLAUDE.md and
+# GEMINI.md hold user-owned rules and are never written.
+_TOOL_ROOTS = {
+    Tool.AGENTS: ".agents",
+    Tool.CLAUDE: ".claude",
+    Tool.ANTIGRAVITY: ".gemini/config",
+}
 
 
 class DeploymentSafetyError(Exception):
@@ -30,26 +49,40 @@ def _is_link_or_reparse(path: Path) -> bool:
 
 
 @dataclass(frozen=True)
+class AgentsFile:
+    """AGENTS.md copy pair; present in a plan only for Tool.AGENTS."""
+
+    source: Path
+    target: Path
+
+
+@dataclass(frozen=True)
 class DeploymentPlan:
     """Immutable, fully validated deployment execution plan."""
 
     repo_root: Path
     canonical_target: Path
-    agents_source: Path
+    agents: AgentsFile | None
     skills_source: Path
-    target_agents: Path
     target_skills: Path
     lock_path: Path
 
 
-def create_deployment_plan(repo_root: Path, target_arg: str | None) -> DeploymentPlan:
-    """Validate environment, parameters, and boundary invariants into an immutable plan."""
+def create_deployment_plan(
+    repo_root: Path, target_arg: str | None, tool: Tool = Tool.AGENTS
+) -> DeploymentPlan:
+    """Validate environment, parameters, and boundary invariants into an immutable plan.
+
+    An explicit target (argument or AGENT_HOME) applies to Tool.AGENTS only.
+    """
     home_env = os.environ.get("HOME")
     home_dir = Path(home_env).resolve() if home_env else Path.home().resolve()
 
-    target_input = target_arg or os.environ.get("AGENT_HOME")
+    target_input = (
+        (target_arg or os.environ.get("AGENT_HOME")) if tool is Tool.AGENTS else None
+    )
     if not target_input:
-        target_path = home_dir / ".agents"
+        target_path = home_dir / _TOOL_ROOTS[tool]
     else:
         if target_input == "~":
             target_path = home_dir
@@ -64,7 +97,7 @@ def create_deployment_plan(repo_root: Path, target_arg: str | None) -> Deploymen
 
     if _is_link_or_reparse(target_path):
         raise DeploymentSafetyError(
-            f"destination must not be a symlink or junction: {target_input}\n"
+            f"destination must not be a symlink or junction: {target_path}\n"
         )
 
     is_root = canonical_target == canonical_target.parent
@@ -76,29 +109,35 @@ def create_deployment_plan(repo_root: Path, target_arg: str | None) -> Deploymen
     )
     is_home_ancestor = canonical_target in home_dir.parents
     if is_root or canonical_target == home_dir or is_in_repo or is_home_ancestor:
-        raise DeploymentSafetyError(f"refusing unsafe AGENT_HOME: {target_input}\n")
+        label = "AGENT_HOME" if tool is Tool.AGENTS else "destination"
+        raise DeploymentSafetyError(
+            f"refusing unsafe {label}: {target_input or canonical_target}\n"
+        )
 
     if canonical_target.exists() and not canonical_target.is_dir():
         raise DeploymentSafetyError(
             f"destination is not a directory: {canonical_target}\n"
         )
 
-    agents_source = repo_root / "AGENTS.md"
     skills_source = repo_root / "skills"
-    if not agents_source.is_file():
-        raise DeploymentSafetyError(f"AGENTS.md not found in {repo_root}\n")
     if not skills_source.is_dir():
         raise DeploymentSafetyError(f"skills/ not found in {repo_root}\n")
 
-    target_agents = canonical_target / "AGENTS.md"
-    if _is_link_or_reparse(target_agents):
-        raise DeploymentSafetyError(
-            f"destination must not be a symlink or junction: {target_agents}\n"
-        )
-    if target_agents.exists() and not target_agents.is_file():
-        raise DeploymentSafetyError(
-            f"destination is not a regular file: {target_agents}\n"
-        )
+    agents = None
+    if tool is Tool.AGENTS:
+        agents_source = repo_root / "AGENTS.md"
+        if not agents_source.is_file():
+            raise DeploymentSafetyError(f"AGENTS.md not found in {repo_root}\n")
+        target_agents = canonical_target / "AGENTS.md"
+        if _is_link_or_reparse(target_agents):
+            raise DeploymentSafetyError(
+                f"destination must not be a symlink or junction: {target_agents}\n"
+            )
+        if target_agents.exists() and not target_agents.is_file():
+            raise DeploymentSafetyError(
+                f"destination is not a regular file: {target_agents}\n"
+            )
+        agents = AgentsFile(source=agents_source, target=target_agents)
 
     target_skills = canonical_target / "skills"
     if _is_link_or_reparse(target_skills):
@@ -115,9 +154,8 @@ def create_deployment_plan(repo_root: Path, target_arg: str | None) -> Deploymen
     return DeploymentPlan(
         repo_root=repo_root,
         canonical_target=canonical_target,
-        agents_source=agents_source,
+        agents=agents,
         skills_source=skills_source,
-        target_agents=target_agents,
         target_skills=target_skills,
         lock_path=lock_path,
     )
@@ -231,16 +269,18 @@ class DeploymentTransaction:
             return
 
         # 1. Restore or clean AGENTS.md
-        if self._target_agents_swapped:
-            try:
-                os.replace(self.backup_agents, self.plan.target_agents)
-            except OSError:
-                pass
-        elif not self._target_agents_existed and self.plan.target_agents.exists():
-            try:
-                self.plan.target_agents.unlink(missing_ok=True)
-            except OSError:
-                pass
+        if self.plan.agents is not None:
+            target_agents = self.plan.agents.target
+            if self._target_agents_swapped:
+                try:
+                    os.replace(self.backup_agents, target_agents)
+                except OSError:
+                    pass
+            elif not self._target_agents_existed and target_agents.exists():
+                try:
+                    target_agents.unlink(missing_ok=True)
+                except OSError:
+                    pass
 
         # 2. Restore skills/
         if self._target_skills_moved:
@@ -263,10 +303,12 @@ class DeploymentTransaction:
             else:
                 shutil.copy2(entry, destination, follow_symlinks=False)
 
-    def commit(self) -> tuple[Path, int]:
-        """Commit AGENTS.md and skills/ atomically in two phases."""
+    def commit(self) -> tuple[Path | None, int]:
+        """Commit AGENTS.md (when planned) and skills/ atomically in two phases."""
         # Phase 1: Pure staging (targets untouched)
-        shutil.copy2(self.plan.agents_source, self.staging_agents)
+        agents = self.plan.agents
+        if agents is not None:
+            shutil.copy2(agents.source, self.staging_agents)
         shutil.copytree(self.plan.skills_source, self.staging_skills)
         skill_count = sum(
             1 for p in self.staging_skills.rglob("SKILL.md") if p.is_file()
@@ -275,31 +317,33 @@ class DeploymentTransaction:
 
         # Phase 2: Swapping with rollback guards
         self._phase2_started = True
-        self._target_agents_existed = self.plan.target_agents.exists()
-
-        if self._target_agents_existed:
-            shutil.copy2(self.plan.target_agents, self.backup_agents)
+        if agents is not None:
+            self._target_agents_existed = agents.target.exists()
+            if self._target_agents_existed:
+                shutil.copy2(agents.target, self.backup_agents)
 
         if self.plan.target_skills.exists():
             os.replace(self.plan.target_skills, self.backup_skills)
             self._target_skills_moved = True
 
-        os.replace(self.staging_agents, self.plan.target_agents)
-        if self._target_agents_existed:
-            self._target_agents_swapped = True
+        if agents is not None:
+            os.replace(self.staging_agents, agents.target)
+            if self._target_agents_existed:
+                self._target_agents_swapped = True
 
         os.replace(self.staging_skills, self.plan.target_skills)
 
         self._committed = True
-        return self.plan.target_agents, skill_count
+        return (agents.target if agents is not None else None), skill_count
 
 
-def deploy(repo_root: Path, target_arg: str | None) -> int:
+def deploy(repo_root: Path, target_arg: str | None, tool: Tool = Tool.AGENTS) -> int:
     try:
-        plan = create_deployment_plan(repo_root, target_arg)
+        plan = create_deployment_plan(repo_root, target_arg, tool)
         with DeploymentTransaction(plan) as tx:
             target_agents, skill_count = tx.commit()
-            print(f"copied: AGENTS.md -> {target_agents}")
+            if target_agents is not None:
+                print(f"copied: AGENTS.md -> {target_agents}")
             print(f"mirrored: skills/ -> {plan.target_skills} ({skill_count} skills)")
             print("done.")
             return 0
@@ -310,16 +354,26 @@ def deploy(repo_root: Path, target_arg: str | None) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Mirror AGENTS.md and skills/ into shared agent folder."
+        description="Mirror AGENTS.md and skills/ into the shared agent folder "
+        "(default), or skills/ only into Claude or Antigravity."
+    )
+    parser.add_argument(
+        "--tool",
+        type=Tool,
+        choices=list(Tool),
+        default=Tool.AGENTS,
+        help="Deployment target (default: agents)",
     )
     parser.add_argument(
         "target",
         nargs="?",
         default=None,
-        help="Optional explicit destination path (overrides AGENT_HOME)",
+        help="Optional explicit destination path (agents only; overrides AGENT_HOME)",
     )
     args = parser.parse_args()
-    return deploy(REPO_ROOT, args.target)
+    if args.target is not None and args.tool is not Tool.AGENTS:
+        parser.error("explicit target is only valid with --tool agents")
+    return deploy(REPO_ROOT, args.target, args.tool)
 
 
 if __name__ == "__main__":

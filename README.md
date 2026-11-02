@@ -31,7 +31,7 @@ Skills are independent on-demand modalities, not a mandatory sequence:
 - skills/*/SKILL.md - Four modal contracts: [`challenge`](skills/challenge/SKILL.md) (inquiry), [`crisp`](skills/crisp/SKILL.md) (compression), [`lean-design`](skills/lean-design/SKILL.md) (types/invariants), [`lean-review`](skills/lean-review/SKILL.md) (adversarial audit).
 - [docs/skills-spec.md](docs/skills-spec.md) - Architecture specification and quality gates.
 - [docs/PHILOSOPHY.md](docs/PHILOSOPHY.md) / [docs/PHILOSOPHY.ko.md](docs/PHILOSOPHY.ko.md) - Architectural and probabilistic philosophy.
-- [scripts/deploy_agents.py](scripts/deploy_agents.py) - Copies AGENTS.md and skills into ~/.agents. Which tools read that directory is up to each tool.
+- [scripts/deploy_agents.py](scripts/deploy_agents.py) - Copies AGENTS.md and skills into ~/.agents (default), or skills only into Claude or Antigravity via `--tool`.
 - [scripts/validate-skills.py](scripts/validate-skills.py) - Dependency-free metadata, plan, and safety validator.
 - [.github/workflows/ci.yml](.github/workflows/ci.yml) - Multi-OS GitHub Actions workflow.
 
@@ -44,7 +44,16 @@ Skills are independent on-demand modalities, not a mandatory sequence:
    python3 scripts/deploy_agents.py
    ```
 
-   Set `AGENT_HOME` to override the destination directory.
+   Set `AGENT_HOME` to override the destination directory. On Windows, use `python` instead of `python3`.
+
+3. Deploy skills only to a specific tool with `--tool` (default `agents`):
+
+   ```sh
+   python3 scripts/deploy_agents.py --tool claude        # ~/.claude/skills
+   python3 scripts/deploy_agents.py --tool antigravity   # ~/.gemini/config/skills
+   ```
+
+   `CLAUDE.md` and `GEMINI.md` are never modified. `AGENT_HOME` and the positional target apply only to `--tool agents`; the positional target with another tool is a usage error.
 
 ## Verification
 

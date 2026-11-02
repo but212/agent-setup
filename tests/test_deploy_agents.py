@@ -47,6 +47,185 @@ class DeployAgentsTests(unittest.TestCase):
             check=False,
         )
 
+    def run_tool(self, *args, agent_home=None):
+        environment = os.environ.copy()
+        environment.pop("AGENT_HOME", None)
+        environment["HOME"] = str(self.home)
+        if agent_home is not None:
+            environment["AGENT_HOME"] = str(agent_home)
+        return subprocess.run(
+            [sys.executable, str(self.repo / "scripts" / "deploy_agents.py"), *args],
+            cwd=self.root,
+            env=environment,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+    def test_default_tool_deploys_to_home_agents(self):
+        result = self.run_tool()
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue((self.home / ".agents" / "AGENTS.md").is_file())
+        self.assertTrue(
+            (self.home / ".agents" / "skills" / "example" / "SKILL.md").is_file()
+        )
+
+    def test_claude_tool_deploys_skills_only_and_keeps_claude_md(self):
+        claude_md = self.home / ".claude" / "CLAUDE.md"
+        claude_md.parent.mkdir()
+        claude_md.write_text("user rules\n", encoding="utf-8")
+
+        result = self.run_tool("--tool", "claude")
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(
+            (self.home / ".claude" / "skills" / "example" / "SKILL.md").is_file()
+        )
+        self.assertEqual(claude_md.read_text(encoding="utf-8"), "user rules\n")
+        self.assertFalse((self.home / ".claude" / "AGENTS.md").exists())
+        self.assertFalse((self.home / ".claude" / ".deploy.lock").exists())
+
+    def test_antigravity_tool_deploys_skills_only_and_keeps_gemini_md(self):
+        gemini_md = self.home / ".gemini" / "GEMINI.md"
+        gemini_md.parent.mkdir()
+        gemini_md.write_text("user rules\n", encoding="utf-8")
+
+        result = self.run_tool("--tool", "antigravity")
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        root = self.home / ".gemini" / "config"
+        self.assertTrue((root / "skills" / "example" / "SKILL.md").is_file())
+        self.assertFalse((root / "AGENTS.md").exists())
+        self.assertEqual(gemini_md.read_text(encoding="utf-8"), "user rules\n")
+
+    def test_claude_tool_preserves_foreign_skills(self):
+        foreign = self.home / ".claude" / "skills" / "synced"
+        foreign.mkdir(parents=True)
+        (foreign / "SKILL.md").write_text("foreign\n", encoding="utf-8")
+
+        result = self.run_tool("--tool", "claude")
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+            (foreign / "SKILL.md").read_text(encoding="utf-8"), "foreign\n"
+        )
+
+    def test_agent_home_is_ignored_for_non_agents_tool(self):
+        other = self.root / "other"
+
+        result = self.run_tool("--tool", "claude", agent_home=other)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(other.exists())
+        self.assertTrue(
+            (self.home / ".claude" / "skills" / "example" / "SKILL.md").is_file()
+        )
+
+    def test_positional_target_with_non_agents_tool_is_usage_error(self):
+        result = self.run_tool("--tool", "claude", str(self.root / "other"))
+
+        self.assertEqual(result.returncode, 2)
+        self.assertFalse((self.root / "other").exists())
+        self.assertFalse((self.home / ".claude").exists())
+
+    def test_unknown_tool_is_usage_error(self):
+        result = self.run_tool("--tool", "bogus")
+
+        self.assertEqual(result.returncode, 2)
+
+    def test_plan_for_skills_only_tool_has_no_agents_paths(self):
+        from unittest.mock import patch
+
+        from scripts.deploy_agents import Tool, create_deployment_plan
+
+        with patch.dict(os.environ, {"HOME": str(self.home)}):
+            plan = create_deployment_plan(self.repo, None, Tool.CLAUDE)
+
+        self.assertIsNone(plan.agents)
+        self.assertEqual(plan.canonical_target, (self.home / ".claude").resolve())
+        self.assertEqual(plan.target_skills, plan.canonical_target / "skills")
+
+    def test_plan_for_agents_tool_pairs_source_and_target(self):
+        from scripts.deploy_agents import create_deployment_plan
+
+        target = self.root / "paired_target"
+        plan = create_deployment_plan(self.repo, str(target))
+
+        self.assertEqual(plan.agents.source, self.repo / "AGENTS.md")
+        self.assertEqual(plan.agents.target, target.resolve() / "AGENTS.md")
+
+    def test_unsafe_skills_only_destination_message_names_path_not_none(self):
+        environment = os.environ.copy()
+        environment.pop("AGENT_HOME", None)
+        environment["HOME"] = str(self.repo)
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(self.repo / "scripts" / "deploy_agents.py"),
+                "--tool",
+                "claude",
+            ],
+            cwd=self.root,
+            env=environment,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertNotIn("None", result.stderr)
+        self.assertIn(str((self.repo / ".claude").resolve()), result.stderr)
+        self.assertFalse((self.repo / ".claude").exists())
+
+    def test_skills_only_tool_does_not_require_agents_md_in_repo(self):
+        from unittest.mock import patch
+
+        from scripts.deploy_agents import Tool, create_deployment_plan
+
+        (self.repo / "AGENTS.md").unlink()
+        with patch.dict(os.environ, {"HOME": str(self.home)}):
+            plan = create_deployment_plan(self.repo, None, Tool.ANTIGRAVITY)
+
+        self.assertEqual(
+            plan.canonical_target, (self.home / ".gemini" / "config").resolve()
+        )
+
+    def test_skills_only_failure_preserves_original_skills(self):
+        from unittest.mock import patch
+
+        from scripts.deploy_agents import (
+            DeploymentTransaction,
+            Tool,
+            create_deployment_plan,
+        )
+
+        original = self.home / ".claude" / "skills" / "example"
+        original.mkdir(parents=True)
+        (original / "SKILL.md").write_text("original\n", encoding="utf-8")
+        with patch.dict(os.environ, {"HOME": str(self.home)}):
+            plan = create_deployment_plan(self.repo, None, Tool.CLAUDE)
+
+        orig_replace = os.replace
+
+        def fail_on_skills_swap(src, dst):
+            if str(src).endswith(".skills.tmp"):
+                raise OSError("Simulated swap failure")
+            return orig_replace(src, dst)
+
+        with (
+            patch("os.replace", side_effect=fail_on_skills_swap),
+            self.assertRaises(OSError),
+            DeploymentTransaction(plan) as tx,
+        ):
+            tx.commit()
+
+        self.assertEqual(
+            (original / "SKILL.md").read_text(encoding="utf-8"), "original\n"
+        )
+        self.assertEqual([p.name for p in plan.canonical_target.glob(".*")], [])
+
     def test_deploy_rejects_resolved_home_alias_before_write(self):
         result = self.run_deploy(self.home / ".")
 
@@ -254,7 +433,7 @@ class DeployAgentsTests(unittest.TestCase):
         ):
             tx.commit()
 
-        self.assertFalse(plan.target_agents.exists())
+        self.assertFalse(plan.agents.target.exists())
         self.assertFalse(plan.target_skills.exists())
         staging_files = [p.name for p in target.glob(".*")]
         self.assertEqual(staging_files, [])
@@ -265,7 +444,7 @@ class DeployAgentsTests(unittest.TestCase):
         target = self.root / "valid_plan_target"
         plan = create_deployment_plan(self.repo, str(target))
         self.assertEqual(plan.canonical_target, target.resolve())
-        self.assertEqual(plan.target_agents, target.resolve() / "AGENTS.md")
+        self.assertEqual(plan.agents.target, target.resolve() / "AGENTS.md")
         self.assertEqual(plan.target_skills, target.resolve() / "skills")
         self.assertEqual(plan.lock_path, target.resolve() / ".deploy.lock")
 
