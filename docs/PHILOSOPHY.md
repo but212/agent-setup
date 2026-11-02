@@ -32,7 +32,7 @@ Bloated frameworks that ignore the physical constraints of stochastic models (co
 
 No agent configuration is permanent. Agent Setup keeps coupling minimal and scopes tight so skills and agent instructions can be swapped as superior approaches arise.
 
-- **Keep all agent documents under ~200 lines and minimize file count.**
+- **Keep all agent documents at 200 lines or fewer (enforced by the validator) and minimize file count.**
   Tightly coupled documents increase cognitive load and resist refactoring. Every document must remain independently addable, editable, and disposable.
 - **Validate experiments through standalone skills.**
   Test ideas as isolated, minimal skills driven by real needs. Fold proven skills into `AGENTS.md` and ruthlessly discard what fails.

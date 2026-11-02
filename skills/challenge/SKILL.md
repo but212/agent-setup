@@ -17,7 +17,7 @@ Read-only: produce one confirmed decision summary in chat without modifying code
 Modes:
 
 - **Grounded mode:** Codebase, tests, `context.md`, or ADRs exist.
-- **Light mode:** No codebase or project documentation exists.
+- **Light mode:** Grounded conditions not met (early idea; no code, tests, `context.md`, or ADRs).
 
 ## Fast Path
 
@@ -30,7 +30,7 @@ Applies when all applicable gates pass (Grounded: all 6; Light: 1, 2, 4, 5):
 5. No unresolved material decisions affecting scope, behavior, or risk.
 6. No `context.md` or ADR update required *(Grounded only)*.
 
-Output short-form decision summary in chat, then proceed directly to implementation under AGENTS.md rules without waiting for confirmation.
+Output short-form decision summary in chat, then hand off directly to implementation under AGENTS.md rules without waiting for confirmation; this skill writes nothing itself.
 
 ## Standard Path
 

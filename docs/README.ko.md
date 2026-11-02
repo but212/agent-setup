@@ -44,7 +44,7 @@
    python3 scripts/deploy_agents.py
    ```
 
-   대상 디렉터리를 변경하려면 `AGENT_HOME` 환경 변수를 지정하십시오.
+   `AGENT_HOME` 환경 변수로 대상 디렉터리를 변경할 수 있습니다.
 
 ## 검증
 
@@ -63,4 +63,4 @@ python3 -m unittest discover -s tests -v
 
 ---
 
-참고 및 출처: `challenge`는 [grill-me](https://github.com/mattpocock/skills/tree/main/skills/productivity/grill-me), `lean-review`는 [ponytail-review](https://github.com/DietrichGebert/ponytail/blob/main/skills/ponytail-review/SKILL.md), `crisp`는 [caveman](https://github.com/JuliusBrussee/caveman)에서 영감을 받았습니다. 상세 내용은 [NOTICE](../NOTICE) 및 [LICENSE](../LICENSE)를 참조하십시오.
+참고 및 출처: `challenge`는 [grill-me](https://github.com/mattpocock/skills/tree/main/skills/productivity/grill-me), `lean-review`는 [ponytail-review](https://github.com/DietrichGebert/ponytail/blob/main/skills/ponytail-review/SKILL.md), `crisp`는 [caveman](https://github.com/JuliusBrussee/caveman)에서 영감을 받았습니다. 상세 내용은 [NOTICE](../NOTICE) 및 [LICENSE](../LICENSE)에 있습니다.

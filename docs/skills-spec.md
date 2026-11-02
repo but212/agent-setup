@@ -45,35 +45,19 @@ Frontmatter is validated by `scripts/validate-skills.py`.
 
 ### 3.1 Challenge Routing
 
-`challenge` stress-tests plans and decisions through an adaptive path:
-
-- Grounded mode: Selected when repository, source files, tests, `context.md`, or ADRs exist.
-- Light mode: Selected for early idea exploration without codebase context.
-- Questioning presents 2-4 options with `(Recommended)` first, one decision at a time.
+`challenge` stress-tests plans and decisions in Grounded or Light mode. Mode selection, paths, and questioning rules: [skills/challenge/SKILL.md](../skills/challenge/SKILL.md).
 
 ### 3.2 Prose and Document Compression Routing
 
-`crisp` compresses response prose and explicitly named Markdown or plain-text documents without altering operational contracts:
-
-- Response mode: Lead with outcome, optimize density, zero filler.
-- Document mode: Inventory anchors, cut bloat, keep nuance, verify diff, report in 5 sections (`Outcome`, `Scope`, `Analysis`, `Verification`, `Next`).
-- Authority is strictly limited to named target files (`modification-authority: Named files only`).
+`crisp` compresses response prose and explicitly named Markdown or plain-text documents without altering operational contracts. Modes and workflow: [skills/crisp/SKILL.md](../skills/crisp/SKILL.md). Authority is limited to named target files (`modification-authority: Named files only`).
 
 ### 3.3 Structural Design Routing
 
-`lean-design` models domain structures, state transitions, schemas, and boundaries before coding:
-
-- Models sum types, state machines, and algebraic invariants.
-- Eliminates impossible states and pass-through abstractions.
-- Handoff contracts provide exact type signatures and transition rules for implementation.
+`lean-design` models domain structures, state transitions, schemas, and boundaries before coding. Principles and handoff contract: [skills/lean-design/SKILL.md](../skills/lean-design/SKILL.md).
 
 ### 3.4 Adversarial Review Routing
 
-`lean-review` performs read-only audits on diffs or repositories:
-
-- Falsifies behavior with concrete counterexamples or deterministic static evidence.
-- Categorizes findings by severity (`[P1]`, `[P2]`, `[P3]`); `skills/lean-review/SKILL.md` is the SSOT for severity definitions.
-- Strictly read-only (`modification-authority: None`), producing minimal action proposals for implementation.
+`lean-review` performs read-only audits (`modification-authority: None`) on diffs or repositories, falsifying behavior with concrete counterexamples or deterministic static evidence. Workflow and output format: [skills/lean-review/SKILL.md](../skills/lean-review/SKILL.md), which is the SSOT for severity definitions (`[P1]`, `[P2]`, `[P3]`).
 
 ### 3.5 Direct Handoff
 

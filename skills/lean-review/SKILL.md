@@ -64,7 +64,7 @@ For each finding:
 
 - **Priority**:
   - `[P1]`: incorrect observable behavior, crash, data loss, security defect, or invariant breach.
-  - `[P2]`: impossible/contradictory states, unsound or weakened contracts, unhandled state transitions, or unverified branches, without immediate incorrect output.
+  - `[P2]`: impossible/contradictory states, unsound or weakened contracts, or unhandled state transitions, without immediate incorrect output.
   - `[P3]`: structural cleanup without behavioral impact: dead symbols (report only; never delete pre-existing dead code), unneeded complexity, indirection without polymorphism or transformation.
 - **Location**: `path/to/file.ext:line`
 - **Tag**: vector tag
