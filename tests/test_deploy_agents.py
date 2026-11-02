@@ -63,10 +63,10 @@ class DeployAgentsTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertFalse((target / "AGENTS.md" / "AGENTS.md").exists())
 
-    def test_deploy_mirrors_and_cleans_stale(self):
+    def test_deploy_replaces_owned_skill_and_cleans_stale_inside_it(self):
         target = self.root / "target"
-        (target / "skills").mkdir(parents=True)
-        stale = target / "skills" / "stale.txt"
+        (target / "skills" / "example").mkdir(parents=True)
+        stale = target / "skills" / "example" / "stale.txt"
         stale.write_text("stale", encoding="utf-8")
 
         result = self.run_deploy(target)
@@ -78,6 +78,23 @@ class DeployAgentsTests(unittest.TestCase):
             (target / "AGENTS.md").read_text(encoding="utf-8"),
             (self.repo / "AGENTS.md").read_text(encoding="utf-8"),
         )
+
+    def test_deploy_preserves_foreign_skill_entries(self):
+        target = self.root / "target"
+        foreign_dir = target / "skills" / "foreign"
+        foreign_dir.mkdir(parents=True)
+        (foreign_dir / "SKILL.md").write_text("foreign\n", encoding="utf-8")
+        foreign_file = target / "skills" / "note.txt"
+        foreign_file.write_text("keep", encoding="utf-8")
+
+        result = self.run_deploy(target)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+            (foreign_dir / "SKILL.md").read_text(encoding="utf-8"), "foreign\n"
+        )
+        self.assertEqual(foreign_file.read_text(encoding="utf-8"), "keep")
+        self.assertTrue((target / "skills" / "example" / "SKILL.md").exists())
 
     def test_deploy_reconciles_conflicting_node_types(self):
         target = self.root / "target"
@@ -97,8 +114,8 @@ class DeployAgentsTests(unittest.TestCase):
 
     def test_safe_target_is_mirrored_without_external_deletion(self):
         target = self.root / "target"
-        (target / "skills").mkdir(parents=True)
-        stale = target / "skills" / "stale.txt"
+        (target / "skills" / "example").mkdir(parents=True)
+        stale = target / "skills" / "example" / "stale.txt"
         stale.write_text("stale", encoding="utf-8")
 
         external_dir = self.root / "external"

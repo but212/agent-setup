@@ -25,7 +25,7 @@ description: Minimalist architecture and API design that eliminates impossible s
   4. `runtime`: explicit core checks only when 1-3 cannot express the invariant (cross-row, temporal).
 - **Functional Core, Imperative Shell:** isolate pure domain logic from boundary I/O and hidden side effects (clock, random, global state).
 - **Structure determines logic:** models and transitions precede functions; prefer compile-time proofs.
-- **Contract boundaries:** establish failure domains, temporal stability, partition isolation, and resource limits first.
+- **Contract boundaries:** establish failure domains, temporal stability, partition isolation (tenant, shard, or process boundary, where applicable), and resource limits first.
 - **Dissolve hollow indirection:** eliminate single-implementation interfaces, pass-through DTOs, and speculative factories.
 - **Bounded scope:** satisfy current requirements only; reject speculative abstractions, caching, or plugins.
 
@@ -45,7 +45,7 @@ Use sections in order; omit empty ones:
 ## Prohibited
 
 - Placeholders in models (`...`, `TODO`, pseudocode).
-- Omitting validation, business logic, error handling, or return contracts.
+- Omitting validation points, failure paths, or return contracts from the Handoff Contract.
 - Unversioned breaking serialization, cross-partition leaks, or unbounded mutations.
 
 ## Controls

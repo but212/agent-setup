@@ -8,7 +8,7 @@ description: Compresses response prose and explicitly named Markdown or plain-te
 
 # Crisp
 
-Optimize density while preserving full meaning. Delegate code structure to `lean-*`.
+Optimize density while preserving full meaning. Code restructuring is out of scope; route to `lean-design` or `lean-review`.
 
 ## Reader Assumption
 

@@ -71,8 +71,8 @@ Frontmatter is validated by `scripts/validate-skills.py`.
 
 `lean-review` performs read-only audits on diffs or repositories:
 
-- Falsifies behavior with concrete, constructible counterexamples.
-- Categorizes findings by severity (`[P1]`, `[P2]`, `[P3]`).
+- Falsifies behavior with concrete counterexamples or deterministic static evidence.
+- Categorizes findings by severity (`[P1]`, `[P2]`, `[P3]`); `skills/lean-review/SKILL.md` is the SSOT for severity definitions.
 - Strictly read-only (`modification-authority: None`), producing minimal action proposals for implementation.
 
 ### 3.5 Direct Handoff
@@ -86,23 +86,24 @@ When tracking multi-step work, an agent plan artifact or a persistent plan file 
 - Work remains in `planned` state until explicit execution approval is granted.
 - Check items only upon deterministic verification pass; record deviations under decisions and deviations.
 
-### 3.7 Deployment Mirror Rules
+### 3.7 Deployment Rules
 
-`scripts/deploy_agents.py` mirrors repository content into `~/.agents` (overridable via `AGENT_HOME`):
+`scripts/deploy_agents.py` copies repository content into `~/.agents` (overridable via `AGENT_HOME`):
 
 - Destination is a copy target; repository is the source of truth.
+- Repository-owned skill entries are replaced in full. Top-level entries of the destination `skills/` whose names are not in the repository are preserved. Skills removed or renamed in the repository are not cleaned up automatically.
 - Destination path safety (preventing repository, home, or root overwrites) is validated before write.
 - Atomic deployment invariant: deployment uses a mutual-exclusion lock (`.deploy.lock`) and a staging-then-swap pattern (`.skills.tmp.<pid>`); failures preserve existing destination files without leaving intermediate or partial state.
 
 ## 4. Quality Gates
 
-- [x] Every skill frontmatter defines valid `name`, `role`, `activation`, and `modification-authority`.
+- [x] Every skill frontmatter defines valid `name`, `role`, `activation`, `modification-authority`, and `description`.
 - [x] Agent prompt Markdown files (AGENTS.md, skills/) are strictly ASCII-only.
 - [x] `python3 scripts/validate-skills.py` and `python3 -m unittest discover -s tests -v` pass.
 
 ## 5. Stabilization Policy
 
-The specification remains `candidate` during active development. Promote to `stable` when:
+The specification is `stable` while all of the following hold; demote to `candidate` when any fails:
 
 1. Every `skills/*/SKILL.md` contains verified frontmatter and self-contained contracts.
 2. Operational boundaries, plan lifecycle, and atomic deployment guards are validated.

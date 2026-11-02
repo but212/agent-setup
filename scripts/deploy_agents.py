@@ -246,6 +246,20 @@ class DeploymentTransaction:
             except OSError:
                 pass
 
+    def _stage_foreign_skill_entries(self):
+        """Carry over top-level target skills/ entries not owned by the repository."""
+        if not self.plan.target_skills.is_dir():
+            return
+        owned = {p.name for p in self.plan.skills_source.iterdir()}
+        for entry in self.plan.target_skills.iterdir():
+            if entry.name in owned:
+                continue
+            destination = self.staging_skills / entry.name
+            if entry.is_dir() and not entry.is_symlink():
+                shutil.copytree(entry, destination, symlinks=True)
+            else:
+                shutil.copy2(entry, destination, follow_symlinks=False)
+
     def commit(self) -> tuple[Path, int]:
         """Commit AGENTS.md and skills/ atomically in two phases."""
         # Phase 1: Pure staging (targets untouched)
@@ -254,6 +268,7 @@ class DeploymentTransaction:
         skill_count = sum(
             1 for p in self.staging_skills.rglob("SKILL.md") if p.is_file()
         )
+        self._stage_foreign_skill_entries()
 
         # Phase 2: Swapping with rollback guards
         self._phase2_started = True

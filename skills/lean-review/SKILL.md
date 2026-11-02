@@ -13,7 +13,7 @@ Audit diffs and repositories for semantic regressions, impossible states, and ar
 ## Operating contract
 
 - Compare against specifications, invariants, and prior behavior.
-- Every finding MUST include a concrete, reproducible counterexample.
+- Every finding MUST include a concrete, reproducible counterexample or deterministic static evidence (zero call sites, unreachable branch).
 - Never weaken or delete trust-boundary validation, security controls, error handling, accessibility, or domain invariants.
 
 ## Review vectors
@@ -52,7 +52,7 @@ Default to `diff`; use `repo` for full repository or named modules.
 - **`diff`**:
   1. Identify target diff (`git diff`, staged, commit range, named files).
   2. Trace changes through types, callers, transitions, and boundaries.
-  3. Falsify observable behavior against vectors; re-read after updates. Diagnostics must exit cleanly.
+  3. Falsify observable behavior against vectors.
 - **`repo`**:
   1. State boundary and exclusions.
   2. Trace exports, call paths, types, and boundaries.
@@ -64,13 +64,13 @@ For each finding:
 
 - **Priority**:
   - `[P1]`: incorrect observable behavior, crash, data loss, security defect, or invariant breach.
-  - `[P2]`: impossible/contradictory states or weakened contracts without immediate incorrect output.
-  - `[P3]`: structural cleanup without behavioral impact.
+  - `[P2]`: impossible/contradictory states, unsound or weakened contracts, unhandled state transitions, or unverified branches, without immediate incorrect output.
+  - `[P3]`: structural cleanup without behavioral impact: dead symbols (report only; never delete pre-existing dead code), unneeded complexity, indirection without polymorphism or transformation.
 - **Location**: `path/to/file.ext:line`
 - **Tag**: vector tag
 - **Issue**: concise defect description
 - **Evidence / Counterexample**: concrete input, trace, or state combination
-- **Minimal Action**: smallest diff or replacement pattern (prefer ````suggestion` blocks)
+- **Minimal Action**: smallest diff or replacement pattern (prefer unified diff blocks)
 
 Summary status:
 

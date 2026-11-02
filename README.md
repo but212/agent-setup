@@ -37,8 +37,8 @@ Skills are independent on-demand modalities, not a mandatory sequence:
 
 ## Usage
 
-1. Copy or mirror the repository into target workspaces or global agent directories.
-2. Mirror configuration into `~/.agents`:
+1. Copy the repository into target workspaces or global agent directories.
+2. Copy configuration into `~/.agents` (preserves skills not in this repository):
 
    ```sh
    python3 scripts/deploy_agents.py

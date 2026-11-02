@@ -33,16 +33,14 @@ Logical deduction cannot substitute for empirical execution.
 - Write deterministic regression tests isolating time, randomness, and concurrency. Verify invariant laws, type contracts, state transitions, and boundary edge cases.
 - Forbid brittle assertion of detailed phrasing, exact prose wording, or cosmetic formatting that breaks under benign edits; assert observable functional outcomes, typed data contracts, and failure exit states.
 - Never assert or report verification for unrun commands, unexecuted branches, or unverified failure paths. When missing toolchains or network barriers prevent execution, explicitly report checks as Unverified with blocker details.
-- Execute repository-native test commands starting from the narrowest relevant vector.
+- Execute repository-native test commands starting from the narrowest relevant vector: `python scripts/validate-skills.py`, `python -m unittest discover -s tests -v`, `ruff check .`.
 
 ## Adversarial Falsification
 
 - Scope: Active only during explicit review tasks or final diff audits; do not apply during implementation.
 - Audit changes skeptically against regressions, invalid states, and hollow indirection.
 - Every reported defect is admissible if and only if accompanied by a constructible counterexample or deterministic static evidence (e.g. zero referencing call sites, unreachable branches, single-caller pass-through wrappers):
-  - `[P1]`: Broken invariant, security breach, or data corruption.
-  - `[P2]`: Unsound contract, unhandled state transition, or unverified branch.
-  - `[P3]`: Dead symbol (report for awareness; do not delete pre-existing dead code), unneeded complexity, or structural redundancy (e.g. indirection without polymorphism or transformation).
+- Severity levels (`[P1]`-`[P3]`) are defined in `skills/lean-review/SKILL.md`.
 
 ## Handoff and Integration Integrity
 

@@ -30,21 +30,22 @@ Applies when all applicable gates pass (Grounded: all 6; Light: 1, 2, 4, 5):
 5. No unresolved material decisions affecting scope, behavior, or risk.
 6. No `context.md` or ADR update required *(Grounded only)*.
 
-Output short-form decision summary in chat for confirmation; hand off directly to implementation under AGENTS.md rules.
+Output short-form decision summary in chat, then proceed directly to implementation under AGENTS.md rules without waiting for confirmation.
 
 ## Standard Path
 
 Triggered when any Fast-path gate fails. Inspect repository facts, docs, code, and types first; do not ask for verifiable facts.
 
 - **Questioning:** One material decision at a time in dependency order. 2-4 options with `(Recommended)` first.
-- **Question format:** Recommendation | Why | Trade-off / Counter-argument | Decision requested.
-- **Post-answer summary:** Decision | Recommendation | Why | Risk mitigated.
+- **Question fields:** Recommendation, Why, Trade-off / Counter-argument, Decision requested.
+- **Post-answer summary fields:** Decision, Recommendation, Why, Risk mitigated.
 
 ## Context & Documentation (Grounded mode)
 
 - **Discovery order:** 1. Repo guidance -> 2. Local docs (`context.md`, ADRs) -> 3. Target code and tests.
 - **Maintain `context.md`:** Propose updates for entities, value objects, invariants, boundaries, or lifecycle rules.
 - **Maintain ADRs:** Propose ADRs for hard-to-reverse or high-trade-off architectural choices.
+- Approved `context.md` and ADR updates are applied during implementation.
 
 ## Output & Handoff
 
