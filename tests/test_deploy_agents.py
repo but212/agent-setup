@@ -357,6 +357,48 @@ class DeployAgentsTests(unittest.TestCase):
         self.assertEqual([p.name for p in target.glob(".*")], [])
         self.assertTrue((target / "skills" / "example" / "SKILL.md").exists())
 
+    def test_deploy_recovers_skills_backup_from_interrupted_run(self):
+        target = self.root / "target"
+        interrupted = target / ".skills.bak" / "foreign"
+        interrupted.mkdir(parents=True)
+        (interrupted / "SKILL.md").write_text("foreign\n", encoding="utf-8")
+
+        result = self.run_deploy(target)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+            (target / "skills" / "foreign" / "SKILL.md").read_text(encoding="utf-8"),
+            "foreign\n",
+        )
+        self.assertEqual([p.name for p in target.glob(".*")], [])
+
+    def test_transaction_recovers_agents_backup_from_interrupted_run(self):
+        from scripts.deploy_agents import (
+            DeploymentTransaction,
+            create_deployment_plan,
+        )
+
+        target = self.root / "target"
+        target.mkdir()
+        (target / ".AGENTS.md.bak").write_text("previous agents\n", encoding="utf-8")
+        plan = create_deployment_plan(self.repo, str(target))
+
+        with DeploymentTransaction(plan):
+            self.assertEqual(
+                plan.agents.target.read_text(encoding="utf-8"), "previous agents\n"
+            )
+
+    def test_stale_backup_is_discarded_when_target_skills_exist(self):
+        target = self.root / "target"
+        (target / "skills" / "example").mkdir(parents=True)
+        (target / ".skills.bak" / "old").mkdir(parents=True)
+
+        result = self.run_deploy(target)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse((target / "skills" / "old").exists())
+        self.assertEqual([p.name for p in target.glob(".*")], [])
+
     def test_deploy_rejects_filesystem_root(self):
         # Rejected by the combined guard; is_root is not isolated here because
         # the home-ancestor check also covers the root when HOME is under it.
@@ -407,6 +449,44 @@ class DeployAgentsTests(unittest.TestCase):
         )
         staging_files = [p.name for p in target.glob(".*")]
         self.assertEqual(staging_files, [])
+
+    def test_failed_skills_swap_restores_existing_agents_and_skills(self):
+        from unittest.mock import patch
+
+        from scripts.deploy_agents import (
+            DeploymentTransaction,
+            create_deployment_plan,
+        )
+
+        target = self.root / "target"
+        (target / "skills" / "example").mkdir(parents=True)
+        original_skill = target / "skills" / "example" / "SKILL.md"
+        original_skill.write_text("original skill\n", encoding="utf-8")
+        original_agents = target / "AGENTS.md"
+        original_agents.write_text("original agents\n", encoding="utf-8")
+        plan = create_deployment_plan(self.repo, str(target))
+
+        orig_replace = os.replace
+
+        def fail_on_final_skills_swap(src, dst):
+            if str(src).endswith(".skills.tmp"):
+                raise OSError("Simulated swap failure")
+            return orig_replace(src, dst)
+
+        with (
+            patch("os.replace", side_effect=fail_on_final_skills_swap),
+            self.assertRaises(OSError),
+            DeploymentTransaction(plan) as tx,
+        ):
+            tx.commit()
+
+        self.assertEqual(
+            original_agents.read_text(encoding="utf-8"), "original agents\n"
+        )
+        self.assertEqual(
+            original_skill.read_text(encoding="utf-8"), "original skill\n"
+        )
+        self.assertEqual([p.name for p in target.glob(".*")], [])
 
     def test_deployment_transaction_rollback_cleans_new_target_on_failure(self):
         from unittest.mock import patch

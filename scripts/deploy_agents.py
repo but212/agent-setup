@@ -6,6 +6,8 @@ import os
 import shutil
 import stat
 import sys
+from collections.abc import Callable
+from contextlib import suppress
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -60,12 +62,68 @@ class AgentsFile:
 class DeploymentPlan:
     """Immutable, fully validated deployment execution plan."""
 
-    repo_root: Path
     canonical_target: Path
     agents: AgentsFile | None
     skills_source: Path
     target_skills: Path
     lock_path: Path
+
+
+def _resolve_target(tool: Tool, target_arg: str | None, home_dir: Path) -> Path:
+    """Expand the destination: explicit path (agents only) or the tool's default root."""
+    target_input = (
+        (target_arg or os.environ.get("AGENT_HOME")) if tool is Tool.AGENTS else None
+    )
+    if not target_input:
+        return home_dir / _TOOL_ROOTS[tool]
+
+    if target_input == "~":
+        target_path = home_dir
+    elif target_input.startswith((f"~{os.sep}", "~/")):
+        target_path = home_dir / target_input[2:]
+    else:
+        target_path = Path(target_input)
+    return target_path if target_path.is_absolute() else Path.cwd() / target_path
+
+
+def _reject_unsafe_target(
+    target_path: Path, canonical_target: Path, repo_root: Path, home_dir: Path, tool: Tool
+) -> None:
+    """Refuse links, filesystem roots, home (or its ancestors), and the repository tree."""
+    _reject_link(target_path)
+
+    canonical_repo = repo_root.resolve()
+
+    is_root = canonical_target == canonical_target.parent
+    is_home = canonical_target == home_dir
+    is_home_ancestor = canonical_target in home_dir.parents
+    is_repo_or_inside = (
+        canonical_target == canonical_repo or canonical_repo in canonical_target.parents
+    )
+    is_repo_ancestor = canonical_target in canonical_repo.parents
+
+    if is_root or is_home or is_home_ancestor or is_repo_or_inside or is_repo_ancestor:
+        label = "AGENT_HOME" if tool is Tool.AGENTS else "destination"
+        raise DeploymentSafetyError(f"refusing unsafe {label}: {canonical_target}")
+
+
+def _reject_link(path: Path) -> None:
+    if _is_link_or_reparse(path):
+        raise DeploymentSafetyError(
+            f"destination must not be a symlink or junction: {path}"
+        )
+
+
+def _require_kind(path: Path, *, is_dir: bool) -> None:
+    """An existing node must be a directory (is_dir) or a regular file."""
+    if path.exists() and not (path.is_dir() if is_dir else path.is_file()):
+        kind = "directory" if is_dir else "regular file"
+        raise DeploymentSafetyError(f"destination is not a {kind}: {path}")
+
+
+def _require_slot(path: Path, *, is_dir: bool) -> None:
+    _reject_link(path)
+    _require_kind(path, is_dir=is_dir)
 
 
 def create_deployment_plan(
@@ -78,86 +136,34 @@ def create_deployment_plan(
     home_env = os.environ.get("HOME")
     home_dir = Path(home_env).resolve() if home_env else Path.home().resolve()
 
-    target_input = (
-        (target_arg or os.environ.get("AGENT_HOME")) if tool is Tool.AGENTS else None
-    )
-    if not target_input:
-        target_path = home_dir / _TOOL_ROOTS[tool]
-    else:
-        if target_input == "~":
-            target_path = home_dir
-        elif target_input.startswith((f"~{os.sep}", "~/")):
-            target_path = home_dir / target_input[2:]
-        else:
-            target_path = Path(target_input)
-        if not target_path.is_absolute():
-            target_path = Path.cwd() / target_path
-
+    target_path = _resolve_target(tool, target_arg, home_dir)
     canonical_target = target_path.resolve()
 
-    if _is_link_or_reparse(target_path):
-        raise DeploymentSafetyError(
-            f"destination must not be a symlink or junction: {target_path}\n"
-        )
-
-    is_root = canonical_target == canonical_target.parent
-    canonical_repo = repo_root.resolve()
-    is_in_repo = (
-        canonical_target == canonical_repo
-        or canonical_repo in canonical_target.parents
-        or canonical_target in canonical_repo.parents
-    )
-    is_home_ancestor = canonical_target in home_dir.parents
-    if is_root or canonical_target == home_dir or is_in_repo or is_home_ancestor:
-        label = "AGENT_HOME" if tool is Tool.AGENTS else "destination"
-        raise DeploymentSafetyError(
-            f"refusing unsafe {label}: {target_input or canonical_target}\n"
-        )
-
-    if canonical_target.exists() and not canonical_target.is_dir():
-        raise DeploymentSafetyError(
-            f"destination is not a directory: {canonical_target}\n"
-        )
+    _reject_unsafe_target(target_path, canonical_target, repo_root, home_dir, tool)
+    _require_kind(canonical_target, is_dir=True)
 
     skills_source = repo_root / "skills"
     if not skills_source.is_dir():
-        raise DeploymentSafetyError(f"skills/ not found in {repo_root}\n")
+        raise DeploymentSafetyError(f"skills/ not found in {repo_root}")
 
     agents = None
     if tool is Tool.AGENTS:
         agents_source = repo_root / "AGENTS.md"
         if not agents_source.is_file():
-            raise DeploymentSafetyError(f"AGENTS.md not found in {repo_root}\n")
+            raise DeploymentSafetyError(f"AGENTS.md not found in {repo_root}")
         target_agents = canonical_target / "AGENTS.md"
-        if _is_link_or_reparse(target_agents):
-            raise DeploymentSafetyError(
-                f"destination must not be a symlink or junction: {target_agents}\n"
-            )
-        if target_agents.exists() and not target_agents.is_file():
-            raise DeploymentSafetyError(
-                f"destination is not a regular file: {target_agents}\n"
-            )
+        _require_slot(target_agents, is_dir=False)
         agents = AgentsFile(source=agents_source, target=target_agents)
 
     target_skills = canonical_target / "skills"
-    if _is_link_or_reparse(target_skills):
-        raise DeploymentSafetyError(
-            f"destination must not be a symlink or junction: {target_skills}\n"
-        )
-    if target_skills.exists() and not target_skills.is_dir():
-        raise DeploymentSafetyError(
-            f"destination is not a directory: {target_skills}\n"
-        )
-
-    lock_path = canonical_target / ".deploy.lock"
+    _require_slot(target_skills, is_dir=True)
 
     return DeploymentPlan(
-        repo_root=repo_root,
         canonical_target=canonical_target,
         agents=agents,
         skills_source=skills_source,
         target_skills=target_skills,
-        lock_path=lock_path,
+        lock_path=canonical_target / ".deploy.lock",
     )
 
 
@@ -179,37 +185,31 @@ class DeploymentLock:
                 holder = "unknown"
             raise DeploymentSafetyError(
                 f"deployment lock already held at {self.lock_path} (pid {holder}); "
-                "remove it if no deployment is running\n"
+                "remove it if no deployment is running"
             ) from exc
         except OSError as exc:
             raise DeploymentSafetyError(
-                f"failed to acquire deployment lock at {self.lock_path}: {exc}\n"
+                f"failed to acquire deployment lock at {self.lock_path}: {exc}"
             ) from exc
 
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as f:
                 f.write(f"{os.getpid()}\n")
         except BaseException as exc:
-            try:
+            with suppress(OSError):
                 os.close(fd)
-            except OSError:
-                pass
-            try:
+            with suppress(OSError):
                 self.lock_path.unlink(missing_ok=True)
-            except OSError:
-                pass
             if isinstance(exc, OSError):
                 raise DeploymentSafetyError(
-                    f"failed to acquire deployment lock at {self.lock_path}: {exc}\n"
+                    f"failed to acquire deployment lock at {self.lock_path}: {exc}"
                 ) from exc
             raise
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        try:
+        with suppress(OSError):
             self.lock_path.unlink(missing_ok=True)
-        except OSError:
-            pass
 
 
 class DeploymentTransaction:
@@ -226,16 +226,14 @@ class DeploymentTransaction:
         self.staging_skills = self.target / ".skills.tmp"
         self.backup_skills = self.target / ".skills.bak"
 
-        self._phase2_started = False
-        self._target_agents_existed = False
-        self._target_agents_swapped = False
-        self._target_skills_moved = False
-        self._committed = False
+        # Inverse operations of the target mutations applied so far; empty once committed.
+        self._undo: list[Callable[[], None]] = []
 
     def __enter__(self):
         self.target.mkdir(parents=True, exist_ok=True)
         self.lock.__enter__()
         try:
+            self._recover_interrupted()
             self._cleanup_scratch()
         except BaseException:
             self.lock.__exit__(None, None, None)
@@ -244,7 +242,7 @@ class DeploymentTransaction:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         try:
-            if exc_type is not None and not self._committed:
+            if exc_type is not None:
                 self._rollback()
         finally:
             try:
@@ -252,42 +250,30 @@ class DeploymentTransaction:
             finally:
                 self.lock.__exit__(exc_type, exc_val, exc_tb)
 
+    def _recover_interrupted(self):
+        """Restore backups orphaned by a run killed mid-swap (target missing, backup present)."""
+        if self.backup_skills.is_dir() and not self.plan.target_skills.exists():
+            os.replace(self.backup_skills, self.plan.target_skills)
+        agents = self.plan.agents
+        if (
+            agents is not None
+            and self.backup_agents.is_file()
+            and not agents.target.exists()
+        ):
+            os.replace(self.backup_agents, agents.target)
+
     def _cleanup_scratch(self):
-        try:
+        with suppress(OSError):
             self.staging_agents.unlink(missing_ok=True)
-        except OSError:
-            pass
-        try:
+        with suppress(OSError):
             self.backup_agents.unlink(missing_ok=True)
-        except OSError:
-            pass
         shutil.rmtree(self.staging_skills, ignore_errors=True)
         shutil.rmtree(self.backup_skills, ignore_errors=True)
 
     def _rollback(self):
-        if not self._phase2_started:
-            return
-
-        # 1. Restore or clean AGENTS.md
-        if self.plan.agents is not None:
-            target_agents = self.plan.agents.target
-            if self._target_agents_swapped:
-                try:
-                    os.replace(self.backup_agents, target_agents)
-                except OSError:
-                    pass
-            elif not self._target_agents_existed and target_agents.exists():
-                try:
-                    target_agents.unlink(missing_ok=True)
-                except OSError:
-                    pass
-
-        # 2. Restore skills/
-        if self._target_skills_moved:
-            try:
-                os.replace(self.backup_skills, self.plan.target_skills)
-            except OSError:
-                pass
+        while self._undo:
+            with suppress(OSError):
+                self._undo.pop()()
 
     def _stage_foreign_skill_entries(self):
         """Carry over top-level target skills/ entries not owned by the repository."""
@@ -305,36 +291,47 @@ class DeploymentTransaction:
 
     def commit(self) -> tuple[Path | None, int]:
         """Commit AGENTS.md (when planned) and skills/ atomically in two phases."""
-        # Phase 1: Pure staging (targets untouched)
+        skill_count = self._stage()
+        self._swap()
+        self._undo.clear()
+
+        agents = self.plan.agents
+        return (agents.target if agents is not None else None), skill_count
+
+    def _stage(self) -> int:
+        """Phase 1: build staging copies; targets stay untouched. Returns the skill count."""
         agents = self.plan.agents
         if agents is not None:
             shutil.copy2(agents.source, self.staging_agents)
+
         shutil.copytree(self.plan.skills_source, self.staging_skills)
         skill_count = sum(
             1 for p in self.staging_skills.rglob("SKILL.md") if p.is_file()
         )
         self._stage_foreign_skill_entries()
+        return skill_count
 
-        # Phase 2: Swapping with rollback guards
-        self._phase2_started = True
-        if agents is not None:
-            self._target_agents_existed = agents.target.exists()
-            if self._target_agents_existed:
-                shutil.copy2(agents.target, self.backup_agents)
+    def _swap(self):
+        """Phase 2: move staged content into place, recording an undo for each step."""
+        agents = self.plan.agents
+        agents_existed = agents is not None and agents.target.exists()
+        if agents_existed:
+            shutil.copy2(agents.target, self.backup_agents)
 
         if self.plan.target_skills.exists():
             os.replace(self.plan.target_skills, self.backup_skills)
-            self._target_skills_moved = True
+            self._undo.append(
+                lambda: os.replace(self.backup_skills, self.plan.target_skills)
+            )
 
         if agents is not None:
             os.replace(self.staging_agents, agents.target)
-            if self._target_agents_existed:
-                self._target_agents_swapped = True
+            if agents_existed:
+                self._undo.append(lambda: os.replace(self.backup_agents, agents.target))
+            else:
+                self._undo.append(lambda: agents.target.unlink(missing_ok=True))
 
         os.replace(self.staging_skills, self.plan.target_skills)
-
-        self._committed = True
-        return (agents.target if agents is not None else None), skill_count
 
 
 def deploy(repo_root: Path, target_arg: str | None, tool: Tool = Tool.AGENTS) -> int:
@@ -348,7 +345,7 @@ def deploy(repo_root: Path, target_arg: str | None, tool: Tool = Tool.AGENTS) ->
             print("done.")
             return 0
     except DeploymentSafetyError as exc:
-        sys.stderr.write(str(exc))
+        sys.stderr.write(f"{exc}\n")
         return 1
 
 
