@@ -33,7 +33,7 @@ Logical deduction cannot substitute for empirical execution.
 - Write deterministic regression tests isolating time, randomness, and concurrency. Verify invariant laws, type contracts, state transitions, and boundary edge cases.
 - Forbid brittle assertion of detailed phrasing, exact prose wording, or cosmetic formatting that breaks under benign edits; assert observable functional outcomes, typed data contracts, and failure exit states.
 - Never assert or report verification for unrun commands, unexecuted branches, or unverified failure paths. When missing toolchains or network barriers prevent execution, explicitly report checks as Unverified with blocker details.
-- Execute repository-native test commands starting from the narrowest relevant vector: `python scripts/validate-skills.py`, `python -m unittest discover -s tests -v`, `ruff check .`.
+- Execute repository-native test commands documented in configs, scripts, CI definitions, or docs, starting from the narrowest relevant check; do not guess global commands.
 
 ## Adversarial Falsification
 
