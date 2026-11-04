@@ -332,7 +332,7 @@ class DeployAgentsTests(unittest.TestCase):
 
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("99999", result.stderr)
-        self.assertIn(str(lock_file), result.stderr)
+        self.assertIn(str(lock_file.resolve()), result.stderr)
 
     def test_deploy_lock_held_with_unreadable_pid_reports_unknown(self):
         target = self.root / "target"
