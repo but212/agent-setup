@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Mirror AGENTS.md and skills/ into ~/.agents, or skills/ into Claude or Antigravity."""
+"""Repository-specific deployment script for agent-setup.
+
+Mirrors agent-setup's AGENTS.md and skills/ into ~/.agents, or skills/ into
+Claude or Antigravity. Not intended as a general-purpose deployment tool outside
+this repository.
+"""
 
 import argparse
 import os
@@ -351,8 +356,9 @@ def deploy(repo_root: Path, target_arg: str | None, tool: Tool = Tool.AGENTS) ->
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Mirror AGENTS.md and skills/ into the shared agent folder "
-        "(default), or skills/ only into Claude or Antigravity."
+        description="Repository-specific tool for agent-setup: Mirror AGENTS.md "
+        "and skills/ into the shared agent folder (default), or skills/ only "
+        "into Claude or Antigravity."
     )
     parser.add_argument(
         "--tool",

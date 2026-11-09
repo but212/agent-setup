@@ -31,8 +31,8 @@
 - skills/*/SKILL.md - 4가지 모달 계약: [`challenge`](../skills/challenge/SKILL.md)(심층 질의), [`crisp`](../skills/crisp/SKILL.md)(텍스트 압축), [`lean-design`](../skills/lean-design/SKILL.md)(타입/불변식), [`lean-review`](../skills/lean-review/SKILL.md)(적대적 감사).
 - [docs/skills-spec.md](skills-spec.md) - 아키텍처 명세 및 품질 게이트.
 - [docs/PHILOSOPHY.ko.md](PHILOSOPHY.ko.md) / [docs/PHILOSOPHY.md](PHILOSOPHY.md) - Agent Setup의 설계 철학 및 배경.
-- [scripts/deploy_agents.py](../scripts/deploy_agents.py) - `AGENTS.md`와 스킬을 `~/.agents`로 복사(기본). `--tool`로 Claude·Antigravity에는 스킬만 복사.
-- [scripts/validate-skills.py](../scripts/validate-skills.py) - 외부 의존성 없는 메타데이터, 계획, 안전 규칙 검증기.
+- [scripts/deploy_agents.py](../scripts/deploy_agents.py) - 이 저장소 전용 배포 스크립트. `AGENTS.md`와 스킬을 `~/.agents`로 복사(기본). `--tool`로 Claude·Antigravity에는 스킬만 복사.
+- [scripts/validate-skills.py](../scripts/validate-skills.py) - 이 저장소 전용 검증 스크립트. 외부 의존성 없는 메타데이터, 계획, 안전 규칙 검증기.
 - [.github/workflows/ci.yml](../.github/workflows/ci.yml) - 멀티 OS GitHub Actions 워크플로우.
 
 ## 사용법
@@ -57,7 +57,7 @@
 
 ## 검증
 
-저장소 루트에서 검증을 실행합니다:
+저장소 루트에서 검증을 실행합니다(스크립트와 테스트는 `agent-setup` 저장소 전용입니다):
 
 ```sh
 python3 scripts/validate-skills.py

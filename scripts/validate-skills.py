@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Validate skill metadata, repository contracts, and ASCII-only Markdown."""
+"""Repository-specific validator for agent-setup.
+
+Validates skill metadata, repository contracts, document line budgets,
+and ASCII-only Markdown within agent-setup. Not intended as a general-purpose
+tool outside this repository.
+"""
 
 import json
 import re

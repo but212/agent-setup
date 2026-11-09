@@ -39,7 +39,7 @@ Each skill in `skills/*/SKILL.md` declares scalar frontmatter fields:
 
 Frontmatter syntax is strictly restricted to flat scalar mappings or inline JSON arrays (`["item1", "item2"]`). Multiline block scalars (`|`, `>`) and indented nested lists (`- item`) are unsupported and rejected during validation.
 
-Frontmatter is validated by `scripts/validate-skills.py`.
+Frontmatter is validated by repository-specific script `scripts/validate-skills.py`.
 
 ## 3. Routing and Handoffs
 
@@ -72,7 +72,7 @@ When tracking multi-step work, an agent plan artifact or a persistent plan file 
 
 ### 3.7 Deployment Rules
 
-`scripts/deploy_agents.py --tool <agents|claude|antigravity>` (default `agents`) copies repository content into one destination per run:
+The repository-specific script `scripts/deploy_agents.py --tool <agents|claude|antigravity>` (default `agents`) copies repository content into one destination per run:
 
 | Tool | Root | Deployed |
 | --- | --- | --- |

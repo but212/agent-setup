@@ -31,8 +31,8 @@ Skills are independent on-demand modalities, not a mandatory sequence:
 - skills/*/SKILL.md - Four modal contracts: [`challenge`](skills/challenge/SKILL.md) (inquiry), [`crisp`](skills/crisp/SKILL.md) (compression), [`lean-design`](skills/lean-design/SKILL.md) (types/invariants), [`lean-review`](skills/lean-review/SKILL.md) (adversarial audit).
 - [docs/skills-spec.md](docs/skills-spec.md) - Architecture specification and quality gates.
 - [docs/PHILOSOPHY.md](docs/PHILOSOPHY.md) / [docs/PHILOSOPHY.ko.md](docs/PHILOSOPHY.ko.md) - Architectural and probabilistic philosophy.
-- [scripts/deploy_agents.py](scripts/deploy_agents.py) - Copies AGENTS.md and skills into ~/.agents (default), or skills only into Claude or Antigravity via `--tool`.
-- [scripts/validate-skills.py](scripts/validate-skills.py) - Dependency-free metadata, plan, and safety validator.
+- [scripts/deploy_agents.py](scripts/deploy_agents.py) - Repository-specific tool to copy AGENTS.md and skills into ~/.agents (default), or skills only into Claude or Antigravity via `--tool`.
+- [scripts/validate-skills.py](scripts/validate-skills.py) - Repository-specific, dependency-free metadata, plan, and safety validator.
 - [.github/workflows/ci.yml](.github/workflows/ci.yml) - Multi-OS GitHub Actions workflow.
 
 ## Usage
@@ -57,7 +57,7 @@ Skills are independent on-demand modalities, not a mandatory sequence:
 
 ## Verification
 
-Run repository checks from the root:
+Run repository checks from the root (scripts and tests are repository-specific for `agent-setup`):
 
 ```sh
 python3 scripts/validate-skills.py
