@@ -8,73 +8,75 @@ description: Derives minimal software architecture by positing an extreme zero-c
 
 # Constraints Projection
 
-Derives minimal baseline software architecture by backtracking from an Ideal Oracle to physical reality.
+Architecture is the residue of an Ideal Oracle after verified constraints are projected onto it.
 
 ## Operating Contract
 
-- Read-only analysis: outputs architectural baseline contracts; modifies no code, schemas, or documents.
-- Self-contained: yields typed signatures and invariants consumable by standard TDD cycles or domain modeling workflows.
-- Grounded constraints: admits only physical boundaries, platform limits, and hard requirements. Rejects habit and premature defensive branching.
+- Read-only: emits architectural baseline contracts; modifies no code, schemas, or documents.
+- Output is typed signatures and invariants consumable by TDD or domain modeling.
+- Admissible constraints are physical boundaries, platform limits, and hard requirements only. Habit, framework dogma, and defensive hunch are inadmissible.
 
-## Core Principle: Isolated Three-Phase Protocol
+## Laws
 
-To prevent attention dilution and premature compromise, execute phases strictly in sequence without cross-stage contamination.
+1. **Isolation:** Phases execute strictly in sequence; no phase reads ahead or leaks into another.
+2. **Oracle Primacy:** Every design element derives from a Phase 1 assumption; none originates in a constraint.
+3. **Exhaustive Projection:** Every ideal assumption is cross-checked against every constraint; no pair is skipped.
+4. **Burden of Proof:** An ideal holds until a verified constraint refutes it; "infeasible" without evidence is not refutation.
+5. **Minimal Relaxation:** Each refuted ideal yields the least deviation that satisfies the constraint.
 
-### Phase 1: Ideal Oracle Baseline (Strict Feasibility Oblivion)
+## Phase 1: Ideal Oracle
 
-Assume absolute unconstrained perfection. Completely disregard physical feasibility, hardware limits, and existing implementations. While defining Phase 1, never mention constraints or compromises.
+Feasibility, hardware, and existing implementation do not exist. Phase 1 output contains no constraint or compromise.
 
-- **Greenfield Baseline:** `f() -> Output`
-  - Zero Input: System derives intent with zero parameters or lookups.
-  - Instant Execution: O(1) computation and zero latency (0ms).
-  - Infinite Resource: Boundless memory, storage, and bandwidth at zero cost.
-  - Zero State Drift: Concurrency conflicts and state divergence are structurally impossible.
-- **Incremental Baseline (Brownfield / Existing Codebase):**
-  - Ideal Delta: Existing f(x) yields target outcome f'(x) -> y' with zero caller modification, zero latency increase, and zero side effects.
+- **Greenfield:** `f() -> Output`
+  - Zero Input: intent is known without parameters or lookups.
+  - Instant Execution: O(1) computation, 0ms latency.
+  - Infinite Resource: memory, storage, bandwidth, and quota are unbounded and free.
+  - Zero State Drift: concurrency conflict, divergence, and data loss are impossible.
+- **Incremental (Brownfield):** Ideal Delta — existing `f(x)` yields target `f'(x) -> y'` with existing inputs preserved, zero caller modification, zero latency increase, zero side effects, and zero marginal cost.
 
-### Phase 2: Constraint Enumeration (Independent Reality Mapping)
+## Phase 2: Constraint Enumeration
 
-List verified, immutable boundaries conflicting with Phase 1 assumptions across three categories:
+Enumerate, independently of Phase 1 reasoning, verified immutable boundaries conflicting with Phase 1 assumptions:
 
-- **Physics:** Network RTT, bandwidth ceilings, memory ceilings, persistence latency.
-- **Environment:** Platform runtime limits, third-party API contracts, legacy caller compatibility.
-- **Requirement:** User intent, domain safety rules, regulatory boundaries.
+- **Physics:** network RTT, bandwidth, memory ceilings, persistence latency.
+- **Environment:** platform runtime limits, third-party API contracts, cost ceilings, legacy caller compatibility.
+- **Requirement:** user intent, domain safety rules, regulatory boundaries.
 
-### Phase 3: Projection & Triage
+## Phase 3: Projection & Triage
 
-Project constraints onto Phase 1 assumptions. The triage subject is always the **Ideal Assumption**:
+The triage subject is always an **Ideal Assumption**; each receives exactly one verdict:
 
-- `Accept`: Preserve the ideal guarantee as an unyielding architectural invariant (e.g. sum types, immutable append-only log).
-- `Compromise`: Relax the ideal assumption minimally at external ingress boundaries (e.g. accept minimal entity ID; resolve remainder locally).
-- `Abandon`: Drop synchronous satisfaction of the ideal guarantee; decouple into asynchronous queues or eventual consistency.
+- `Accept`: the ideal guarantee survives intact and becomes a structural invariant enforced by type or schema.
+- `Compromise`: the ideal is relaxed only at the external ingress boundary; the interior retains the ideal.
+- `Abandon`: synchronous satisfaction is dropped; the guarantee is delivered asynchronously or eventually.
+
+Incremental projection: compatibility conflicts resolve at an adapter boundary that leaves existing callers unbroken; performance conflicts resolve by decoupling into background execution.
 
 ## Output Schema: Projection Matrix
-
-Output the analysis in this schema:
 
 ### 1. Baseline Function
 
 - Function Signature: `f() -> Output` or incremental `f'(x) -> y'`
-- Core Invariant: Single sentence stating the unconstrained functional invariant.
+- Core Invariant: one sentence stating the unconstrained functional invariant.
 
 ### 2. Projection Matrix
 
+One row per (assumption, conflicting constraint) pair.
+
 | Phase 1 Ideal Assumption | Phase 2 Conflicting Constraint | Category | Triage (`Accept` / `Compromise` / `Abandon`) | Architectural Resolution |
 | :--- | :--- | :--- | :--- | :--- |
-| Zero Input | Caller intent unknown | Requirement | Compromise | Accept minimal entity ID at ingress boundary |
-| Instant Execution | Remote I/O latency | Physics | Abandon | Asynchronous job with completion event |
-| Zero State Drift | Concurrent writes | Physics | Accept | Immutable append-only log with deterministic ordering |
 
 ### 3. Handoff Contract
 
-- Signatures: Minimal input/output types and function definitions.
-- Invariants (`I-NN`): Core preserved or introduced domain laws.
-- Failure Modes: Concrete error states introduced by `Compromise` and `Abandon` decisions.
-- Next Step: Handoff target (TDD implementation or algebraic domain modeling).
+- Signatures: minimal input/output types and function definitions.
+- Invariants (`I-NN`): preserved or introduced domain laws.
+- Failure Modes: concrete error states introduced by `Compromise` and `Abandon`.
+- Next Step: handoff target (TDD implementation or algebraic domain modeling).
 
 ## Prohibited
 
-- Contaminating Phase 1 with Phase 2 constraints or speculative implementation compromises.
-- Treating developer habit, framework dogma, or defensive hunch as a valid constraint.
-- Emitting vague prose in place of typed signatures and numbered invariants.
-- Introducing multi-agent orchestration overhead or conversational meta-explanations.
+- Phase 1 content referencing constraints or implementation compromises.
+- Inadmissible constraints per Operating Contract.
+- Vague prose in place of typed signatures and numbered invariants.
+- Multi-agent orchestration overhead or conversational meta-explanation.
