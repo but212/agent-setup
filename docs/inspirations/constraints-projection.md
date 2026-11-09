@@ -1,6 +1,6 @@
 # Constraints Projection
 
-**English** | [한국어](constaraints-projection.ko.md)
+**English** | [한국어](constraints-projection.ko.md)
 
 Conventional bureaucratic software engineering has historically focused on post-hoc maintenance and downside defense due to human cognitive limitations. In contrast, **Constraints Projection** is an AI-native development paradigm predicated on the pattern-matching and exhaustive search capabilities of LLMs: it begins from an extreme Ideal Oracle and projects real-world constraints in stages to converge onto an executable implementation.
 

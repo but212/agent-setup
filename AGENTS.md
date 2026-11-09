@@ -23,7 +23,6 @@ Every state mutation must be the minimal closed subset resolving the approved ta
 - Eliminate impossible states at the type and schema level; avoid defensive branching in internal domain logic, while strictly validating and parsing untrusted inputs at external boundaries (network, storage, user input).
 - Classify external assumptions into Environment (platform facts), Requirement (intent), and Design (chosen model). Ground every constraint in observable evidence.
 - Dissolve speculative abstractions and single-impl interfaces, except where repository patterns, test mocks (e.g. traits), or established conventions explicitly warrant them; repository patterns take precedence.
-- When authoring or modifying SKILL.md, emit only single-line scalar strings or inline JSON arrays in frontmatter; never use multiline block scalars (| or >) or indented list items.
 
 ## Empirical Verification and TDD
 
@@ -39,8 +38,7 @@ Logical deduction cannot substitute for empirical execution.
 
 - Scope: Active only during explicit review tasks or final diff audits; do not apply during implementation.
 - Audit changes skeptically against regressions, invalid states, and hollow indirection.
-- Every reported defect is admissible if and only if accompanied by a constructible counterexample or deterministic static evidence (e.g. zero referencing call sites, unreachable branches, single-caller pass-through wrappers):
-- Severity levels (`[P1]`-`[P3]`) are defined in `skills/lean-review/SKILL.md`.
+- Every reported defect is admissible if and only if accompanied by a constructible counterexample or deterministic static evidence (e.g. zero referencing call sites, unreachable branches, single-caller pass-through wrappers).
 
 ## Handoff and Integration Integrity
 

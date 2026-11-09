@@ -55,6 +55,8 @@ Frontmatter is validated by repository-specific script `scripts/validate-skills.
 
 `lean-design` models domain structures, state transitions, schemas, and boundaries before coding. Principles and handoff contract: [skills/lean-design/SKILL.md](../skills/lean-design/SKILL.md).
 
+`constraints-projection` (pre-release, [wip/constraints-projection/SKILL.md](../wip/constraints-projection/SKILL.md)) precedes `lean-design`. It decides macro architecture from requirements and system constraints (sync vs async, single transaction vs event sourcing, minimal required inputs). `lean-design` then encodes the decided structure in language and schema types (sum types, newtypes, DB constraints). Use `constraints-projection` when the structure is undecided; use `lean-design` when it is decided.
+
 ### 3.4 Adversarial Review Routing
 
 `lean-review` performs read-only audits (`modification-authority: None`) on diffs or repositories, falsifying behavior with concrete counterexamples or deterministic static evidence. Workflow and output format: [skills/lean-review/SKILL.md](../skills/lean-review/SKILL.md), which is the SSOT for severity definitions (`[P1]`, `[P2]`, `[P3]`).
