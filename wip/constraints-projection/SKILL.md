@@ -1,82 +1,83 @@
 ---
 name: constraints-projection
-role: Derives minimal baseline architecture via constraints projection
-activation: "`/project-constraints`, architectural baseline design, oracle-first modeling"
+role: Derives minimal baseline design and execution plans via constraints projection
+activation: "`/project-constraints`, baseline design, oracle-first modeling, task or architecture simplification"
 modification-authority: None
-description: Derives minimal software architecture by positing an extreme zero-cost ideal oracle and sequentially projecting physical, runtime, and domain constraints without defensive sprawl.
+description: Derives minimal baseline architecture, workflows, and execution plans by positing an extreme zero-cost ideal oracle and sequentially projecting verified physical, environmental, and domain constraints without defensive sprawl.
 ---
 
 # Constraints Projection
 
-Architecture is the residue of an Ideal Oracle after verified constraints are projected onto it.
+A minimal design or execution plan is the residue of an Ideal Oracle after verified constraints are projected onto it.
 
 ## Operating Contract
 
-- Read-only: emits architectural baseline contracts; modifies no code, schemas, or documents.
-- Output is typed signatures and invariants consumable by TDD or domain modeling.
-- Admissible constraints are physical boundaries, platform limits, and hard requirements only. Habit, framework dogma, and defensive hunch are inadmissible.
+- Read-only: emits baseline contracts, invariants, and execution plans; modifies no code, schemas, or documents.
+- Output is structured specifications (typed signatures or concrete outcomes, numbered invariants, and failure modes) consumable by TDD, domain modeling, or direct execution.
+- Admissible constraints are verified physical limits, environmental/platform boundaries, and hard requirements only. Habit, dogma, defensive hunch, and unverified hypotheses are inadmissible.
 
 ## Laws
 
 1. **Isolation:** Phases execute strictly in sequence; no phase reads ahead or leaks into another.
-2. **Oracle Primacy:** Every design element derives from a Phase 1 assumption; none originates in a constraint.
-3. **Exhaustive Projection:** Every ideal assumption is cross-checked against every constraint; no pair is skipped.
-4. **Burden of Proof:** An ideal holds until a verified constraint refutes it; "infeasible" without evidence is not refutation.
-5. **Minimal Relaxation:** Each refuted ideal yields the least deviation that satisfies the constraint.
+2. **Oracle Primacy:** Every design or plan element derives from a Phase 1 assumption; none originates in a constraint.
+3. **Exhaustive Projection:** Every ideal assumption is cross-checked against every verified constraint; no pair is skipped.
+4. **Burden of Proof:** An ideal holds until a verified constraint refutes it; unverified guesses, "infeasible", or "that's how it's done" are not refutation.
+5. **Minimal Relaxation:** Each refuted ideal yields the least deviation that satisfies the constraint, ranked by: `Reversibility > Core Outcome Preservation > Effort/Cost`.
 
 ## Phase 1: Ideal Oracle
 
-Feasibility, hardware, and existing implementation do not exist. Phase 1 output contains no constraint or compromise.
+Feasibility, cost, tools, and existing implementation or habits do not exist. Phase 1 output contains no constraint or compromise.
 
-- **Greenfield:** `f() -> Output`
-  - Zero Input: intent is known without parameters or lookups.
-  - Instant Execution: O(1) computation, 0ms latency.
-  - Infinite Resource: memory, storage, bandwidth, and quota are unbounded and free.
-  - Zero State Drift: concurrency conflict, divergence, and data loss are impossible.
-- **Incremental (Brownfield):** Ideal Delta — existing `f(x)` yields target `f'(x) -> y'` with existing inputs preserved, zero caller modification, zero latency increase, zero side effects, and zero marginal cost.
+- **Greenfield:** `() -> PrimaryOutcome` (code: `f() -> Output`)
+  - Singular Intent (Zero Input): one unambiguous `PrimaryOutcome` is known immediately without lookups, clarification, or competing goals.
+  - Instant Execution: O(1) computation, 0ms latency, zero calendar time, zero effort.
+  - Infinite Resource: budget, attention, memory, storage, bandwidth, and quota are unbounded and free.
+  - Zero State Drift: misunderstanding, concurrency conflict, divergence, errors, and data loss are impossible.
+- **Incremental (Brownfield):** Ideal Delta -- existing `f(x)` or workflow yields target `f'(x) -> y'` with existing inputs, callers, and stakeholders preserved, zero disruption, zero latency/effort increase, zero side effects, and zero marginal cost.
 
 ## Phase 2: Constraint Enumeration
 
-Enumerate, independently of Phase 1 reasoning, verified immutable boundaries conflicting with Phase 1 assumptions:
+Enumerate, independently of Phase 1 reasoning, verified immutable boundaries (`VerifiedFact`) conflicting with Phase 1 assumptions. Unverified guesses about human reactions, edge cases, or feasibility must be tagged `Hypothesis(claim, check_method)` and isolated -- never treated as `VerifiedFact` until tested.
 
-- **Physics:** network RTT, bandwidth, memory ceilings, persistence latency.
-- **Environment:** platform runtime limits, third-party API contracts, cost ceilings, legacy caller compatibility.
-- **Requirement:** user intent, domain safety rules, regulatory boundaries.
+- **Physics:** deadlines, human attention/working-memory ceilings, network RTT, bandwidth, memory/storage ceilings, persistence latency.
+- **Environment:** platform/runtime limits, legal/policy/API contracts, budget/cost ceilings, legacy caller or stakeholder compatibility.
+- **Requirement:** primary user intent, non-negotiable `Guardrails`, domain safety rules, regulatory boundaries.
 
 ## Phase 3: Projection & Triage
 
 The triage subject is always an **Ideal Assumption**; each receives exactly one verdict:
 
-- `Accept`: the ideal guarantee survives intact and becomes a structural invariant enforced by type or schema.
-- `Compromise`: the ideal is relaxed only at the external ingress boundary; the interior retains the ideal.
-- `Abandon`: synchronous satisfaction is dropped; the guarantee is delivered asynchronously or eventually.
+- `Accept`: the ideal guarantee survives intact and becomes a structural invariant enforced by type, schema, rule, or fixed process.
+- `Compromise`: the ideal is relaxed only at the external boundary (ingress, handoff, or communication wrapper); the interior retains the ideal.
+- `Abandon`: synchronous or one-shot satisfaction is dropped; the guarantee is delivered asynchronously, eventually, or in staged milestones.
 
-Incremental projection: compatibility conflicts resolve at an adapter boundary that leaves existing callers unbroken; performance conflicts resolve by decoupling into background execution.
+Incremental projection: compatibility conflicts resolve at an adapter or boundary layer that leaves existing callers or stakeholders unbroken; performance or capacity conflicts resolve by decoupling into background or staged execution.
 
 ## Output Schema: Projection Matrix
 
-### 1. Baseline Function
+### 1. Baseline Target
 
-- Function Signature: `f() -> Output` or incremental `f'(x) -> y'`
-- Core Invariant: one sentence stating the unconstrained functional invariant.
+- Signature / Target: `() -> PrimaryOutcome` (code: `f() -> Output`) or incremental `f'(x) -> y'`
+- Core Invariant: one sentence stating the unconstrained primary outcome.
 
 ### 2. Projection Matrix
 
-One row per (assumption, conflicting constraint) pair.
+One row per `(Phase 1 Ideal Assumption, Phase 2 Conflicting Constraint)` pair.
 
-| Phase 1 Ideal Assumption | Phase 2 Conflicting Constraint | Category | Triage (`Accept` / `Compromise` / `Abandon`) | Architectural Resolution |
+| Phase 1 Ideal Assumption | Phase 2 Conflicting Constraint | Category | Triage (`Accept` / `Compromise` / `Abandon`) | Resolution |
 | :--- | :--- | :--- | :--- | :--- |
 
 ### 3. Handoff Contract
 
-- Signatures: minimal input/output types and function definitions.
-- Invariants (`I-NN`): preserved or introduced domain laws.
-- Failure Modes: concrete error states introduced by `Compromise` and `Abandon`.
-- Next Step: handoff target (TDD implementation or algebraic domain modeling).
+- Signatures / Deliverables: minimal input/output types, function definitions, or concrete deliverable boundaries.
+- Invariants (`I-NN`): preserved or introduced domain/process laws and non-negotiable `Guardrails`.
+- Unverified Hypotheses: `Hypothesis` items requiring validation before they may alter the plan (omit if none).
+- Failure Modes: concrete error or failure states introduced by `Compromise` and `Abandon`.
+- Next Step: handoff target (TDD implementation, algebraic domain modeling, or staged execution).
 
 ## Prohibited
 
-- Phase 1 content referencing constraints or implementation compromises.
-- Inadmissible constraints per Operating Contract.
-- Vague prose in place of typed signatures and numbered invariants.
+- Phase 1 content referencing constraints, compromises, or unprioritized competing goals.
+- Inadmissible constraints per Operating Contract (including `Hypothesis` treated as `VerifiedFact`).
+- Vague prose in place of concrete signatures/outcomes and numbered invariants.
 - Multi-agent orchestration overhead or conversational meta-explanation.

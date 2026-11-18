@@ -55,7 +55,7 @@ Frontmatter is validated by repository-specific script `scripts/validate-skills.
 
 `lean-design` models domain structures, state transitions, schemas, and boundaries before coding. Principles and handoff contract: [skills/lean-design/SKILL.md](../skills/lean-design/SKILL.md).
 
-`constraints-projection` (pre-release, [wip/constraints-projection/SKILL.md](../wip/constraints-projection/SKILL.md)) precedes `lean-design`. It decides macro architecture from requirements and system constraints (sync vs async, single transaction vs event sourcing, minimal required inputs). `lean-design` then encodes the decided structure in language and schema types (sum types, newtypes, DB constraints). Use `constraints-projection` when the structure is undecided; use `lean-design` when it is decided.
+`constraints-projection` (pre-release, [wip/constraints-projection/SKILL.md](../wip/constraints-projection/SKILL.md)) precedes `lean-design` or execution planning. It derives minimal baseline architecture, workflows, and execution plans from an ideal oracle and verified system or domain constraints (sync vs async, single transaction vs event sourcing, minimal required inputs, staged milestones). `lean-design` then encodes the decided software structure in language and schema types (sum types, newtypes, DB constraints). Use `constraints-projection` when the structure or plan is undecided; use `lean-design` when it is decided.
 
 ### 3.4 Adversarial Review Routing
 
